@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# تَثَبُّت · Tathabbut
 
-## Getting Started
+**المنظومة الذكية للتحقق الفوري من صحة النصوص الإسلامية وتخريجها**
 
-First, run the development server:
+تحقق فوري من الأحاديث والآيات المتداولة: يُلصق المنشور كما هو (أو تُرفع لقطة الشاشة)، فتُستخرج النصوص المنسوبة، ويُعرض لكل نص مصدره وحكمه **منسوباً إلى قائله** — للدعاة والمعرّفين بالإسلام ومشرفي المحتوى الدعوي.
 
+> مشروع مشارك في **تحدي الذكاء الاصطناعي في خدمة المحتوى الإسلامي 2026** — المسار الرابع: أدوات المعرفة والتحقق لتمكين المعرفين بالإسلام.
+
+> ⚠️ أداة مدعومة بالذكاء الاصطناعي. لا تُصدر فتاوى، ولا تجتهد في الحكم على الأحاديث؛ تنقل أحكام أهل الاختصاص بنصها، وتحيل إلى المختص عند غياب المرجع.
+
+## المبدأ الجوهري
+النموذج اللغوي يستخرج النصوص ويطابقها فقط؛ أما **العزو والحكم فيُقرآن من المصادر المعتمدة** ولا يولّدهما النموذج — وفق قاعدة الحزمة العلمية للتحدي: «لا يُنسب حديث دون مصدر وحكم معتمد».
+
+## التشغيل محلياً
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # ثم املأ المفاتيح
+npm run dev                  # http://localhost:3000
+npm test                     # الاختبارات
 ```
+مخطط قاعدة البيانات: `supabase/migrations/`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## المصادر
+| المجال | المصدر | الاستخدام |
+|---|---|---|
+| الحديث وأحكامه | [الدرر السنية](https://dorar.net) — الواجهة العامة `dorar_api.json` | البحث وجلب أحكام المحدثين بنصها، مع تخزين مؤقت |
+| القرآن الكريم | مصحف مجمع الملك فهد / [Tanzil](https://tanzil.net) | المطابقة والتنبيه على الآيات المنقولة بخطأ |
+| الأحاديث المشتهرة | قائمة يحرّرها صاحب المشروع، معزوّة إلى المقاصد الحسنة وكشف الخفاء والسلسلة الضعيفة | التعرف على المتداول غير الثابت |
+| المصطلحات | [موسوعة الجمهرة](https://islamic-content.com/dictionary) | مقابلات المصطلحات في الردود المترجمة |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## إعادة الاستخدام والإفصاح
+- أجزاء من مشروع سابق للمشارك نفسه، **Al-Ulama Easy Editor** (AGPL-3.0): تحليل استجابة الدرر السنية (`src/lib/dorar.ts`)، وتطبيع النص العربي ومقارنة ألفاظ المتن (`src/lib/arabic.ts`).
+- مجموعة الاختبار أعدّها صاحب المشروع (متخصص في الحديث وعلومه)، وتُعلَّم إجاباتها قبل تشغيل الأداة عليها.
+- بدأ العمل في 1 أكتوبر 2026 بإذن إدارة التحدي.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## الحالة
+🚧 قيد البناء خلال أيام التحدي (3–6 أكتوبر 2026).
