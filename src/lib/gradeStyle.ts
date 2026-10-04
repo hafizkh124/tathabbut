@@ -3,7 +3,7 @@
 import { GRADES } from "./gradeMap";
 import { STATES } from "./states";
 
-export type Tone = "accepted" | "weak" | "veryWeak" | "unsure" | "verse" | "misquote" | "translated" | "fatwa" | "notFound";
+export type Tone = "accepted" | "weak" | "veryWeak" | "unsure" | "verse" | "misquote" | "translated" | "fatwa" | "notFound" | "found";
 export type IconName = "check" | "bang" | "cross" | "question" | "book" | "refer" | "dash";
 
 export interface ToneStyle {
@@ -36,6 +36,8 @@ export const TONE_STYLE: Record<Tone, ToneStyle> = {
   translated: style("translated", "book"),
   fatwa: style("fatwa", "refer"),
   notFound: style("notFound", "dash", true),
+  // found in the books of Turath: a neutral tone, not a grade
+  found: style("found", "book"),
 };
 
 const EXACT: Record<string, Tone> = {
@@ -48,6 +50,8 @@ const EXACT: Record<string, Tone> = {
   [STATES.verseTranslated]: "translated",
   [STATES.notFound]: "notFound",
   [STATES.fatwa]: "fatwa",
+  [STATES.turathFound]: "found",
+  [STATES.fiqh]: "found",
   // the specialist's own extra statuses (circulating_sayings)
   "قول منسوب خطأً إلى النبي ﷺ": "misquote",
   "لفظ أو ترجمة غير دقيقة": "misquote",

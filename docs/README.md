@@ -17,6 +17,8 @@ who introduce Islam).
 | 7 | [Evaluation plan](07-evaluation-plan.md) | Test set, metrics, targets, baseline comparison |
 | 8 | [Challenge compliance](08-challenge-compliance.md) | Judging criteria, required deliverables, timeline, disclosures |
 | 9 | [Risks and mitigations](09-risks.md) | What could go wrong and how we respond |
+| 10 | [Turath integration decisions](10-turath-integration-decisions.md) | SDK choice, lookup scope and limits, citation/locator behavior, failure handling, retention, attribution, and evaluation status |
+| 11 | [Turath extension decisions](11-turath-extension-decisions.md) | Category-scoped search, strict matching, «غير حاسم» fallback, fiqh and personal-case handling, translation, caching; drafts for the specialist (ruling books, test questions) |
 
 ## Status
 

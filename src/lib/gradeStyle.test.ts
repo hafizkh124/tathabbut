@@ -14,6 +14,7 @@ describe("toneOf", () => {
     expect(toneOf(STATES.verseTranslated)).toBe("translated");
     expect(toneOf(STATES.fatwa)).toBe("fatwa");
     expect(toneOf(STATES.notFound)).toBe("notFound");
+    expect(toneOf(STATES.turathFound)).toBe("found"); // not a grade, and not «غير حاسم»
   });
 
   it("reads the specialist's own statuses as a misquote", () => {
@@ -35,5 +36,11 @@ describe("toneOf", () => {
 
   it("every tone carries an icon", () => {
     for (const t of Object.values(TONE_STYLE)) expect(t.icon).toBeTruthy();
+  });
+});
+
+describe("fiqh question", () => {
+  it("is shown in the neutral tone, never as a grade", () => {
+    expect(toneOf(STATES.fiqh)).toBe("found");
   });
 });

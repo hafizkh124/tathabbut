@@ -14,7 +14,8 @@ export function sourceLine(r: ClaimResult, locale: Locale): string | null {
   const n = r.dorar?.narrations[0];
   if (n?.source) return [n.source, n.reference].filter(Boolean).join(" — ");
   if (r.saying?.reference) return r.saying.reference;
-  return null;
+  const book = r.turath && r.turath.status === "success" ? r.turath.references[0]?.book.title : undefined;
+  return book ?? null;
 }
 
 export function buildShareText(results: ClaimResult[], locale: Locale, appName = "تَثَبُّت"): string {

@@ -52,7 +52,7 @@ Riyadh is 2 hours behind Pakistan time (the participant's location).
 | Content levels أ/ب/ج/د | Implemented as governance ([rules](04-verification-rules.md#46-content-levels-from-the-challenges-scientific-package)) |
 | Anti-hallucination: abstain or refer when evidence is insufficient | «لم يُعثر عليه — إحالة», candidate-constrained matching |
 | Transparency: disclose AI nature | Disclaimer in the UI and README |
-| Privacy: collect only what is needed, with a stated policy | No accounts; no user identity in the review queue; Gemini processing disclosed |
+| Privacy: collect only what is needed, with a stated policy | No accounts; no user identity in the review queue; Gemini processing disclosed; Turath receives only a hadith's or a saying's Arabic text, or the short Arabic topic of a question, never the question itself |
 | Test case: wrongly quoted verse | Correct text shown gently with surah and verse; nothing built on the wrong text |
 | Test case: "give me a hadith proving this" when none exists | Refuses to invent; says no matching evidence was found |
 | Test case: personal fiqh question | Recognised as level د; general information only, with referral |

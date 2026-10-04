@@ -4,6 +4,72 @@ import { matnOverlap, matnTokens, normalizeArabic } from "./arabic";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
 import { getBookTier } from "./hadithRanking";
+import type { TurathPassage } from "./turathApi";
+
+export const MAX_TURATH_PASSAGE_CHARS = 1_500;
+
+export interface TurathReference {
+  excerpt: string;
+  citation: string;
+  book: { id: string; title: string };
+  author?: { id?: string; name?: string };
+  /** Canonical Turath book ID from the source locator. */
+  bookId: string;
+  /** Keep Turath's internal page separate from a printed page number. */
+  pageLocator?: { internalPage?: number; printedPage?: number; volume?: string };
+  url: string;
+  /** Turath's own order: 0 = the best match of its category */
+  provenance?: { rank: number; totalMatches: number; truncated: boolean };
+  /** The Turath category the passage was searched in (the book's type shown to the reader). */
+  category?: { id: string; title: string };
+}
+
+export type TurathLookupOutcome =
+  /** `partial`: some of the category searches failed, so «no reference» is not conclusive. */
+  | { status: "success"; references: TurathReference[]; partial?: true }
+  | { status: "unavailable"; references: [] };
+
+/** Purely adapts Turath passages for our response/UI; it never turns a source into a hadith grade. */
+export function adaptTurathPassages(passages: TurathPassage[], category?: { id: string; title: string }): TurathReference[] {
+  const seenPages = new Set<string>();
+  const references: TurathReference[] = [];
+  const ranked = passages.map((passage, index) => ({ passage, index })).sort((a, b) => a.passage.rank - b.passage.rank || a.index - b.index);
+
+  for (const { passage } of ranked) {
+    const bookId = passage.book.id;
+    const { internalPage, printedPage, volume } = passage.location;
+    if (internalPage !== undefined) {
+      const key = `${bookId}:${internalPage}`;
+      if (seenPages.has(key)) continue;
+      seenPages.add(key);
+    }
+
+    const pageLocator =
+      internalPage !== undefined || printedPage !== undefined || volume !== undefined
+        ? {
+            ...(internalPage !== undefined ? { internalPage } : {}),
+            ...(printedPage !== undefined ? { printedPage } : {}),
+            ...(volume !== undefined ? { volume } : {}),
+          }
+        : undefined;
+    // the lookup is already bounded; the cap is enforced again at this boundary
+    const excerpt = passage.text.slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[�-�]$/, "");
+
+    references.push({
+      excerpt,
+      citation: passage.citation,
+      book: { id: passage.book.id, title: passage.book.title },
+      ...(passage.author ? { author: { ...passage.author } } : {}),
+      bookId,
+      ...(pageLocator ? { pageLocator } : {}),
+      url: passage.url || "https://app.turath.io/",
+      provenance: { rank: passage.rank, totalMatches: passage.totalMatches, truncated: passage.truncated },
+      ...(category ? { category: { ...category } } : {}),
+    });
+  }
+
+  return references;
+}
 
 export interface GradedNarration extends DorarResult {
   grade: Grade;
