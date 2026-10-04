@@ -12,12 +12,12 @@ const SHOWN = 3;
 /** An excerpt is folded to this many lines until the reader asks for all of it. */
 const FOLDED_LINES = 6;
 
-/** Where the books hold a text Dorar gave no verdict on: said outright, since a card of «غير حاسم» alone would not tell it. */
+/** A text Dorar gave no verdict on but the books hold: «موجود», one word, since the passages below may themselves state a ruling. */
 export function TurathBasisLine({ r }: { r: ClaimResult }) {
   const { t } = useI18n();
   const first = r.turath && r.turath.status === "success" ? r.turath.references[0] : undefined;
   if (!first) return null;
-  const key: Key = r.claim.kind === "scholar_quote" ? "turath.basis.saying" : r.turathReason === "dorar-unavailable" ? "turath.basis.hadithDown" : "turath.basis.hadith";
+  const key: Key = r.claim.kind === "scholar_quote" ? "turath.basis.saying" : "turath.basis.hadith";
   return <p className="text-base">{t(key, { book: first.book.title })}</p>;
 }
 

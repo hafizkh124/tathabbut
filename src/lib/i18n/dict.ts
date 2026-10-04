@@ -88,16 +88,8 @@ export const DICT = {
     en: "Some kinds of books could not be searched, so more passages may exist.",
     ur: "کتابوں کی بعض اقسام میں تلاش نہ ہو سکی، اس لیے مزید نتائج ہو سکتے ہیں۔",
   },
-  "turath.basis.hadith": {
-    ar: "ورد النص في «{book}»، ولا حكم صريح في الدرر السنية.",
-    en: "The text appears in “{book}”. Dorar has no explicit ruling on it.",
-    ur: "یہ متن «{book}» میں ملا ہے، اور الدرر میں اس پر کوئی صریح حکم نہیں۔",
-  },
-  "turath.basis.hadithDown": {
-    ar: "ورد النص في «{book}»، وتعذّر البحث في الدرر السنية فلا نعرض حكمًا.",
-    en: "The text appears in “{book}”. Dorar could not be searched, so no ruling is shown.",
-    ur: "یہ متن «{book}» میں ملا ہے؛ الدرر میں تلاش نہ ہو سکی، اس لیے حکم نہیں دکھایا جا رہا۔",
-  },
+  // one word, so the line can never disagree with a ruling the passages below may state
+  "turath.basis.hadith": { ar: "موجود", en: "Found", ur: "موجود" },
   "turath.basis.saying": {
     ar: "ورد القول في «{book}»، وصحة نسبته غير محققة.",
     en: "The saying is recorded in “{book}”. That the person named really said it has not been verified.",
