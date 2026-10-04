@@ -103,11 +103,6 @@ export const DICT = {
     en: "The saying is recorded in “{book}”. That the person named really said it has not been verified.",
     ur: "یہ قول «{book}» میں نقل ہوا ہے؛ اس کی نسبت کی صحت محقق نہیں۔",
   },
-  "turath.ruling": {
-    ar: "كتاب في الحكم على الأحاديث — اقرأ عبارته بنفسك.",
-    en: "A book that judges hadith — read its own wording.",
-    ur: "یہ احادیث پر حکم کی کتاب ہے — اس کی عبارت خود پڑھیں۔",
-  },
   "turath.page": { ar: "صفحة تراث {p}", en: "Turath page {p}", ur: "صفحۂ تراث {p}" },
   "turath.volume": { ar: "ج {v}", en: "vol. {v}", ur: "ج {v}" },
   "turath.printedPage": { ar: "ص {p}", en: "p. {p}", ur: "ص {p}" },

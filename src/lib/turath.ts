@@ -1,5 +1,4 @@
 import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, type TurathLookupOutcome, type TurathReference } from "./hadithMatch";
-import rulingBookIds from "../data/turathRulingBooks.json";
 import { searchTurath, type TurathSearchOptions, type TurathSearchResult } from "./turathApi";
 import { isSameText } from "./turathMatch";
 import { SCOPES, type TurathLookupKind } from "./turathScope";
@@ -7,9 +6,6 @@ import { SCOPES, type TurathLookupKind } from "./turathScope";
 /** One deadline for the whole lookup (specialist's decision, 2026-10-05: 5 s, so the screen never lags on the books). */
 export const TURATH_TIMEOUT_MS = 5_000;
 export const MAX_TURATH_PASSAGES = 10;
-
-/** Books that judge hadith (the specialist's list): a passage from one is tagged so the reader reads its wording. */
-const RULING_BOOKS = new Set<string>((rulingBookIds as Array<string | number>).map(String));
 
 const UNAVAILABLE: TurathLookupOutcome = { status: "unavailable", references: [] };
 
@@ -42,7 +38,7 @@ export function createTurathLookup(search: TurathSearch = searchTurath) {
           const key = ref.pageLocator?.internalPage !== undefined ? `${ref.bookId}:${ref.pageLocator.internalPage}` : `${ref.bookId}:${ref.excerpt.slice(0, 60)}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          references.push(RULING_BOOKS.has(ref.bookId) ? { ...ref, rulingBook: true } : ref);
+          references.push(ref);
         }
       }
       return {

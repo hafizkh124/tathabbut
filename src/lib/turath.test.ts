@@ -2,8 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { TurathPassage, TurathSearchOptions, TurathSearchResult } from "./turathApi";
 import { createTurathLookup, MAX_TURATH_PASSAGES, TURATH_TIMEOUT_MS } from "./turath";
 
-vi.mock("../data/turathRulingBooks.json", () => ({ default: ["900"] }));
-
 const QUERY = "اطلبوا العلم ولو بالصين";
 
 function passage(text: string, bookId: string, page: number, rank = 0): TurathPassage {
@@ -68,13 +66,6 @@ describe("createTurathLookup", () => {
     const out = await createTurathLookup(search)(QUERY, "scholar_quote");
 
     expect(out.status === "success" && out.references).toHaveLength(MAX_TURATH_PASSAGES);
-  });
-
-  it("tags a passage from a book that judges hadith", async () => {
-    const search = vi.fn(async () => found([passage(QUERY, "900", 1), passage(QUERY, "10", 1)]));
-    const out = await createTurathLookup(search)(QUERY, "hadith");
-
-    expect(out.status === "success" && out.references.map((r) => [r.bookId, r.rulingBook])).toEqual([["900", true], ["10", undefined]]);
   });
 
   it("is unavailable when every search fails, and partial when only some do", async () => {

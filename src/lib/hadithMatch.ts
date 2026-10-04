@@ -22,8 +22,6 @@ export interface TurathReference {
   provenance?: { rank: number; totalMatches: number; truncated: boolean };
   /** The Turath category the passage was searched in (the book's type shown to the reader). */
   category?: { id: string; title: string };
-  /** The book is one that judges hadith (from the specialist's list): the reader is told to read its wording. */
-  rulingBook?: true;
 }
 
 export type TurathLookupOutcome =

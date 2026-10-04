@@ -69,7 +69,6 @@ function ReferenceCard({ r: ref_, phrase }: { r: TurathReference; phrase: string
         {category && <span className="rounded-full border border-line px-2 py-0.5 text-[12px] text-muted">{category}</span>}
       </div>
       <PageLine ref_={ref_} />
-      {ref_.rulingBook && <p className="text-[13px] font-semibold text-ink">{t("turath.ruling")}</p>}
       <p
         className="quran text-[18px] leading-[2.1] text-ink"
         lang="ar"
