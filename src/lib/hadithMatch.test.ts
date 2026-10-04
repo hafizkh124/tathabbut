@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Passage } from "nusus";
 import { describe, expect, it } from "vitest";
 import { parseDorarHtml } from "./dorar";
-import { selectRelevant, summarizeGrades, type GradedNarration } from "./hadithMatch";
+import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, selectRelevant, summarizeGrades, type GradedNarration } from "./hadithMatch";
 
 // A real dorar.net answer for «اطلبوا العلم ولو بالصين» (saved 2026-10-02).
 const results = parseDorarHtml(readFileSync(join(__dirname, "__fixtures__", "dorar_talab_al_ilm.html"), "utf-8"));
@@ -65,5 +66,88 @@ describe("summarizeGrades (the specialist's rule)", () => {
   it("is غير حاسم when no verdict is explicit", () => {
     expect(summarizeGrades([n("غير حاسم")]).grade).toBe("غير حاسم");
     expect(summarizeGrades([]).grade).toBe("غير حاسم");
+  });
+});
+
+const turathPassage = (over: Partial<Passage> = {}): Passage => ({
+  provider: "turath",
+  book: { id: "42", title: "كتاب العلل" },
+  author: { id: "9", name: "الإمام" },
+  location: { internalPage: 17, printedPage: 84, volume: "2" },
+  text: "نص المصدر",
+  headings: [],
+  url: "https://app.turath.io/book/42/17",
+  alternateUrls: { shamela: "https://shamela.ws/book/42/17" },
+  citation: "كتاب العلل، 2/84",
+  locator: { bookId: "42", internalPage: 17, printedPage: 84, volume: "2", url: "https://app.turath.io/book/42/17" },
+  provenance: {
+    query: "الحديث",
+    rank: 1,
+    totalMatches: 1,
+    truncated: false,
+    contextPages: { before: 0, after: 0 },
+    retrievedVia: "search-hit",
+  },
+  ...over,
+});
+
+describe("adaptTurathPassages", () => {
+  it("preserves citation, book and author metadata, URL, provenance, and distinct page locators", () => {
+    const [reference] = adaptTurathPassages([turathPassage()]);
+    expect(reference).toMatchObject({
+      excerpt: "نص المصدر",
+      citation: "كتاب العلل، 2/84",
+      book: { id: "42", title: "كتاب العلل" },
+      author: { id: "9", name: "الإمام" },
+      bookId: "42",
+      pageLocator: { internalPage: 17, printedPage: 84, volume: "2" },
+      url: "https://app.turath.io/book/42/17",
+      provenance: { query: "الحديث", rank: 1, retrievedVia: "search-hit" },
+    });
+  });
+
+  it("deduplicates by Turath book ID and internal page, not by printed page", () => {
+    const references = adaptTurathPassages([
+      turathPassage(),
+      turathPassage({ text: "duplicate page", citation: "alternate citation" }),
+      turathPassage({ location: { internalPage: 18, printedPage: 84, volume: "2" }, locator: { bookId: "42", internalPage: 18, printedPage: 84, volume: "2", url: "https://app.turath.io/book/42/18" } }),
+      turathPassage({ book: { id: "43", title: "كتاب آخر" }, locator: { bookId: "43", internalPage: 17, printedPage: 84, volume: "2", url: "https://app.turath.io/book/43/17" } }),
+    ]);
+    expect(references).toHaveLength(3);
+    expect(references.map((reference) => [reference.bookId, reference.pageLocator?.internalPage])).toEqual([
+      ["42", 17], ["42", 18], ["43", 17],
+    ]);
+  });
+
+  it("keeps Turath's explicit search rank in best-first order", () => {
+    const later = turathPassage({
+      book: { id: "44", title: "كتاب آخر" },
+      citation: "المرتبة الثانية",
+      locator: { bookId: "44", internalPage: 9, url: "https://app.turath.io/book/44/9" },
+      provenance: { ...turathPassage().provenance!, rank: 1 },
+    });
+    const first = turathPassage({
+      book: { id: "43", title: "كتاب أول" },
+      citation: "المرتبة الأولى",
+      locator: { bookId: "43", internalPage: 8, url: "https://app.turath.io/book/43/8" },
+      provenance: { ...turathPassage().provenance!, rank: 0 },
+    });
+
+    expect(adaptTurathPassages([later, first]).map((reference) => reference.citation)).toEqual([
+      "المرتبة الأولى", "المرتبة الثانية",
+    ]);
+  });
+
+  it("falls back to the passage location and keeps printed pages separate from internal page IDs", () => {
+    const [reference] = adaptTurathPassages([turathPassage({
+      location: { internalPage: 501, printedPage: 23 },
+      locator: undefined,
+    })]);
+    expect(reference.pageLocator).toEqual({ internalPage: 501, printedPage: 23 });
+  });
+
+  it("caps each mapped excerpt at 1,500 characters", () => {
+    const [reference] = adaptTurathPassages([turathPassage({ text: "x".repeat(MAX_TURATH_PASSAGE_CHARS + 40) })]);
+    expect(reference.excerpt).toHaveLength(MAX_TURATH_PASSAGE_CHARS);
   });
 });

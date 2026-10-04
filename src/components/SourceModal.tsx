@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import type { TurathLookupOutcome } from "@/lib/hadithMatch";
 
 export interface ModalSourceData {
   title: string;
@@ -27,6 +28,7 @@ export interface ModalSourceData {
     dorarUrl?: string;
     shamelaUrl?: string;
   };
+  turathDetails?: TurathLookupOutcome;
   sayingDetails?: {
     claimedAttribution?: string | null;
     claimedReference?: string | null;
@@ -216,6 +218,66 @@ export function SourceModal({ isOpen, onClose, data }: SourceModalProps) {
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {data.turathDetails && (
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                مراجع إضافية من مكتبة تراث:
+              </p>
+              {data.turathDetails.status === "unavailable" ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+                  تعذّر البحث في تراث مؤقتا. هذا لا يغيّر حالة التحقق أو أحكام الدرر السنية.
+                </p>
+              ) : data.turathDetails.references.length === 0 ? (
+                <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-300">
+                  اكتمل البحث المباشر في تراث، ولم تُعثر على إحالات مطابقة.
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                  {data.turathDetails.references.map((reference, idx) => (
+                    <article
+                      key={`${reference.bookId}:${reference.pageLocator?.internalPage ?? idx}`}
+                      className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100">
+                            {reference.book.title}
+                            {reference.author?.name ? ` — ${reference.author.name}` : ""}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{reference.citation}</p>
+                          {reference.provenance && (
+                            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              ترتيب النتيجة في بحث تراث: {reference.provenance.rank + 1}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Turath ID: {reference.bookId}</span>
+                      </div>
+                      {reference.pageLocator && (
+                        <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                          {reference.pageLocator.volume ? `المجلد: ${reference.pageLocator.volume} · ` : ""}
+                          {reference.pageLocator.printedPage !== undefined ? `الصفحة المطبوعة: ${reference.pageLocator.printedPage} · ` : ""}
+                          {reference.pageLocator.internalPage !== undefined ? `معرّف الصفحة الداخلي في تراث: ${reference.pageLocator.internalPage}` : ""}
+                        </p>
+                      )}
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200" dir="rtl">
+                        {reference.excerpt}
+                      </p>
+                      <a
+                        href={reference.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex text-xs font-semibold text-emerald-700 underline underline-offset-2 dark:text-emerald-300"
+                      >
+                        فتح الإحالة في تراث
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

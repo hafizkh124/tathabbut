@@ -41,6 +41,7 @@ function deps(over: Partial<VerifyDeps> = {}): VerifyDeps {
     matchVerses: vi.fn(async () => []),
     matchSayings: vi.fn(async () => []),
     lookupDorar: vi.fn(async () => ({ ok: true as const, results: [], origin: "live" as const })),
+    lookupTurath: vi.fn(async () => ({ status: "success" as const, references: [] })),
     ...over,
   };
 }
@@ -52,6 +53,7 @@ describe("verifyClaim — routing and authority", () => {
     expect(r.state).toBe(STATES.fatwa);
     expect(d.matchSayings).not.toHaveBeenCalled();
     expect(d.lookupDorar).not.toHaveBeenCalled();
+    expect(d.lookupTurath).not.toHaveBeenCalled();
   });
 
   it("the specialist's list comes first and Dorar is not asked", async () => {
@@ -59,6 +61,8 @@ describe("verifyClaim — routing and authority", () => {
     const r = await verifyClaim(arabic("hadith", "لولاك لما خلقت الأفلاك"), d);
     expect(r).toMatchObject({ state: "شديد الضعف أو لا أصل له", basis: "specialist-list", saying: { verdict_by: "الصغاني" } });
     expect(d.lookupDorar).not.toHaveBeenCalled();
+    expect(d.lookupTurath).toHaveBeenCalledWith("لولاك لما خلقت الأفلاك");
+    expect(r.turath).toEqual({ status: "success", references: [] });
   });
 
   it("a weak match in the list is not used", async () => {
@@ -106,9 +110,11 @@ describe("verifyClaim — Quran", () => {
   });
 
   it("an Arabic text sent as a hadith that is a verse is treated as the verse", async () => {
-    const r = await verifyClaim(arabic("hadith", "إن الله مع الصابرين"), deps({ matchVerses: vi.fn(async () => [{ ...v2_153, score: 0.95 }]) }));
+    const d = deps({ matchVerses: vi.fn(async () => [{ ...v2_153, score: 0.95 }]) });
+    const r = await verifyClaim(arabic("hadith", "إن الله مع الصابرين"), d);
     expect(r.state).toBe(STATES.verseOk);
     expect(r.notes).toContain("النص آية من القرآن وليس حديثا");
+    expect(d.lookupTurath).toHaveBeenCalledOnce();
   });
 
   it("a 'verse' far from any verse falls through to Dorar", async () => {
@@ -153,5 +159,27 @@ describe("verifyClaims", () => {
     const d = deps();
     const r = await verifyClaims([claim({ kind: "question" }), arabic("hadith", "زيتون"), claim({ kind: "question" })], d);
     expect(r.map((x) => x.state)).toEqual([STATES.fatwa, STATES.notFound, STATES.fatwa]);
+    expect(d.lookupTurath).toHaveBeenCalledOnce();
+  });
+
+  it("deduplicates normalized Turath queries within one post", async () => {
+    const d = deps();
+    const r = await verifyClaims(
+      [claim({ kind: "hadith", query: "إِنَّمَا الأعمال" }), claim({ kind: "hadith", query: "انما الاعمال" })],
+      d,
+    );
+    expect(d.lookupTurath).toHaveBeenCalledOnce();
+    expect(r.every((item) => item.turath?.status === "success")).toBe(true);
+  });
+
+  it("keeps a Dorar grade unchanged when the independent Turath lookup fails", async () => {
+    const d = deps({
+      lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })),
+      lookupTurath: vi.fn(async () => { throw new Error("temporary failure"); }),
+    });
+    const r = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), d);
+    expect(r.state).toBe("شديد الضعف أو لا أصل له");
+    expect(r.basis).toBe("dorar");
+    expect(r.turath).toEqual({ status: "unavailable", references: [] });
   });
 });

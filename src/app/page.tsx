@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { SourceModal, type ModalSourceData } from "@/components/SourceModal";
 import { OriginTrackerDrawer } from "@/components/OriginTrackerDrawer";
+import type { TurathLookupOutcome } from "@/lib/hadithMatch";
 
 interface ClaimResult {
   claim: {
@@ -66,6 +67,7 @@ interface ClaimResult {
       shamela: string;
     };
   };
+  turath?: TurathLookupOutcome;
   notes: string[];
 }
 
@@ -126,6 +128,7 @@ export default function Home() {
         kind: "quran",
         arabicText: r.verse.text,
         statusBadge: r.state,
+        turathDetails: r.turath,
         verseDetails: {
           surahName: r.verse.surahName,
           surah: r.verse.surah,
@@ -141,6 +144,7 @@ export default function Home() {
         kind: "hadith",
         arabicText: r.claim.arabicSpan || r.claim.query,
         statusBadge: r.state,
+        turathDetails: r.turath,
         hadithDetails: {
           narrations: r.dorar.narrations,
           dorarUrl: r.dorar.externalUrls?.dorar,
@@ -153,6 +157,7 @@ export default function Home() {
         kind: "saying",
         arabicText: r.saying.text_ar,
         statusBadge: r.state,
+        turathDetails: r.turath,
         sayingDetails: {
           claimedAttribution: r.saying.claimed_attribution,
           claimedReference: r.saying.claimed_reference,
@@ -163,6 +168,14 @@ export default function Home() {
           dorarUrl: r.saying.externalUrls?.dorar,
           shamelaUrl: r.saying.externalUrls?.shamela,
         },
+      });
+    } else if (r.turath) {
+      setSelectedSourceModal({
+        title: "مراجع تراث — المكتبة التراثية",
+        kind: "hadith",
+        arabicText: r.claim.arabicSpan || r.claim.query,
+        statusBadge: r.state,
+        turathDetails: r.turath,
       });
     }
   };
@@ -344,6 +357,17 @@ export default function Home() {
                     </div>
                   )}
 
+                  {r.turath && (
+                    <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400">
+                      <span className="font-bold">مراجع إضافية من تراث:</span>{" "}
+                      {r.turath.status === "unavailable"
+                        ? "البحث غير متاح مؤقتا؛ لم يتغير حكم الدرر"
+                        : r.turath.references.length
+                          ? `${r.turath.references.length} إحالات كتابية`
+                          : "لم يُعثر على إحالات"}
+                    </div>
+                  )}
+
                   {r.saying && (
                     <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 space-y-1">
                       <p>
@@ -365,7 +389,7 @@ export default function Home() {
                   {/* Action Buttons Bar */}
                   <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                     {/* Source Modal Trigger */}
-                    {(r.verse || r.dorar || r.saying) && (
+                    {(r.verse || r.dorar || r.saying || r.turath) && (
                       <button
                         type="button"
                         onClick={() => openSourceModal(r)}

@@ -3,9 +3,10 @@
 // Nothing here writes a verdict: a state is either the specialist's, the mushaf's wording, or Dorar's muhaddithun
 // read through gradeMap.
 import type { Claim } from "./claims";
+import { normalizeArabic } from "./arabic";
 import type { DorarResult } from "./dorar";
 import { NOT_FOUND_STATE, type Grade } from "./gradeMap";
-import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
+import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary, type TurathLookupOutcome } from "./hadithMatch";
 import type { LookupOutcome } from "./lookup";
 import { compareWithVerse, type VerseHit, type WordingCheck } from "./quranCheck";
 
@@ -51,6 +52,8 @@ export interface VerifiedClaim {
   verse?: { surah: number; ayah: number; surahName: string; text: string; wording?: WordingCheck; externalUrls?: { quranCom: string; quranpedia: string } };
   saying?: SayingHit & { externalUrls?: { dorar: string; shamela: string } };
   dorar?: { narrations: GradedNarration[]; summary: GradeSummary; origin?: string; externalUrls?: { dorar: string; shamela: string } };
+  /** Supporting library references only; these never affect state or Dorar grading. */
+  turath?: TurathLookupOutcome;
   notes: string[];
 }
 
@@ -58,6 +61,7 @@ export interface VerifyDeps {
   matchVerses: (quoted: string) => Promise<VerseHit[]>;
   matchSayings: (query: string) => Promise<SayingHit[]>;
   lookupDorar: (query: string) => Promise<LookupOutcome>;
+  lookupTurath: (query: string) => Promise<TurathLookupOutcome>;
 }
 
 /** Thresholds (word_similarity, 0–1) and the largest share of changed words still treated as "this verse, misquoted". */
@@ -128,7 +132,7 @@ function fromSaying(claim: Claim, s: SayingHit): VerifiedClaim {
   };
 }
 
-export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim> {
+async function verifyClaimWithoutTurath(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim> {
   if (claim.kind === "question") return { claim, state: STATES.fatwa, basis: "kind", notes: ["سؤال عن حكم أو حالة: يُحال إلى أهل العلم"] };
 
   // Urdu is written in Arabic script too, so "has Arabic letters" is not enough: search only with the post's
@@ -178,15 +182,41 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   };
 }
 
-/** Verifies all claims of a post, a few at a time (Dorar is reached through one relay). */
+const TURATH_UNAVAILABLE: TurathLookupOutcome = { status: "unavailable", references: [] };
+
+/** Turath is queried alongside the normal checks for every hadith claim, including early-return cases. */
+export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim> {
+  if (claim.kind !== "hadith") return verifyClaimWithoutTurath(claim, deps);
+
+  const verification = verifyClaimWithoutTurath(claim, deps);
+  const turath = Promise.resolve()
+    .then(() => deps.lookupTurath(claim.query))
+    .catch(() => TURATH_UNAVAILABLE);
+  const [result, lookup] = await Promise.all([verification, turath]);
+  return { ...result, turath: lookup };
+}
+
+/** Verifies all claims of a post with bounded concurrency; duplicate Turath queries share a request-local lookup. */
 export async function verifyClaims(claims: Claim[], deps: VerifyDeps, concurrency = 3): Promise<VerifiedClaim[]> {
   const out: VerifiedClaim[] = new Array(claims.length);
+  const lookupsByQuery = new Map<string, Promise<TurathLookupOutcome>>();
+  const requestDeps: VerifyDeps = {
+    ...deps,
+    lookupTurath: (query) => {
+      const key = normalizeArabic(query).toLowerCase();
+      const existing = lookupsByQuery.get(key);
+      if (existing) return existing;
+      const pending = Promise.resolve().then(() => deps.lookupTurath(query));
+      lookupsByQuery.set(key, pending);
+      return pending;
+    },
+  };
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(concurrency, claims.length) }, async () => {
       while (next < claims.length) {
         const i = next++;
-        out[i] = await verifyClaim(claims[i], deps);
+        out[i] = await verifyClaim(claims[i], requestDeps);
       }
     }),
   );

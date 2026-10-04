@@ -7,6 +7,7 @@ import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
 import { matchVerses } from "@/lib/quranCheck";
 import { matchSayings } from "@/lib/sayingsMatch";
+import { lookupTurath } from "@/lib/turath";
 import { verifyClaims } from "@/lib/verify";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     matchVerses: (q) => matchVerses(q),
     matchSayings: (q) => matchSayings(q),
     lookupDorar: (q) => lookupDorar(q, { cache }),
+    lookupTurath,
   });
 
   return Response.json({

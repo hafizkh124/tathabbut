@@ -1,8 +1,73 @@
 // From Dorar's answer (always 15 results, even for invented text) keep only the narrations that are this text,
 // grade each muhaddith's verdict with the specialist's rules, and summarize.
 import { matnOverlap, matnTokens, normalizeArabic } from "./arabic";
+import type { Passage, PassageProvenance } from "nusus";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
+
+export const MAX_TURATH_PASSAGE_CHARS = 1_500;
+
+export interface TurathReference {
+  excerpt: string;
+  citation: string;
+  book: { id: string; title: string };
+  author?: { id?: string; name?: string };
+  /** Canonical Turath book ID from the source locator. */
+  bookId: string;
+  /** Keep Turath's internal page separate from a printed page number. */
+  pageLocator?: { internalPage?: number; printedPage?: number; volume?: string };
+  url: string;
+  provenance?: PassageProvenance;
+}
+
+export type TurathLookupOutcome =
+  | { status: "success"; references: TurathReference[] }
+  | { status: "unavailable"; references: [] };
+
+/** Purely adapts SDK passages for our response/UI; it never turns a source into a hadith grade. */
+export function adaptTurathPassages(passages: Passage[]): TurathReference[] {
+  const seenPages = new Set<string>();
+  const references: TurathReference[] = [];
+  const rankedPassages = passages
+    .map((passage, index) => ({ passage, index }))
+    .sort((a, b) => (a.passage.provenance?.rank ?? a.index) - (b.passage.provenance?.rank ?? b.index) || a.index - b.index);
+
+  for (const { passage } of rankedPassages) {
+    const bookId = passage.locator?.bookId ?? passage.book.id;
+    const internalPage = passage.locator?.internalPage ?? passage.location.internalPage;
+    if (internalPage !== undefined) {
+      const key = `${bookId}:${internalPage}`;
+      if (seenPages.has(key)) continue;
+      seenPages.add(key);
+    }
+
+    const printedPage = passage.locator?.printedPage ?? passage.location.printedPage;
+    const volume = passage.locator?.volume ?? passage.location.volume;
+    const hasPageLocator = internalPage !== undefined || printedPage !== undefined || volume !== undefined;
+    const pageLocator = hasPageLocator
+      ? {
+          ...(internalPage !== undefined ? { internalPage } : {}),
+          ...(printedPage !== undefined ? { printedPage } : {}),
+          ...(volume !== undefined ? { volume } : {}),
+        }
+      : undefined;
+    // retrieve() is already bounded; enforce the UI/API cap at the adapter boundary too.
+    const excerpt = passage.text.slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[\uD800-\uDBFF]$/, "");
+
+    references.push({
+      excerpt,
+      citation: passage.citation,
+      book: { id: passage.book.id, title: passage.book.title },
+      ...(passage.author ? { author: { ...passage.author } } : {}),
+      bookId,
+      ...(pageLocator ? { pageLocator } : {}),
+      url: passage.url || passage.locator?.url || "https://app.turath.io/",
+      ...(passage.provenance ? { provenance: passage.provenance } : {}),
+    });
+  }
+
+  return references;
+}
 
 export interface GradedNarration extends DorarResult {
   grade: Grade;
