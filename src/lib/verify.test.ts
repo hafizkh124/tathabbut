@@ -203,3 +203,44 @@ describe("verifyClaim — «هل تقصد؟» candidates", () => {
     expect(r.verse?.candidates).toBeUndefined();
   });
 });
+
+describe("verifyClaim — Dorar ranking and prioritization", () => {
+  it("isolates weak variants when text is in Sahihayn and ranks Sahihayn first", async () => {
+    const d = deps({
+      lookupDorar: vi.fn(async () => ({
+        ok: true as const,
+        origin: "live" as const,
+        results: [
+          { rank: 1, matn: "من غشنا فليس منا", source: "المعجم الكبير", verdict: "إسناده ضعيف", muhaddith: "الهيثمي" },
+          { rank: 2, matn: "من غشنا فليس منا", source: "صحيح مسلم", verdict: "صحيح", muhaddith: "مسلم" },
+          { rank: 3, matn: "من غشنا فليس منا", source: "سنن الترمذي", verdict: "حسن صحيح", muhaddith: "الترمذي" },
+          { rank: 4, matn: "من غشنا فليس منا", source: "مسند الفردوس", verdict: "موضوع لا أصل له", muhaddith: "ابن الجوزي" },
+        ],
+      })),
+    });
+
+    const r = await verifyClaim(arabic("hadith", "من غشنا فليس منا"), d);
+    expect(r.basis).toBe("dorar");
+    expect(r.dorar?.narrations[0].source).toBe("صحيح مسلم");
+    expect(r.dorar?.narrations.map((n) => n.grade)).toEqual(["مقبول", "مقبول"]);
+    expect(r.dorar?.weakVariants).toBeDefined();
+    expect(r.dorar?.weakVariants?.map((n) => n.source)).toEqual(["المعجم الكبير", "مسند الفردوس"]);
+  });
+
+  it("prioritizes Sheikh Al-Albani when hadith is in Sunan", async () => {
+    const d = deps({
+      lookupDorar: vi.fn(async () => ({
+        ok: true as const,
+        origin: "live" as const,
+        results: [
+          { rank: 1, matn: "الدعاء هو العبادة", source: "سنن أبي داود", verdict: "سكت عنه", muhaddith: "أبو داود" },
+          { rank: 2, matn: "الدعاء هو العبادة", source: "سنن أبي داود", verdict: "صحيح", muhaddith: "الألباني" },
+        ],
+      })),
+    });
+
+    const r = await verifyClaim(arabic("hadith", "الدعاء هو العبادة"), d);
+    expect(r.dorar?.narrations[0].muhaddith).toBe("الألباني");
+  });
+});
+

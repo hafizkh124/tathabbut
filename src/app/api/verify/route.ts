@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       dorar: r.dorar && {
         ...r.dorar,
         narrations: r.dorar.narrations.slice(0, 8).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
+        weakVariants: r.dorar.weakVariants?.slice(0, 8).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
       },
     })),
     dropped: extraction.dropped,

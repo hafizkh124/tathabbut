@@ -57,6 +57,12 @@ describe("summarizeGrades (the specialist's rule)", () => {
     }
   });
 
+  it("breaks a tie towards the grade given in the higher book tier, before severity", () => {
+    const s = summarizeGrades([n("مقبول", "سنن الترمذي"), n("مقبول", "سنن أبي داود"), n("ضعيف", "المعجم الكبير"), n("ضعيف", "شعب الإيمان")]);
+    expect(s).toMatchObject({ grade: "مقبول", disputed: true });
+    expect(summarizeGrades([n("مقبول", "المعجم الكبير"), n("ضعيف", "سنن الترمذي")]).grade).toBe("ضعيف");
+  });
+
   it("breaks a tie towards the more severe grade", () => {
     expect(summarizeGrades([n("ضعيف"), n("شديد الضعف أو لا أصل له")]).grade).toBe("شديد الضعف أو لا أصل له");
     expect(summarizeGrades([n("مقبول"), n("ضعيف")])).toMatchObject({ grade: "ضعيف", disputed: true });

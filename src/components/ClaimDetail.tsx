@@ -107,6 +107,7 @@ function NarrationRow({ n }: { n: NarrationView }) {
 function SourceBox({ r }: { r: ClaimResult }) {
   const { t, num } = useI18n();
   const [more, setMore] = useState(false);
+  const [showWeak, setShowWeak] = useState(false);
 
   if (r.verse) {
     const v = r.verse;
@@ -123,6 +124,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
 
   if (r.dorar) {
     const [first, ...rest] = r.dorar.narrations;
+    const weakList = r.dorar.weakVariants;
     return (
       <div className="space-y-2">
         {r.dorar.summary.disputed && <p className="text-[13px] text-muted">{t("note.disputed")}</p>}
@@ -153,6 +155,25 @@ function SourceBox({ r }: { r: ClaimResult }) {
               <ul className="space-y-2">
                 {rest.map((n, i) => (
                   <NarrationRow key={i} n={n} />
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {weakList && weakList.length > 0 && (
+          <div className="space-y-2 pt-1 border-t border-line/60">
+            <button
+              type="button"
+              onClick={() => setShowWeak((w) => !w)}
+              aria-expanded={showWeak}
+              className="min-h-11 text-[13px] text-muted underline underline-offset-[5px] cursor-pointer hover:text-brand-ink"
+            >
+              {showWeak ? t("narrations.fewer") : t("narrations.weakVariants", { n: num(weakList.length) })}
+            </button>
+            {showWeak && (
+              <ul className="space-y-2">
+                {weakList.map((n, i) => (
+                  <NarrationRow key={`weak-${i}`} n={n} />
                 ))}
               </ul>
             )}

@@ -3,6 +3,7 @@
 import { matnOverlap, matnTokens, normalizeArabic } from "./arabic";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
+import { getBookTier } from "./hadithRanking";
 
 export interface GradedNarration extends DorarResult {
   grade: Grade;
@@ -66,8 +67,9 @@ export const inSahihayn = (n: DorarResult): boolean => SAHIHAYN_SOURCES.has(norm
 /**
  * One state from several muhaddithun (the specialist's decision, 2026-10-04):
  * - a text whose narration is in Sahih al-Bukhari or Sahih Muslim is مقبول, with no "disputed" caution;
- * - otherwise the grade most of them gave (غير حاسم not counted), a tie going to the more severe grade, and the
- *   card warns when acceptance and weakness are both present;
+ * - otherwise the grade most of them gave (غير حاسم not counted); on a tie the grade given in the higher book tier
+ *   wins (decision of 2026-10-04), then the more severe grade; the card warns when acceptance and weakness are both
+ *   present;
  * - no explicit verdict → غير حاسم.
  */
 export function summarizeGrades(items: GradedNarration[]): GradeSummary {
@@ -76,7 +78,12 @@ export function summarizeGrades(items: GradedNarration[]): GradeSummary {
   if (items.some(inSahihayn)) return { grade: "مقبول", counts, basis: "في صحيح البخاري أو صحيح مسلم", disputed: false, inSahihayn: true };
   const graded = GRADES.filter((g) => g !== "غير حاسم" && counts[g] > 0);
   if (!graded.length) return { grade: "غير حاسم", counts, basis: "لا حكم صريح بين النتائج المطابقة", disputed: false, inSahihayn: false };
-  const grade = graded.reduce((a, b) => (counts[b] > counts[a] || (counts[b] === counts[a] && SEVERITY[b] > SEVERITY[a]) ? b : a));
+  const bestTier = (g: Grade) => Math.min(...items.filter((it) => it.grade === g).map((it) => getBookTier(it.source)));
+  const grade = graded.reduce((a, b) => {
+    if (counts[b] !== counts[a]) return counts[b] > counts[a] ? b : a;
+    if (bestTier(b) !== bestTier(a)) return bestTier(b) < bestTier(a) ? b : a;
+    return SEVERITY[b] > SEVERITY[a] ? b : a;
+  });
   const disputed = counts["مقبول"] > 0 && counts["ضعيف"] + counts["شديد الضعف أو لا أصل له"] > 0;
   return { grade, counts, basis: `أكثر المحدثين (${counts[grade]} من ${graded.reduce((n, g) => n + counts[g], 0)})`, disputed, inSahihayn: false };
 }

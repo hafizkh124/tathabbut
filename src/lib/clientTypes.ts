@@ -6,7 +6,10 @@ import type { VerifiedClaim } from "./verify";
 export type NarrationView = GradedNarration & { display?: GradeDisplay };
 
 export type ClaimResult = Omit<VerifiedClaim, "dorar"> & {
-  dorar?: Omit<NonNullable<VerifiedClaim["dorar"]>, "narrations"> & { narrations: NarrationView[] };
+  dorar?: Omit<NonNullable<VerifiedClaim["dorar"]>, "narrations" | "weakVariants"> & {
+    narrations: NarrationView[];
+    weakVariants?: NarrationView[];
+  };
 };
 
 export interface VerifyResponse {

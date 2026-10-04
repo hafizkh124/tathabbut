@@ -6,6 +6,7 @@ import type { Claim } from "./claims";
 import type { DorarResult } from "./dorar";
 import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
+import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
 import { compareWithVerse, type VerseHit, type WordingCheck } from "./quranCheck";
 
@@ -52,7 +53,13 @@ export interface VerifiedClaim {
   basis: "specialist-list" | "quran" | "dorar" | "none" | "kind";
   verse?: VerseView & { candidates?: VerseView[] };
   saying?: SayingHit & { externalUrls?: { dorar: string; shamela: string } };
-  dorar?: { narrations: GradedNarration[]; summary: GradeSummary; origin?: string; externalUrls?: { dorar: string; shamela: string } };
+  dorar?: {
+    narrations: GradedNarration[];
+    weakVariants?: GradedNarration[];
+    summary: GradeSummary;
+    origin?: string;
+    externalUrls?: { dorar: string; shamela: string };
+  };
   notes: string[];
 }
 
@@ -165,17 +172,19 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   if (!canSearch) return { claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] };
   const looked = await deps.lookupDorar(claim.query);
   if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`] };
-  const narrations = selectRelevant(claim.query, looked.results);
+  const rawNarrations = selectRelevant(claim.query, looked.results);
   const notes = claim.kind === "quran" ? ["لم يُعثر على آية مطابقة"] : [];
-  if (!narrations.length) return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"] };
-  const summary = summarizeGrades(narrations);
+  if (!rawNarrations.length) return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"] };
+  const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
+  const summary = summarizeGrades(rawNarrations);
   const encodedQuery = encodeURIComponent(claim.query);
   return {
     claim,
     state: summary.grade as Grade,
     basis: "dorar",
     dorar: {
-      narrations,
+      narrations: ranked.allRanked,
+      weakVariants: ranked.weakVariants.length > 0 ? ranked.weakVariants : undefined,
       summary,
       origin: looked.origin,
       externalUrls: {
