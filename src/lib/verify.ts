@@ -50,7 +50,7 @@ export interface VerifiedClaim {
   claim: Claim;
   state: State;
   /** where the state comes from */
-  basis: "specialist-list" | "quran" | "dorar" | "none" | "kind";
+  basis: "specialist-list" | "quran" | "dorar" | "turath" | "none" | "kind";
   verse?: VerseView & { candidates?: VerseView[] };
   saying?: SayingHit & { externalUrls?: { dorar: string; shamela: string } };
   dorar?: {

@@ -19,14 +19,19 @@ export interface TurathReference {
   pageLocator?: { internalPage?: number; printedPage?: number; volume?: string };
   url: string;
   provenance?: PassageProvenance;
+  /** The Turath category the passage was searched in (the book's type shown to the reader). */
+  category?: { id: string; title: string };
+  /** The book is one that judges hadith (from the specialist's list): the reader is told to read its wording. */
+  rulingBook?: true;
 }
 
 export type TurathLookupOutcome =
-  | { status: "success"; references: TurathReference[] }
+  /** `partial`: some of the category searches failed, so «no reference» is not conclusive. */
+  | { status: "success"; references: TurathReference[]; partial?: true }
   | { status: "unavailable"; references: [] };
 
 /** Purely adapts SDK passages for our response/UI; it never turns a source into a hadith grade. */
-export function adaptTurathPassages(passages: Passage[]): TurathReference[] {
+export function adaptTurathPassages(passages: Passage[], category?: { id: string; title: string }): TurathReference[] {
   const seenPages = new Set<string>();
   const references: TurathReference[] = [];
   const rankedPassages = passages
@@ -64,6 +69,7 @@ export function adaptTurathPassages(passages: Passage[]): TurathReference[] {
       ...(pageLocator ? { pageLocator } : {}),
       url: passage.url || passage.locator?.url || "https://app.turath.io/",
       ...(passage.provenance ? { provenance: passage.provenance } : {}),
+      ...(category ? { category: { ...category } } : {}),
     });
   }
 
