@@ -1,5 +1,5 @@
 // The screen's side of Turath: it is asked for AFTER /api/verify has answered, so a card never waits for the books.
-import { topicQuery } from "./claims";
+import { topicQuery } from "./topic";
 import type { ClaimResult, TurathView } from "./clientTypes";
 import type { TurathLookupOutcome } from "./hadithMatch";
 import type { TurathPatch } from "./turathFallback";

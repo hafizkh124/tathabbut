@@ -2,7 +2,7 @@
 //   →  { "turath": { status, references, partial? }, "patch": { state, basis, notes } | null }
 // Called by the screen AFTER /api/verify has answered, so the card never waits for Turath. `state`, `basis` and `notes`
 // are the claim's result from /api/verify; `patch` is the change Turath makes to it (see turathFallback.ts).
-import { cleanTopic } from "@/lib/claims";
+import { cleanTopic } from "@/lib/topic";
 import { lookupTurath } from "@/lib/turath";
 import { turathPatch } from "@/lib/turathFallback";
 import { isLookupKind } from "@/lib/turathScope";

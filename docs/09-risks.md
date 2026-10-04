@@ -15,4 +15,4 @@
 | Unclear rights on a data source | Medium — legal and reputational | Use only sources with clear terms; exclude others; document all terms; keep dumps out of the public repo |
 | Overclaiming in slides or README | Medium — credibility with judges | Only measured numbers; partnerships described as planned; unused sources listed as planned |
 | Mentors unavailable | Low | Mentor review is optional; scholarly review is done by the project's specialist |
-| Privacy concerns about sending posts to Gemini | Low–Medium | No accounts or identity stored; processing disclosed in the README |
+| Privacy concerns about sending posts to Gemini | Low–Medium | No accounts or identity stored; processing disclosed in the README; a question's own words (which may tell a personal story) are sent to Gemini only, and to Turath only a topic of a few Arabic words |
