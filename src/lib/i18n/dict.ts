@@ -113,6 +113,12 @@ export const DICT = {
     en: "We do not guess the result. If you meant another text, change the wording; otherwise ask a scholar.",
     ur: "ہم اندازے سے نتیجہ نہیں دیتے۔ کوئی اور متن مراد ہو تو الفاظ بدلیں، ورنہ اہلِ علم سے رجوع کریں۔",
   },
+  "note.scholar": {
+    ar: "القول منسوب إلى عالم. هذه نتائج الدرر السنية في هذا النص كما وردت، فاقرأ كلام المحدّث كاملًا.",
+    en: "This is a saying attributed to a scholar. These are Dorar's results for the text, as given; read the scholar's words in full.",
+    ur: "یہ کسی عالم سے منسوب قول ہے۔ یہ الدرر کے نتائج جوں کے توں ہیں؛ محدث کے الفاظ پورے پڑھیں۔",
+  },
+  "label.cited": { ar: "ذُكر في الرسالة", en: "Named in the message", ur: "پیغام میں مذکور" },
   "fatwa.body": {
     ar: "هذا سؤال عن حكم أو حالة شخصية، والجواب فيه لأهل العلم.",
     en: "This is a question about a ruling or a personal case, and the answer belongs to the scholars.",

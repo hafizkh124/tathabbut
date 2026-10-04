@@ -266,6 +266,14 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
     tone === "notFound" ? (
       <div className="space-y-2">
         <p className="text-base">{t("notfound.body")}</p>
+        {r.claim.citedSource && (
+          <p className="text-[14px]">
+            <span className="text-muted">{t("label.cited")}: </span>
+            <span lang="ar" dir="rtl">
+              {r.claim.citedSource}
+            </span>
+          </p>
+        )}
         <p className="text-[14px] text-muted">{t("notfound.hint")}</p>
       </div>
     ) : tone === "fatwa" ? (
@@ -297,6 +305,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
           )}
         </div>
       )}
+
+      {r.claim.kind === "scholar_quote" && r.dorar && <p className="text-[13px] text-muted">{t("note.scholar")}</p>}
 
       <SourceBox r={r} />
 

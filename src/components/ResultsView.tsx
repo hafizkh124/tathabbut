@@ -68,7 +68,9 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
   const current = claims[selected] ?? claims[0];
   const unplaced = claims.map((c, i) => ({ c, i })).filter(({ i }) => !placed[i]);
   const isOnlyUnplaced = placed.every((p) => !p);
-  const mostlyArabic = claims.filter((c) => c.claim.language === "ar").length * 2 >= claims.length;
+  // An Urdu message with an Arabic quotation in it: the message is set in Nastaliq, only the quotation in Amiri.
+  const urdu = /[ٹڈڑںھے]/.test(post);
+  const mostlyArabic = !urdu && claims.filter((c) => c.claim.language === "ar").length * 2 >= claims.length;
 
   return (
     <div className="space-y-4">
@@ -89,7 +91,10 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
 
       {!isOnlyUnplaced && (
         <>
-          <div className={`rounded-2xl border border-line bg-surface px-4 py-3 text-[20px] leading-[2.3] ${mostlyArabic ? "font-quran" : ""}`} dir="auto">
+          <div className={`rounded-2xl border border-line bg-surface px-4 py-3 text-[20px] ${urdu ? "leading-[2.7]" : "leading-[2.3]"} ${mostlyArabic ? "font-quran" : ""}`}
+            style={urdu ? { fontFamily: "var(--font-nastaliq), serif" } : undefined}
+            dir="auto"
+          >
             {segments.map((seg, i) =>
               seg.claim === null ? (
                 <span key={i}>{seg.text}</span>

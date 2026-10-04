@@ -73,11 +73,17 @@ describe("verifyClaim — routing and authority", () => {
     expect(r).toMatchObject({ state: "قول منسوب خطأً إلى عالم", saying: { correct_text: expect.stringContaining("السباعي") } });
   });
 
-  it("a scholar's quote that is not in the list is referred, never looked up in Dorar", async () => {
-    const d = deps();
-    const r = await verifyClaim(arabic("scholar_quote", "قول لا نعرفه عن عالم"), d);
+  it("a scholar's quote that is not in the list is looked up in Dorar, which records the sayings of many scholars", async () => {
+    const d = deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })) });
+    const r = await verifyClaim(arabic("scholar_quote", "اطلبوا العلم ولو بالصين"), d);
+    expect(d.lookupDorar).toHaveBeenCalled();
+    expect(r.basis).toBe("dorar");
+    expect(r.dorar?.narrations.length).toBeGreaterThan(0);
+  });
+
+  it("a scholar's quote found nowhere is referred", async () => {
+    const r = await verifyClaim(arabic("scholar_quote", "قول لا نعرفه عن عالم"), deps());
     expect(r.state).toBe(STATES.notFound);
-    expect(d.lookupDorar).not.toHaveBeenCalled();
   });
 });
 

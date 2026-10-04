@@ -149,9 +149,8 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
     const [s] = (await deps.matchSayings(claim.query)).filter((h) => h.score >= SAYING_MIN);
     if (s && (claim.kind !== "scholar_quote" || s.claimed_attribution)) return fromSaying(claim, s);
   }
-  if (claim.kind === "scholar_quote") {
-    return { claim, state: STATES.notFound, basis: "none", notes: ["أقوال العلماء تُتحقق من قائمة المختص فقط، وهذا القول ليس فيها"] };
-  }
+  // A scholar's saying that is not in the specialist's list is still looked up: Dorar and the hadith books record the
+  // sayings of many scholars, and its muhaddith's words are shown as they are (specialist's decision, 2026-10-04).
 
   // 2) the Quran: a claimed verse, or an Arabic text that is in fact a verse
   if (claim.kind === "quran") {
