@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Passage } from "nusus";
+import type { TurathPassage } from "./turathApi";
 import { describe, expect, it } from "vitest";
 import { parseDorarHtml } from "./dorar";
 import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, selectRelevant, summarizeGrades, type GradedNarration } from "./hadithMatch";
@@ -75,30 +75,21 @@ describe("summarizeGrades (the specialist's rule)", () => {
   });
 });
 
-const turathPassage = (over: Partial<Passage> = {}): Passage => ({
-  provider: "turath",
+const turathPassage = (over: Partial<TurathPassage> = {}): TurathPassage => ({
   book: { id: "42", title: "كتاب العلل" },
   author: { id: "9", name: "الإمام" },
   location: { internalPage: 17, printedPage: 84, volume: "2" },
   text: "نص المصدر",
-  headings: [],
-  url: "https://app.turath.io/book/42/17",
-  alternateUrls: { shamela: "https://shamela.ws/book/42/17" },
+  url: "https://app.turath.io/book/42?page=17",
   citation: "كتاب العلل، 2/84",
-  locator: { bookId: "42", internalPage: 17, printedPage: 84, volume: "2", url: "https://app.turath.io/book/42/17" },
-  provenance: {
-    query: "الحديث",
-    rank: 1,
-    totalMatches: 1,
-    truncated: false,
-    contextPages: { before: 0, after: 0 },
-    retrievedVia: "search-hit",
-  },
+  rank: 1,
+  totalMatches: 1,
+  truncated: false,
   ...over,
 });
 
 describe("adaptTurathPassages", () => {
-  it("preserves citation, book and author metadata, URL, provenance, and distinct page locators", () => {
+  it("preserves citation, book and author metadata, URL, rank, and distinct page locators", () => {
     const [reference] = adaptTurathPassages([turathPassage()]);
     expect(reference).toMatchObject({
       excerpt: "نص المصدر",
@@ -107,17 +98,22 @@ describe("adaptTurathPassages", () => {
       author: { id: "9", name: "الإمام" },
       bookId: "42",
       pageLocator: { internalPage: 17, printedPage: 84, volume: "2" },
-      url: "https://app.turath.io/book/42/17",
-      provenance: { query: "الحديث", rank: 1, retrievedVia: "search-hit" },
+      url: "https://app.turath.io/book/42?page=17",
+      provenance: { rank: 1, totalMatches: 1, truncated: false },
     });
+  });
+
+  it("labels each reference with the category it was searched in", () => {
+    const [reference] = adaptTurathPassages([turathPassage()], { id: "6", title: "كتب السنة" });
+    expect(reference.category).toEqual({ id: "6", title: "كتب السنة" });
   });
 
   it("deduplicates by Turath book ID and internal page, not by printed page", () => {
     const references = adaptTurathPassages([
       turathPassage(),
       turathPassage({ text: "duplicate page", citation: "alternate citation" }),
-      turathPassage({ location: { internalPage: 18, printedPage: 84, volume: "2" }, locator: { bookId: "42", internalPage: 18, printedPage: 84, volume: "2", url: "https://app.turath.io/book/42/18" } }),
-      turathPassage({ book: { id: "43", title: "كتاب آخر" }, locator: { bookId: "43", internalPage: 17, printedPage: 84, volume: "2", url: "https://app.turath.io/book/43/17" } }),
+      turathPassage({ location: { internalPage: 18, printedPage: 84, volume: "2" } }),
+      turathPassage({ book: { id: "43", title: "كتاب آخر" } }),
     ]);
     expect(references).toHaveLength(3);
     expect(references.map((reference) => [reference.bookId, reference.pageLocator?.internalPage])).toEqual([
@@ -126,29 +122,16 @@ describe("adaptTurathPassages", () => {
   });
 
   it("keeps Turath's explicit search rank in best-first order", () => {
-    const later = turathPassage({
-      book: { id: "44", title: "كتاب آخر" },
-      citation: "المرتبة الثانية",
-      locator: { bookId: "44", internalPage: 9, url: "https://app.turath.io/book/44/9" },
-      provenance: { ...turathPassage().provenance!, rank: 1 },
-    });
-    const first = turathPassage({
-      book: { id: "43", title: "كتاب أول" },
-      citation: "المرتبة الأولى",
-      locator: { bookId: "43", internalPage: 8, url: "https://app.turath.io/book/43/8" },
-      provenance: { ...turathPassage().provenance!, rank: 0 },
-    });
+    const later = turathPassage({ book: { id: "44", title: "كتاب آخر" }, citation: "المرتبة الثانية", location: { internalPage: 9 }, rank: 1 });
+    const first = turathPassage({ book: { id: "43", title: "كتاب أول" }, citation: "المرتبة الأولى", location: { internalPage: 8 }, rank: 0 });
 
     expect(adaptTurathPassages([later, first]).map((reference) => reference.citation)).toEqual([
       "المرتبة الأولى", "المرتبة الثانية",
     ]);
   });
 
-  it("falls back to the passage location and keeps printed pages separate from internal page IDs", () => {
-    const [reference] = adaptTurathPassages([turathPassage({
-      location: { internalPage: 501, printedPage: 23 },
-      locator: undefined,
-    })]);
+  it("keeps printed pages separate from internal page IDs", () => {
+    const [reference] = adaptTurathPassages([turathPassage({ location: { internalPage: 501, printedPage: 23 } })]);
     expect(reference.pageLocator).toEqual({ internalPage: 501, printedPage: 23 });
   });
 

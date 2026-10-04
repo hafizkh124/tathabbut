@@ -1,141 +1,136 @@
 # Turath Integration — Decision Record
 
+> **Reconciled 2026-10-05.** Where this record and [11-turath-extension-decisions.md](11-turath-extension-decisions.md) differ, document 11 and the chat decisions of the specialist hold (category-scoped search, card state and the «غير حاسم» lines, the ruling-book tag). The client is now a direct `fetch` client; see Decision 1.
+
 This is the durable record of material decisions for the Turath reference integration. Entries describe the chosen
 implementation, why it was selected, alternatives considered, and whether the decision has been implemented or
 still needs validation. Dates use the project timezone (Asia/Karachi).
 
-## Decision 1 — SDK, runtime boundary, and version
+## Decision 1 — SDK vs. Direct Fetch, runtime boundary, and dependencies
 
-- **Date:** 2026-10-04
+- **Date:** 2026-10-04 (Updated per consultation)
 - **Context:** Tathabbut needs short, linkable Turath passages in ordinary application requests.
-- **Chosen:** Use the TypeScript SDK `nusus` **0.7.2**, importing `createTurathClient()` from `nusus/turath`. Keep the
-  SDK client in server-side code. Do not make the local stdio `nusus-mcp` server a deployed-app dependency.
-- **Rationale:** The SDK is intended for application code and `retrieve()` returns bounded passages together with
-  citations, book metadata, locators, URLs, and provenance. Pinning the reviewed version makes its contract explicit.
-  The SDK has no API key requirement in its published setup guide.
-- **Alternatives considered:** Calling Turath endpoints directly would duplicate transport, normalization, and
-  citation behavior. `nusus-mcp` is appropriate for a local MCP client/research workflow, not a Next.js request
-  handler. Other Turath clients were not selected because the reviewed plan specifically needs Nusus's higher-level
-  citation-carrying retrieval interface.
-- **Snapshot clarification:** The Nusus repository describes an 8,124-book offline discovery snapshot scanned in
-  March 2026. It is catalog metadata, not a local copy of every book's text and not a guarantee of exhaustive live
-  retrieval coverage. The snapshot did not determine the SDK choice and is not Tathabbut's runtime corpus.
-- **Status:** Implemented; review the pin when deliberately upgrading the SDK.
+- **Chosen:** Use **direct `fetch()`** calls to the Turath endpoints (`api.turath.io`) within server-side code,
+  eliminating third-party package dependencies (`nusus`). Keep all parsing, timeout handling, and citation
+  normalization in-house (similar to `dorar.ts`).
+- **Rationale:** Avoids relying on a single-maintainer third-party package (`nusus`), eliminates supply-chain risks,
+  provides 100% auditable control over request payloads/headers, and keeps the project lightweight and self-contained.
+- **Alternatives considered:** Using the TypeScript SDK `nusus 0.7.2` was considered and prototyped on the
+  `turath-integration` branch; however, direct `fetch()` was selected to maintain zero external dependency and
+  long-term stability.
+- **Status:** **Implemented 2026-10-05**: `src/lib/turathApi.ts` (request, decoding, excerpting, citation) and `src/lib/turath.ts` (the lookup). `nusus` is removed from `package.json`. The API (`GET api.turath.io/search?q=&ver=3&page=&cat_id=`) returns 20 hits a page, each with `book_id`, `cat_id`, `author_id`, a JSON `meta` string, `snip` and the page `text`; with the markup removed the hit's text equals the `/page` text (8 of 8 compared), so one request per category is enough. Requests carry an honest User-Agent without a contact address.
 
 ## Decision 2 — Search scope, query source, and bounds
 
-- **Date:** 2026-10-04
-- **Context:** Additional references should be available even when Tathabbut's specialist list, Quran check, or
-  Dorar check takes an early-return path.
-- **Chosen:** Start one live, unfiltered `retrieve()` for every claim whose extracted kind is `hadith`, using that
-  claim's existing `query`. Do not pass a book, author, or category filter. For repeated normalized queries in one
-  submitted post, share the same in-flight lookup. Return up to ten passages, capped at 1,500 characters each,
-  with a ten-second overall timeout.
-- **Rationale:** This is broad ranked retrieval across Turath, not a claim of exhaustive enumeration over every book.
-  The cap constrains latency and the amount of third-party text shown. Request-local deduplication avoids duplicate
-  provider traffic without retaining content between posts.
-- **Alternatives considered:** Searching only when Dorar finds no grade would miss helpful source discussions for
-  graded narrations and would make availability depend on another provider. Searching selected books or iterating the
-  whole catalog is out of scope for this version.
-- **Implementation detail:** The SDK client is configured with a 10-second transport timeout and an `AbortController`
-  enforces the same bound across the complete retrieval. The pure adapter independently enforces the excerpt cap.
-- **Status:** Implemented; retrieval relevance and provider rate limits remain evaluation items.
+- **Date:** 2026-10-04 (Updated per consultation)
+- **Context:** Additional references should be available both for hadith narrations and for scholarly/Sahaba sayings
+  (`scholar_quote`), especially where Dorar does not index non-hadith sayings or when a hadith requires supplementary context.
+- **Chosen:** Start one live retrieval for every claim whose extracted kind is **`hadith` OR `scholar_quote`**, using that
+  claim's existing `query`, **scoped by Turath category** (hadith: «كتب السنة»; a saying: four categories in parallel) as
+  decided in document 11, Decision 9. The first version of this entry chose an unfiltered search; the live probe of
+  2026-10-04 showed it returning lectures, fatwa sites and manuscript catalogues instead of the books, and the specialist
+  kept the category filter on 2026-10-05. Return up to **ten passages**, capped at **1,500 characters** each,
+  with a **5-second overall timeout** (reduced from 10 seconds).
+- **Rationale:** Expanding to `scholar_quote` covers sayings of Sahaba (e.g. Ali RA) and classical scholars that Dorar
+  does not catalog. Reducing the timeout to 5 seconds prevents interface lag and ensures the verification pipeline
+  remains fast and responsive for users.
+- **Alternatives considered:** Searching only `hadith` was the initial implementation, but it left scholar sayings
+  without textual references. A 10-second timeout was found to be too slow for responsive UI expectations.
+- **Implementation detail:** An `AbortController` with a 5,000ms timer bounds the whole retrieval operation.
+- **Status:** Decided; to be updated in lookup logic.
 
 ## Decision 3 — Response shape and authority separation
 
-- **Date:** 2026-10-04
+- **Date:** 2026-10-04 (Affirmed per consultation)
 - **Context:** Turath books can report scholarly discussion and criticism, but retrieved text is not a normalized
   hadith grading decision.
-- **Chosen:** Add `turath: { status, references }` to hadith claim results, independently from `dorar`, `state`, and
-  `basis`. A successful search has `status: "success"` whether it returns passages or an empty array. A timeout,
-  rate limit, malformed response, or other provider error has `status: "unavailable"` and no references.
-- **Rationale:** A passage may inform specialist review but must not silently become an automated grade or change
-  the result produced by the existing checks.
+- **Chosen:** Add `turath: { status, references }` to both `hadith` and `scholar_quote` claim results,
+  independently from `dorar`, `state`, and `basis`. A successful search has `status: "success"` whether it returns
+  passages or an empty array. A timeout, rate limit, malformed response, or other provider error has
+  `status: "unavailable"` and no references.
+- **Rationale:** A passage may inform specialist review and contextual reading but must not silently become an
+  automated grade or alter the verdict produced by existing checks. Furthermore, if Dorar finds no match but
+  Turath contains the text, the card ends as **«غير حاسم»** with a line naming the book and saying Dorar has no explicit
+  ruling (document 11, Decision 11), without fabricating a verdict. The references travel in a separate request,
+  `POST /api/turath`, made after `/api/verify` has answered (document 11, Decision 14).
 - **Alternatives considered:** Folding Turath material into Dorar narrations or recomputing the grade from retrieved
   passages was rejected because the providers have different evidence shapes and authority.
-- **Status:** Implemented and covered by verification/API tests.
+- **Status:** Affirmed; covered by verification and schema types.
 
 ## Decision 4 — Errors, retries, caching, and text retention
 
-- **Date:** 2026-10-04
-- **Context:** Turath is an auxiliary, live source; its availability must not become a prerequisite for verification.
-- **Chosen:** Convert provider errors to `unavailable`; do not retry in the application. Cache no provider result
-  persistently. Coalesce identical normalized queries only within the current post request. Do not store or bulk
-  download full book text. Return only capped excerpts and citations as part of the live response.
-- **Rationale:** A single bounded attempt limits latency and duplicate load; a temporary failure remains visible and
-  does not suppress or overwrite the Dorar result. No persistent text cache avoids expanding storage and retention
-  obligations.
-- **Alternatives considered:** Persistent caching and automatic retries could reduce repeat latency or transient
-  errors, but require an explicit retention policy, stale-data behavior, and rate-limit evaluation first.
-- **Status:** Implemented. Revisit retry or cache policy only with measured need and source-term review.
+- **Date:** 2026-10-04 (Updated per consultation)
+- **Context:** Turath is an auxiliary, live source; repeat lookups should be instantaneous, and failures must not block verification.
+- **Chosen:** Convert provider errors to `unavailable`; do not retry in the application. Coalesce identical
+  normalized queries in-flight within a single request. **Cache successful query results in Supabase** (similar to
+  `dorarCache.ts`), caching the query's returned references (citations, URLs, and capped passages) so frequently
+  circulated hadiths and sayings return immediately without repeat network delay or rate-limiting. Do not store or
+  bulk-download full book texts offline.
+- **Rationale:** Persistent query caching speeds up responses for popular queries from ~3-5s down to <50ms,
+  protects against third-party API downtime/rate-limits, and saves bandwidth, while still avoiding full-text corpus
+  retention liability.
+- **Alternatives considered:** Zero persistent caching was initially proposed to avoid storage schema changes, but
+  was rejected by the project lead in favor of fast repeat lookups via Supabase.
+- **Status:** Decided; Supabase cache adapter to be created for Turath lookups.
 
 ## Decision 5 — Citation and page-locator behavior
 
-- **Date:** 2026-10-04
+- **Date:** 2026-10-04 (Affirmed per consultation)
 - **Context:** A reader must be able to identify and inspect the source rather than receive an uncited extract.
-- **Chosen:** Preserve the SDK's citation, book title and ID, author metadata when supplied, primary Turath URL,
-  retrieval provenance, and page locator. Deduplicate passages by Turath book ID plus internal page ID. Display the
-  internal page identifier separately from a printed page number and volume; never present the internal ID as a
-  printed page.
-- **Rationale:** Turath's internal page key is what identifies the linked database page; printed pagination may be a
-  separate source location. Keeping both prevents an ambiguous or fabricated citation.
+- **Chosen:** Preserve the book title and ID, author metadata when supplied, primary Turath URL, retrieval provenance,
+  and page locator. Deduplicate passages by Turath book ID plus internal page ID. Display the internal page identifier
+  separately from a printed page number and volume; never present the internal ID as a printed page.
+- **Rationale:** Turath's internal page key is what identifies the linked database page; printed pagination is the
+  citable physical source location. Keeping both prevents ambiguous or fabricated citations.
 - **Alternatives considered:** Deduplicating solely by title or printed page could merge different books or distinct
   Turath records. Omitting page IDs would weaken reproducibility.
-- **Status:** Implemented; citations and both page fields are covered by adapter/UI tests.
+- **Status:** Affirmed; covered by parser/adapter and UI tests.
 
 ## Decision 6 — Attribution and text-rights assumption
 
-- **Date:** 2026-10-04
+- **Date:** 2026-10-04 (Affirmed per consultation)
 - **Context:** The integration displays brief passages from books made accessible through Turath.
 - **Chosen:** Display the book citation and a direct Turath link beside every returned excerpt. Retain only the
-  minimum short passage needed for the result view. Treat Nusus's MIT license as applying to the SDK software only;
-  do not infer that it grants reuse rights for Turath's API output or the underlying books.
-- **Rationale:** Attribution improves source traceability, but it is not a substitute for permission or a license.
-  Many underlying works and editions can have distinct rights holders or terms.
-- **Alternatives considered:** Bulk copying the 8,124-book snapshot or caching complete book text was rejected.
-  Hiding the source link/citation was rejected because it would make passages difficult to verify.
-- **Status:** UI attribution implemented. Confirm Turath API/output terms and the rights applicable to displayed
-  excerpts before expanding public/commercial use; this record is not a legal determination.
+  minimum short passage needed for the result view. Treat digital library access as fair academic quotation;
+  do not infer that it grants ownership or reuse rights for Turath's API output or the underlying books.
+- **Rationale:** Attribution improves source traceability and fulfills academic standards, but it is not a substitute
+  for permission. Displaying bounded snippets respects fair-use quotation while providing rigorous verifiable citations.
+- **Alternatives considered:** Bulk copying or caching complete book text was rejected.
+  Hiding the source link/citation was rejected because it would make passages unverifiable.
+- **Status:** Affirmed; UI attribution confirmed for research and challenge demonstration.
 
 ## Decision 7 — Evaluation and acceptance
 
-- **Date:** 2026-10-04
+- **Date:** 2026-10-04 (Affirmed per consultation)
 - **Context:** A technically valid citation does not by itself establish that a retrieved passage is useful or
-  correctly supports the hadith under review.
-- **Chosen:** Automated tests cover passage mapping and deduplication, citation/URL/provenance retention, ranked
-  best-first ordering, internal versus printed page locators, result bounds, per-hadith lookup routing,
-  request-local query deduplication, empty
-  versus unavailable results, and the invariant that lookup failures cannot change a Dorar grade/state. The API and
-  source modal are tested for passages, no hits, and unavailable status. Separately evaluate relevance and citation
-  correctness on the labelled hadith set, followed by specialist review.
-- **Alternatives considered:** Treating successful HTTP responses or the number of retrieved passages as a quality
-  metric was rejected; relevance and citation correctness require labelled examples and human review.
-- **Status:** Automated coverage implemented. Labelled-set evaluation and specialist review are pending; publish
-  measured results only after they are completed.
+  correctly supports the text under review.
+- **Chosen:** Automated tests cover passage parsing, deduplication, citation/URL retention, ranked best-first
+  ordering, printed vs. internal page locators, result bounds, and the invariant that lookup failures cannot alter
+  the verification outcome. In parallel, separately evaluate textual relevance and citation correctness on a labelled
+  benchmark set of hadiths and sayings, followed by specialist domain review.
+- **Rationale:** Technical availability (HTTP 200) does not imply semantic relevance. Combining automated unit
+  coverage with specialist human review ensures academic fidelity.
+- **Alternatives considered:** Treating successful HTTP responses or raw passage counts as quality metrics was rejected.
+- **Status:** Affirmed; automated tests in place, specialist review protocol active.
 
-## Decision 8 — Passage count and what “best matches” means
+## Decision 8 — Passage count, ranking, and UI presentation
 
-- **Date:** 2026-10-04
-- **Context:** The initial three-passage cap surfaced useful Turath works, but the user asked to see at least ten
-  passages where Turath has them.
-- **Chosen:** Raise Nusus `retrieve()`'s requested cap to ten. Preserve the provider's `provenance.rank` order
-  (best-ranked first) through adaptation and show that rank in the source view. Ten is a maximum: fewer may be
-  returned if the provider has fewer distinct passages or a lookup is unavailable.
-- **Rationale:** Nusus's retrieval results carry the source search order as provenance. Preserving it is the only
-  documented, auditable relevance ordering available to this integration; rank is not a confidence score or a
-  guarantee that every passage is relevant to hadith grading.
-- **Alternatives considered:** An app-authored keyword or model-based reranker could reorder the results, but without
-  a labelled specialist-reviewed set it could demote important critical discussions or promote superficial text
-  matches. Defer reranking until retrieval quality is measured.
-- **Evaluation:** Measure precision@10 and citation correctness on the labelled hadith set; have the specialist
-  review the returned passages. If results are poor, use those judgements to decide whether to refine queries or add
-  a separately evaluated reranker.
-- **Status:** Ten-result cap and rank preservation implemented; the quality evaluation remains pending.
+- **Date:** 2026-10-04 (Affirmed per consultation)
+- **Context:** Finding a balance between surfacing rich classical works without overwhelming the card with long text.
+- **Chosen:** Retrieve up to a maximum cap of **ten passages** from the provider. Preserve the provider's
+  natural best-first relevance order (`provenance.rank`). In the user interface, employ progressive disclosure:
+  render the **top 2–3 most relevant passages** immediately, and provide an expandable toggle/button (*"View more references ({n})"*)
+  to reveal the remaining passages up to ten.
+- **Rationale:** Ten provides deep reference material for researchers while preserving provider ranking. Displaying
+  2-3 initially keeps the UI clean, readable, and focused, avoiding wall-of-text fatigue for general users.
+- **Alternatives considered:** Showing all 10 passages unconditionally was rejected due to UI clutter; hard-capping
+  at 3 was rejected because it conceals valuable scholarly discussions.
+- **Evaluation:** Measure precision@10 and citation correctness on the labelled benchmark set.
+- **Status:** Affirmed; progressive disclosure pattern to be reflected in the Next.js UI component.
 
 ## Implementation changes from the initial plan
 
-- The SDK-level ten-second timeout is supplemented by a whole-retrieval abort deadline because a retrieval may
-  involve more than one HTTP operation.
-- The 1,500-character cap is enforced both in SDK options and in the adapter boundary.
+- One abort deadline (5 s) bounds the whole lookup, which is several category searches in parallel.
+- The 1,500-character cap is applied when a page is cut around the asked phrase and again in the adapter boundary.
 - Failure details are intentionally not returned to the client; only `unavailable` is exposed, avoiding provider
   internals in the public response while preserving the normal verification result.

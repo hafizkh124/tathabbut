@@ -3,7 +3,7 @@
 // بالنيات» returned no Bukhari or Muslim in its first ten), while a category filter returned the books. Turath accepts
 // ONE category per search, so a kind with several categories is searched with several parallel requests; the passage
 // is labelled with the category it was found in.
-// Category ids are Turath's own (nusus catalogue, scanned 2026-03-23).
+// Category ids are Turath's own (Turath's category list, read 2026-10-05).
 
 export interface TurathCategory {
   id: string;

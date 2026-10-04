@@ -1,38 +1,34 @@
-import { createTurathClient, type TurathClient } from "nusus/turath";
 import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, type TurathLookupOutcome, type TurathReference } from "./hadithMatch";
 import rulingBookIds from "../data/turathRulingBooks.json";
+import { searchTurath, type TurathSearchOptions, type TurathSearchResult } from "./turathApi";
 import { isSameText } from "./turathMatch";
 import { SCOPES, type TurathLookupKind } from "./turathScope";
 
-export const TURATH_TIMEOUT_MS = 10_000;
+/** One deadline for the whole lookup (specialist's decision, 2026-10-05: 5 s, so the screen never lags on the books). */
+export const TURATH_TIMEOUT_MS = 5_000;
 export const MAX_TURATH_PASSAGES = 10;
-
-const turathClient = createTurathClient({ timeout: TURATH_TIMEOUT_MS });
 
 /** Books that judge hadith (the specialist's list): a passage from one is tagged so the reader reads its wording. */
 const RULING_BOOKS = new Set<string>((rulingBookIds as Array<string | number>).map(String));
 
 const UNAVAILABLE: TurathLookupOutcome = { status: "unavailable", references: [] };
 
+export type TurathSearch = (query: string, options: TurathSearchOptions) => Promise<TurathSearchResult>;
+
 /**
  * A bounded, category-scoped live lookup. One search per category (Turath allows one category per search), all in
  * parallel under one deadline; a passage is kept only when it holds the asked text (isSameText). A timeout or provider
  * error is "evidence unavailable", never a grade; if only some searches fail the result is flagged `partial`.
  */
-export function createTurathLookup(client: Pick<TurathClient, "retrieve"> = turathClient) {
+export function createTurathLookup(search: TurathSearch = searchTurath) {
   return async (query: string, kind: TurathLookupKind): Promise<TurathLookupOutcome> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TURATH_TIMEOUT_MS);
     try {
       const searches = await Promise.allSettled(
         SCOPES[kind].map(async (category) => {
-          const context = await client.retrieve(query, {
-            maxPassages: MAX_TURATH_PASSAGES,
-            maxCharsPerPassage: MAX_TURATH_PASSAGE_CHARS,
-            scope: { categoryIds: [category.id] },
-            signal: controller.signal,
-          });
-          return adaptTurathPassages(context.passages, category).filter((r) => isSameText(query, r.excerpt));
+          const found = await search(query, { categoryId: category.id, maxPassages: MAX_TURATH_PASSAGES, maxChars: MAX_TURATH_PASSAGE_CHARS, signal: controller.signal });
+          return adaptTurathPassages(found.passages, category).filter((r) => isSameText(query, r.excerpt));
         }),
       );
 

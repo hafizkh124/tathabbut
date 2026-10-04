@@ -1,11 +1,10 @@
 // From Dorar's answer (always 15 results, even for invented text) keep only the narrations that are this text,
 // grade each muhaddith's verdict with the specialist's rules, and summarize.
 import { matnOverlap, matnTokens, normalizeArabic } from "./arabic";
-import type { Passage, PassageProvenance } from "nusus";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
 import { getBookTier } from "./hadithRanking";
-import { cleanTurathText } from "./turathText";
+import type { TurathPassage } from "./turathApi";
 
 export const MAX_TURATH_PASSAGE_CHARS = 1_500;
 
@@ -19,7 +18,8 @@ export interface TurathReference {
   /** Keep Turath's internal page separate from a printed page number. */
   pageLocator?: { internalPage?: number; printedPage?: number; volume?: string };
   url: string;
-  provenance?: PassageProvenance;
+  /** Turath's own order: 0 = the best match of its category */
+  provenance?: { rank: number; totalMatches: number; truncated: boolean };
   /** The Turath category the passage was searched in (the book's type shown to the reader). */
   category?: { id: string; title: string };
   /** The book is one that judges hadith (from the specialist's list): the reader is told to read its wording. */
@@ -31,35 +31,31 @@ export type TurathLookupOutcome =
   | { status: "success"; references: TurathReference[]; partial?: true }
   | { status: "unavailable"; references: [] };
 
-/** Purely adapts SDK passages for our response/UI; it never turns a source into a hadith grade. */
-export function adaptTurathPassages(passages: Passage[], category?: { id: string; title: string }): TurathReference[] {
+/** Purely adapts Turath passages for our response/UI; it never turns a source into a hadith grade. */
+export function adaptTurathPassages(passages: TurathPassage[], category?: { id: string; title: string }): TurathReference[] {
   const seenPages = new Set<string>();
   const references: TurathReference[] = [];
-  const rankedPassages = passages
-    .map((passage, index) => ({ passage, index }))
-    .sort((a, b) => (a.passage.provenance?.rank ?? a.index) - (b.passage.provenance?.rank ?? b.index) || a.index - b.index);
+  const ranked = passages.map((passage, index) => ({ passage, index })).sort((a, b) => a.passage.rank - b.passage.rank || a.index - b.index);
 
-  for (const { passage } of rankedPassages) {
-    const bookId = passage.locator?.bookId ?? passage.book.id;
-    const internalPage = passage.locator?.internalPage ?? passage.location.internalPage;
+  for (const { passage } of ranked) {
+    const bookId = passage.book.id;
+    const { internalPage, printedPage, volume } = passage.location;
     if (internalPage !== undefined) {
       const key = `${bookId}:${internalPage}`;
       if (seenPages.has(key)) continue;
       seenPages.add(key);
     }
 
-    const printedPage = passage.locator?.printedPage ?? passage.location.printedPage;
-    const volume = passage.locator?.volume ?? passage.location.volume;
-    const hasPageLocator = internalPage !== undefined || printedPage !== undefined || volume !== undefined;
-    const pageLocator = hasPageLocator
-      ? {
-          ...(internalPage !== undefined ? { internalPage } : {}),
-          ...(printedPage !== undefined ? { printedPage } : {}),
-          ...(volume !== undefined ? { volume } : {}),
-        }
-      : undefined;
-    // retrieve() is already bounded; enforce the UI/API cap at the adapter boundary too.
-    const excerpt = cleanTurathText(passage.text).slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[\uD800-\uDBFF]$/, "");
+    const pageLocator =
+      internalPage !== undefined || printedPage !== undefined || volume !== undefined
+        ? {
+            ...(internalPage !== undefined ? { internalPage } : {}),
+            ...(printedPage !== undefined ? { printedPage } : {}),
+            ...(volume !== undefined ? { volume } : {}),
+          }
+        : undefined;
+    // the lookup is already bounded; the cap is enforced again at this boundary
+    const excerpt = passage.text.slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[�-�]$/, "");
 
     references.push({
       excerpt,
@@ -68,8 +64,8 @@ export function adaptTurathPassages(passages: Passage[], category?: { id: string
       ...(passage.author ? { author: { ...passage.author } } : {}),
       bookId,
       ...(pageLocator ? { pageLocator } : {}),
-      url: passage.url || passage.locator?.url || "https://app.turath.io/",
-      ...(passage.provenance ? { provenance: passage.provenance } : {}),
+      url: passage.url || "https://app.turath.io/",
+      provenance: { rank: passage.rank, totalMatches: passage.totalMatches, truncated: passage.truncated },
       ...(category ? { category: { ...category } } : {}),
     });
   }
