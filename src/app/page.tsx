@@ -13,6 +13,7 @@ import { LogoMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
+import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
   | { name: "input" }
@@ -39,6 +40,18 @@ export default function Home() {
   }, []);
   useEffect(() => () => keepPreview(null), [keepPreview]);
 
+  /** The books are asked after the cards are on screen; each answer lands on its own claim, and only if the run is still current. */
+  const askTurath = useCallback((id: number, claims: ClaimResult[]) => {
+    claims.forEach((c, i) => {
+      const kind = turathKindOf(c);
+      if (!kind) return;
+      fetchTurath(c, kind).then(({ turath, patch }) => {
+        if (id !== run.current) return;
+        setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? applyTurath(x, turath, patch) : x)) } : p));
+      });
+    });
+  }, []);
+
   const verify = useCallback(
     async (value: string) => {
       const submitted = value.trim();
@@ -62,12 +75,14 @@ export default function Home() {
           setPhase({ name: "error", kind: res.status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read" });
           return;
         }
-        setPhase({ name: "results", claims: data.claims ?? [] });
+        const claims = (data.claims ?? []).map((c) => (turathKindOf(c) ? { ...c, turath: { status: "loading" as const } } : c));
+        setPhase({ name: "results", claims });
+        askTurath(id, claims);
       } catch {
         if (id === run.current) setPhase({ name: "error", kind: "network" });
       }
     },
-    [keepPreview],
+    [keepPreview, askTurath],
   );
 
   /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. */

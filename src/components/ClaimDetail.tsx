@@ -10,6 +10,7 @@ import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
+import { TurathBasisLine, TurathBox } from "./TurathBox";
 
 interface Via {
   label: "via.dorar" | "via.shamela" | "via.quranCom" | "via.quranpedia";
@@ -284,7 +285,9 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
   };
 
   const message =
-    tone === "notFound" ? (
+    r.basis === "turath" ? (
+      <TurathBasisLine r={r} />
+    ) : tone === "notFound" ? (
       <div className="space-y-2">
         <p className="text-base">{t("notfound.body")}</p>
         {r.claim.citedSource && (
@@ -330,6 +333,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
       {r.claim.kind === "scholar_quote" && r.dorar && <p className="text-[13px] text-muted">{t("note.scholar")}</p>}
 
       <SourceBox r={r} />
+
+      <TurathBox r={r} />
 
       <div className="flex gap-2.5 pt-1">
         {tone === "notFound" ? (

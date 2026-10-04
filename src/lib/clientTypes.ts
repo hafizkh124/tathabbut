@@ -1,11 +1,18 @@
 // What /api/verify sends back, as the screens read it. Types only: nothing from the server-side checks is bundled.
 import type { GradeDisplay } from "./gradeMap";
-import type { GradedNarration } from "./hadithMatch";
+import type { GradedNarration, TurathLookupOutcome } from "./hadithMatch";
+import type { TurathPatchReason } from "./turathFallback";
 import type { VerifiedClaim } from "./verify";
 
 export type NarrationView = GradedNarration & { display?: GradeDisplay };
 
+/** What the screen knows of the books of Turath for a claim: asked for after /api/verify, so first «loading». */
+export type TurathView = { status: "loading" } | TurathLookupOutcome;
+
 export type ClaimResult = Omit<VerifiedClaim, "dorar"> & {
+  turath?: TurathView;
+  /** set when Turath changed the claim's state: why the card says «غير حاسم» */
+  turathReason?: TurathPatchReason;
   dorar?: Omit<NonNullable<VerifiedClaim["dorar"]>, "narrations" | "weakVariants"> & {
     narrations: NarrationView[];
     weakVariants?: NarrationView[];

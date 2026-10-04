@@ -5,6 +5,7 @@ import type { Passage, PassageProvenance } from "nusus";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
 import { getBookTier } from "./hadithRanking";
+import { cleanTurathText } from "./turathText";
 
 export const MAX_TURATH_PASSAGE_CHARS = 1_500;
 
@@ -58,7 +59,7 @@ export function adaptTurathPassages(passages: Passage[], category?: { id: string
         }
       : undefined;
     // retrieve() is already bounded; enforce the UI/API cap at the adapter boundary too.
-    const excerpt = passage.text.slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[\uD800-\uDBFF]$/, "");
+    const excerpt = cleanTurathText(passage.text).slice(0, MAX_TURATH_PASSAGE_CHARS).replace(/[\uD800-\uDBFF]$/, "");
 
     references.push({
       excerpt,
