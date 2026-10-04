@@ -6,7 +6,7 @@ create extension if not exists pg_trgm;
 -- pgvector and embedding columns are added in a later migration, once the embedding model
 -- (and therefore its dimension) is confirmed on the build day.
 
--- Quran text (Tanzil / King Fahd Complex), one row per ayah.
+-- Quran text (Hafs mushaf text from quranpedia dumps; ur/en translations in quran_translations), one row per ayah.
 create table if not exists quran_verses (
   id            serial primary key,
   surah         int  not null,

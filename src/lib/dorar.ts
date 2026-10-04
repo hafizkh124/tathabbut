@@ -1,19 +1,20 @@
 // الدرر السنية (dorar.net) client. Every field is reported exactly as Dorar states it —
 // the narrator, the muhaddith, the source and the muhaddith's verdict. Tathabbut never
-// writes a verdict of its own; classification of these verdicts happens later via grade_map.
+// writes a verdict of its own; classification of these verdicts is src/lib/gradeMap.ts.
 // Parsing is ported from Al-Ulama Easy Editor (electron/agent/adapters/dorar.ts, AGPL-3.0).
 
 const ENDPOINT = "https://dorar.net/dorar_api.json";
-const TIMEOUT_MS = 12_000;
+const TIMEOUT_MS = 8_000;
 
-/** dorar.net sits behind Cloudflare; a bare fetch without browser headers is rejected. */
-const BROWSER_HEADERS: Record<string, string> = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept: "application/json, text/plain, */*",
+/** We identify ourselves honestly. Checked 2026-10-03: the endpoint answers this UA without any browser disguise. */
+const HEADERS: Record<string, string> = {
+  "User-Agent": "Tathabbut/0.1 (Islamic AI Challenge 2026; hafizkh124@gmail.com)",
   "Accept-Language": "ar,en;q=0.9",
-  Referer: "https://dorar.net/",
 };
+
+/** The endpoint answered 500 once on a first burst of calls and 200 on the retry. */
+const RETRIES = 1;
+const RETRY_DELAY_MS = 1_500;
 
 export interface DorarResult {
   /** 1-based position in Dorar's answer */
@@ -67,18 +68,43 @@ export function parseDorarHtml(html: string, limit = 15): DorarResult[] {
   return out;
 }
 
-export async function searchDorar(text: string, limit = 15): Promise<DorarLookup> {
+/** Dorar book ids (checked 2026-10-04): s[]=6216 returns only Sahih al-Bukhari, s[]=3088 only Sahih Muslim. */
+export const SAHIHAYN_BOOKS = ["6216", "3088"];
+
+export async function searchDorar(text: string, limit = 15, opts: { books?: string[] } = {}): Promise<DorarLookup> {
   const query = text.trim();
   if (!query) return { ok: false, error: "empty" };
+  const extra = (opts.books ?? []).filter((b) => /^\d{1,6}$/.test(b)).map((b) => `&s[]=${b}`).join("");
 
+  let last: DorarLookup = { ok: false, error: "network" };
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+    last = await fetchOnce(query, limit, extra);
+    // Only transient failures are worth another call; an answer (even an empty one) is final.
+    const transient =
+      !last.ok && (last.error === "network" || last.error === "timeout" || (last.error === "http" && Number(last.detail) >= 500));
+    if (!transient) return last;
+  }
+  return last;
+}
+
+async function fetchOnce(query: string, limit: number, extra = ""): Promise<DorarLookup> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${ENDPOINT}?skey=${encodeURIComponent(query)}`, {
-      headers: BROWSER_HEADERS,
-      signal: controller.signal,
-      cache: "no-store",
-    });
+    // dorar.net answers 403 to Vercel's IPs. When a relay is configured the call goes through it instead
+    // (the Cloudflare Worker in worker/dorar-relay.mjs); it hands back Dorar's own JSON, so everything below is unchanged.
+    const relayUrl = process.env.DORAR_RELAY_URL?.replace(/\/+$/, "");
+    const relayKey = process.env.DORAR_RELAY_KEY;
+    const useRelay = Boolean(relayUrl && relayKey);
+    const res = await fetch(
+      (useRelay ? `${relayUrl}/dorar?skey=` : `${ENDPOINT}?skey=`) + encodeURIComponent(query) + extra,
+      {
+        headers: useRelay ? { "x-relay-key": relayKey as string } : HEADERS,
+        signal: controller.signal,
+        cache: "no-store",
+      },
+    );
     if (!res.ok) return { ok: false, error: "http", detail: String(res.status) };
     const data = (await res.json()) as { ahadith?: { result?: string } };
     const results = parseDorarHtml(data?.ahadith?.result ?? "", limit);

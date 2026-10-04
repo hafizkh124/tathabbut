@@ -1,0 +1,11 @@
+name = "tathabbut-dorar-relay"
+main = "dorar-relay.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Run the Worker near dorar.net's origin: from some Cloudflare data centres (Virginia, Mumbai) dorar.net's own
+# firewall answers 403 "Attention Required", from others it answers 200.
+[placement]
+host = "dorar.net:443"
+
+# The shared key is a secret, never written here:  npx wrangler secret put DORAR_RELAY_KEY
