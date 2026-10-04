@@ -155,3 +155,45 @@ describe("verifyClaims", () => {
     expect(r.map((x) => x.state)).toEqual([STATES.fatwa, STATES.notFound, STATES.fatwa]);
   });
 });
+
+describe("verifyClaim — «هل تقصد؟» candidates", () => {
+  const v8_46: VerseHit = {
+    surah: 8,
+    ayah: 46,
+    surah_name_ar: "سورة الأنفال",
+    text_uthmani: "وَأَطِيعُوا اللَّهَ وَرَسُولَهُ وَلَا تَنَازَعُوا فَتَفْشَلُوا وَتَذْهَبَ رِيحُكُمْ ۖ وَاصْبِرُوا ۚ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ",
+    text_clean: "واطيعوا الله ورسوله ولا تنازعوا فتفشلوا وتذهب ريحكم واصبروا ان الله مع الصابرين",
+    score: 0.7,
+  };
+  const farAway: VerseHit = { surah: 1, ayah: 2, surah_name_ar: "سورة الفاتحة", text_uthmani: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", text_clean: "الحمد لله رب العالمين", score: 0.55 };
+
+  it("a phrase found in two verses offers both, the better-scored first", async () => {
+    const d = deps({ matchVerses: vi.fn(async () => [v2_153, v8_46]) });
+    const r = await verifyClaim(arabic("quran", "إن الله مع الصابرين"), d);
+    expect(r.state).toBe(STATES.verseOk);
+    expect(r.verse?.ayah).toBe(153);
+    expect(r.verse?.candidates?.map((c) => `${c.surah}:${c.ayah}`)).toEqual(["2:153", "8:46"]);
+  });
+
+  it("a misquote ranks the verse it is closest to first, and drops verses that are not close", async () => {
+    const d = deps({ matchVerses: vi.fn(async () => [farAway, v8_46, v2_153]) });
+    const r = await verifyClaim(arabic("quran", "إن الله مع الصابرون"), d);
+    expect(r.state).toBe(STATES.verseWrong);
+    expect(r.verse?.candidates?.some((c) => c.surah === 1)).toBe(false);
+    expect(r.verse?.candidates?.length).toBe(2);
+  });
+
+  it("a verse that shares only half the words is not offered next to an exact one", async () => {
+    const half: VerseHit = { surah: 2, ayah: 249, surah_name_ar: "سورة البقرة", text_uthmani: "إِنَّ اللَّهَ مُبْتَلِيكُمْ بِنَهَرٍ", text_clean: "ان الله مبتليكم بنهر", score: 0.6 };
+    const d = deps({ matchVerses: vi.fn(async () => [v2_153, half]) });
+    const r = await verifyClaim(arabic("quran", "إن الله مع الصابرين"), d);
+    expect(r.state).toBe(STATES.verseOk);
+    expect(r.verse?.candidates).toBeUndefined();
+  });
+
+  it("one verse alone has no candidate list", async () => {
+    const d = deps({ matchVerses: vi.fn(async () => [v2_153]) });
+    const r = await verifyClaim(arabic("quran", "إن الله مع الصابرين"), d);
+    expect(r.verse?.candidates).toBeUndefined();
+  });
+});

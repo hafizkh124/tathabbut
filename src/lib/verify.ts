@@ -9,9 +9,9 @@ import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummar
 import type { LookupOutcome } from "./lookup";
 import { compareWithVerse, type VerseHit, type WordingCheck } from "./quranCheck";
 
-import { STATES, type State } from "./states";
+import { STATES, stateOfVerse, type State } from "./states";
 
-export { STATES };
+export { STATES, stateOfVerse };
 export type { State };
 
 export interface SayingHit {
@@ -35,12 +35,22 @@ export interface ExternalUrls {
   shamela?: string;
 }
 
+/** One verse as the user sees it: where it is, its text, how the quote compares, and where to read it. */
+export interface VerseView {
+  surah: number;
+  ayah: number;
+  surahName: string;
+  text: string;
+  wording?: WordingCheck;
+  externalUrls?: { quranCom: string; quranpedia: string };
+}
+
 export interface VerifiedClaim {
   claim: Claim;
   state: State;
   /** where the state comes from */
   basis: "specialist-list" | "quran" | "dorar" | "none" | "kind";
-  verse?: { surah: number; ayah: number; surahName: string; text: string; wording?: WordingCheck; externalUrls?: { quranCom: string; quranpedia: string } };
+  verse?: VerseView & { candidates?: VerseView[] };
   saying?: SayingHit & { externalUrls?: { dorar: string; shamela: string } };
   dorar?: { narrations: GradedNarration[]; summary: GradeSummary; origin?: string; externalUrls?: { dorar: string; shamela: string } };
   notes: string[];
@@ -60,39 +70,47 @@ const MAX_VERSE_DISTANCE = 0.5;
 
 const hasArabic = (s: string) => /[ء-ي]/.test(s);
 
-function verseResult(claim: Claim, v: VerseHit, wording: WordingCheck | undefined, notes: string[]): VerifiedClaim {
-  const state = !wording ? STATES.verseTranslated : wording.exact ? STATES.verseOk : STATES.verseWrong;
+function verseView(v: VerseHit, wording: WordingCheck | undefined): VerseView {
+  return {
+    surah: v.surah,
+    ayah: v.ayah,
+    surahName: v.surah_name_ar,
+    text: v.text_uthmani.replace(/﻿/g, ""),
+    wording,
+    externalUrls: {
+      quranCom: `https://quran.com/${v.surah}/${v.ayah}`,
+      quranpedia: `https://quranpedia.net/quran/${v.surah}:${v.ayah}`,
+    },
+  };
+}
+
+function verseResult(claim: Claim, v: VerseHit, wording: WordingCheck | undefined, notes: string[], candidates?: VerseView[]): VerifiedClaim {
   return {
     claim,
-    state,
+    state: stateOfVerse(wording),
     basis: "quran",
-    verse: {
-      surah: v.surah,
-      ayah: v.ayah,
-      surahName: v.surah_name_ar,
-      text: v.text_uthmani.replace(/﻿/g, ""),
-      wording,
-      externalUrls: {
-        quranCom: `https://quran.com/${v.surah}/${v.ayah}`,
-        quranpedia: `https://quranpedia.net/quran/${v.surah}:${v.ayah}`,
-      },
-    },
+    verse: { ...verseView(v, wording), ...(candidates && candidates.length > 1 ? { candidates } : {}) },
     notes,
   };
 }
 
-/** The best verse for a quote, checked word by word; null when no verse is close enough to be "this verse". */
+/** At most this many «هل تقصد؟» choices are offered, and none that fits clearly worse than the best one
+ *  (live case 2026-10-04: «إن الله مع الصابرون» also drew a verse that shares only two of its four words). */
+const MAX_CANDIDATES = 3;
+const CANDIDATE_MARGIN = 0.2;
+
+/** The best verse for a quote, checked word by word; null when no verse is close enough to be "this verse".
+ *  A phrase that sits in several verses (or fits one verse only roughly) gives the user the near ones to choose from. */
 async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): Promise<VerifiedClaim | null> {
   const quoted = claim.arabicSpan;
   if (quoted && !claim.queryIsTranslation) {
     const hits = (await deps.matchVerses(quoted)).filter((h) => h.score >= minScore);
-    let best: { v: VerseHit; w: WordingCheck } | null = null;
-    for (const v of hits) {
-      const w = compareWithVerse(quoted, v);
-      if (!best || w.distance < best.w.distance) best = { v, w };
-      if (w.exact) break;
-    }
-    if (best && best.w.distance <= MAX_VERSE_DISTANCE) return verseResult(claim, best.v, best.w, []);
+    const ranked = hits
+      .map((v) => ({ v, w: compareWithVerse(quoted, v) }))
+      .filter((r) => r.w.distance <= MAX_VERSE_DISTANCE)
+      .sort((a, b) => a.w.distance - b.w.distance || b.v.score - a.v.score);
+    ranked.splice(0, ranked.length, ...ranked.filter((r) => r.w.distance <= ranked[0].w.distance + CANDIDATE_MARGIN).slice(0, MAX_CANDIDATES));
+    if (ranked.length) return verseResult(claim, ranked[0].v, ranked[0].w, [], ranked.map((r) => verseView(r.v, r.w)));
     return null;
   }
   // An Urdu/English rendering of a verse: we can show the verse, never judge the wording.

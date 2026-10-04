@@ -13,3 +13,6 @@ export const STATES = {
   fatwa: "فتوى أو حالة شخصية — إحالة",
 } as const;
 export type State = (typeof STATES)[keyof typeof STATES] | string; // + the specialist's own statuses from circulating_sayings
+
+/** The state of a quoted verse from how the quote compares with it (no comparison = a translated text). */
+export const stateOfVerse = (wording: { exact: boolean } | undefined) => (!wording ? STATES.verseTranslated : wording.exact ? STATES.verseOk : STATES.verseWrong);

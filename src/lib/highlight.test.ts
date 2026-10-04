@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { segmentPost } from "./highlight";
+import { markWords, segmentPost } from "./highlight";
 
 const POST = "السلام عليكم. قال تعالى: إن الله مع الصابرين. وقال النبي: اطلبوا العلم ولو بالصين. انشرها";
 
@@ -33,5 +33,19 @@ describe("segmentPost", () => {
     const post = "إن الله مع الصابرين ... إن الله مع الصابرين";
     const { segments } = segmentPost(post, [{ textAsWritten: "إن الله مع الصابرين" }, { textAsWritten: "إن الله مع الصابرين" }]);
     expect(segments.filter((s) => s.claim !== null).map((s) => s.claim)).toEqual([0, 1]);
+  });
+});
+
+describe("markWords", () => {
+  it("flags the uncertain words and keeps every character", () => {
+    const pieces = markWords("إن الله مع الصابرون ... الصابرون", ["الصابرون"]);
+    expect(pieces.map((p) => p.text).join("")).toBe("إن الله مع الصابرون ... الصابرون");
+    expect(pieces.filter((p) => p.flagged).length).toBe(2);
+  });
+
+  it("no words, or words not in the text, flag nothing; special characters are safe", () => {
+    expect(markWords("نص", [])).toEqual([{ text: "نص", flagged: false }]);
+    expect(markWords("نص (1)", ["(1)"]).some((p) => p.flagged)).toBe(true);
+    expect(markWords("نص", ["غير"]).some((p) => p.flagged)).toBe(false);
   });
 });

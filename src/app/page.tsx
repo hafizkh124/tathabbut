@@ -1,17 +1,26 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorView, type ErrorKind } from "@/components/ErrorView";
 import { Header } from "@/components/Header";
 import { InputPanel } from "@/components/InputPanel";
 import { LoadingView } from "@/components/LoadingView";
 import { OriginTrackerDrawer } from "@/components/OriginTrackerDrawer";
 import { ResultsView } from "@/components/ResultsView";
+import { TextConfirm } from "@/components/TextConfirm";
 import { Button } from "@/components/ui/Button";
+import { LogoMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
+import { prepareImage } from "@/lib/image";
 
-type Phase = { name: "input" } | { name: "loading" } | { name: "results"; claims: ClaimResult[] } | { name: "error"; kind: ErrorKind };
+type Phase =
+  | { name: "input" }
+  | { name: "reading" }
+  | { name: "confirm"; text: string; uncertain: string[]; previewUrl: string }
+  | { name: "loading" }
+  | { name: "results"; claims: ClaimResult[] }
+  | { name: "error"; kind: ErrorKind };
 
 export default function Home() {
   const { t } = useI18n();
@@ -21,38 +30,95 @@ export default function Home() {
   const [selected, setSelected] = useState(0);
   const [originQuery, setOriginQuery] = useState<string | null>(null);
   const run = useRef(0);
+  const preview = useRef<string | null>(null);
 
-  const verify = useCallback(async (value: string) => {
-    const submitted = value.trim();
-    if (!submitted) return;
-    const id = ++run.current;
-    setPost(submitted);
-    setSelected(0);
-    setPhase({ name: "loading" });
-    window.scrollTo({ top: 0 });
+  // the picture's object URL is released when it is replaced and when the page closes
+  const keepPreview = useCallback((url: string | null) => {
+    if (preview.current) URL.revokeObjectURL(preview.current);
+    preview.current = url;
+  }, []);
+  useEffect(() => () => keepPreview(null), [keepPreview]);
 
-    try {
-      const res = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: submitted }),
-      });
-      const data = (await res.json()) as VerifyResponse;
-      if (id !== run.current) return;
-      if (!res.ok) {
-        setPhase({ name: "error", kind: res.status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read" });
+  const verify = useCallback(
+    async (value: string) => {
+      const submitted = value.trim();
+      if (!submitted) return;
+      const id = ++run.current;
+      keepPreview(null);
+      setPost(submitted);
+      setSelected(0);
+      setPhase({ name: "loading" });
+      window.scrollTo({ top: 0 });
+
+      try {
+        const res = await fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: submitted }),
+        });
+        const data = (await res.json()) as VerifyResponse;
+        if (id !== run.current) return;
+        if (!res.ok) {
+          setPhase({ name: "error", kind: res.status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read" });
+          return;
+        }
+        setPhase({ name: "results", claims: data.claims ?? [] });
+      } catch {
+        if (id === run.current) setPhase({ name: "error", kind: "network" });
+      }
+    },
+    [keepPreview],
+  );
+
+  /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. */
+  const readPicture = useCallback(
+    async (file: File) => {
+      const id = ++run.current;
+      setPhase({ name: "reading" });
+      window.scrollTo({ top: 0 });
+      let prepared;
+      try {
+        prepared = await prepareImage(file);
+      } catch {
+        if (id === run.current) setPhase({ name: "error", kind: "badImage" });
         return;
       }
-      setPhase({ name: "results", claims: data.claims ?? [] });
-    } catch {
-      if (id === run.current) setPhase({ name: "error", kind: "network" });
-    }
-  }, []);
+      try {
+        const res = await fetch("/api/ocr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: prepared.data, mimeType: prepared.mimeType }),
+        });
+        const data = (await res.json()) as { text?: string; uncertain?: string[] };
+        if (id !== run.current) {
+          URL.revokeObjectURL(prepared.previewUrl);
+          return;
+        }
+        if (!res.ok) {
+          URL.revokeObjectURL(prepared.previewUrl);
+          setPhase({ name: "error", kind: res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
+          return;
+        }
+        if (!data.text?.trim()) {
+          URL.revokeObjectURL(prepared.previewUrl);
+          setPhase({ name: "error", kind: "noText" });
+          return;
+        }
+        keepPreview(prepared.previewUrl);
+        setPhase({ name: "confirm", text: data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
+      } catch {
+        URL.revokeObjectURL(prepared.previewUrl);
+        if (id === run.current) setPhase({ name: "error", kind: "network" });
+      }
+    },
+    [keepPreview],
+  );
 
   const toInput = useCallback(() => {
     run.current++;
+    keepPreview(null);
     setPhase({ name: "input" });
-  }, []);
+  }, [keepPreview]);
   const toNew = useCallback(() => {
     setText("");
     toInput();
@@ -64,7 +130,28 @@ export default function Home() {
       <Header onHome={toNew} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
-        {phase.name === "input" && <InputPanel value={text} onChange={setText} onSubmit={() => verify(text)} />}
+        {phase.name === "input" && <InputPanel value={text} onChange={setText} onSubmit={() => verify(text)} onImage={readPicture} />}
+
+        {phase.name === "reading" && (
+          <div className="flex flex-col items-center gap-3 py-16" role="status" aria-live="polite">
+            <LogoMark size={112} motion="loading" label={t("ocr.reading")} />
+            <p className="text-lg font-semibold text-brand-ink">{t("ocr.reading")}</p>
+          </div>
+        )}
+
+        {phase.name === "confirm" && (
+          <TextConfirm
+            key={phase.previewUrl}
+            text={phase.text}
+            uncertain={phase.uncertain}
+            previewUrl={phase.previewUrl}
+            onConfirm={(confirmed) => {
+              setText(confirmed);
+              verify(confirmed);
+            }}
+            onBack={toInput}
+          />
+        )}
 
         {phase.name === "loading" && <LoadingView text={post} />}
 

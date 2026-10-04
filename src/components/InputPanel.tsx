@@ -1,5 +1,5 @@
 "use client";
-import React, { useId } from "react";
+import React, { useId, useRef } from "react";
 import { useI18n } from "@/lib/i18n/i18n";
 import type { Key } from "@/lib/i18n/dict";
 import { Button } from "./ui/Button";
@@ -22,13 +22,16 @@ interface Props {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  /** a picture was chosen (screenshot or photo of a message) */
+  onImage: (file: File) => void;
   busy?: boolean;
 }
 
-export function InputPanel({ value, onChange, onSubmit, busy }: Props) {
+export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) {
   const { t, num, dir } = useI18n();
   const id = useId();
   const tooLong = value.length > MAX_TEXT;
+  const picker = useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-4">
@@ -62,10 +65,21 @@ export function InputPanel({ value, onChange, onSubmit, busy }: Props) {
       </div>
 
       <div className="flex gap-2.5">
-        <Button variant="secondary" full disabled title={t("home.soon")}>
+        <input
+          ref={picker}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          tabIndex={-1}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = ""; // the same picture can be chosen again
+            if (file) onImage(file);
+          }}
+        />
+        <Button variant="secondary" full disabled={busy} onClick={() => picker.current?.click()}>
           <span>{t("home.image")}</span>
           <Icon name="image" size={18} />
-          <Soon label={t("home.soon")} />
         </Button>
         <Button variant="secondary" full disabled title={t("home.soon")}>
           <span>{t("home.voice")}</span>

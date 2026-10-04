@@ -5,6 +5,8 @@ import { dorarSearchUrl } from "@/lib/dorarLink";
 import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah } from "@/lib/shareText";
+import { pickedIndex } from "@/lib/candidates";
+import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
@@ -228,9 +230,11 @@ interface Props {
   total: number;
   onOrigin: (query: string) => void;
   onEdit: () => void;
+  /** the user chose another verse of «هل تقصد؟» */
+  onPick: (candidate: number) => void;
 }
 
-export function ClaimDetail({ result: r, index, total, onOrigin, onEdit }: Props) {
+export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick }: Props) {
   const { t, num, locale } = useI18n();
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState<string | null>(null);
@@ -272,6 +276,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit }: Props
 
   return (
     <section aria-label={t("result.title")} className="space-y-3">
+      {r.verse?.candidates && r.verse.candidates.length > 1 && <CandidateList candidates={r.verse.candidates} picked={pickedIndex(r)} onPick={onPick} />}
+
       <div className="flex items-center justify-between gap-3">
         <StateBadge state={r.state} size="lg" long />
         {total > 1 && <span className="text-[13px] text-muted">{t("result.of", { i: num(index + 1), n: num(total) })}</span>}

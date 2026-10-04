@@ -58,3 +58,21 @@ export function segmentPost(post: string, claims: ClaimLike[]): { segments: Segm
   if (cursor < post.length) segments.push({ text: post.slice(cursor), claim: null });
   return { segments, placed };
 }
+
+export interface Piece {
+  text: string;
+  /** true for a word the reading was unsure of */
+  flagged: boolean;
+}
+
+/** Cuts a text around the given words (each marked wherever it occurs), keeping every character. */
+export function markWords(text: string, words: string[]): Piece[] {
+  const list = Array.from(new Set(words.map((w) => w.trim()).filter(Boolean))).sort((a, b) => b.length - a.length);
+  if (!list.length) return [{ text, flagged: false }];
+  const escaped = list.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`(${escaped.join("|")})`, "g");
+  return text
+    .split(re)
+    .filter((t) => t !== "")
+    .map((t) => ({ text: t, flagged: list.includes(t) }));
+}

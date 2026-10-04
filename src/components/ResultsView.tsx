@@ -1,6 +1,7 @@
 "use client";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { ClaimResult } from "@/lib/clientTypes";
+import { applyPick } from "@/lib/candidates";
 import { segmentPost } from "@/lib/highlight";
 import { styleOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
@@ -57,8 +58,11 @@ function ClaimMark({ index, state, selected, text, arabic, onClick }: { index: n
   );
 }
 
-export function ResultsView({ post, claims, selected, onSelect, onOrigin, onEdit, onNew }: Props) {
+export function ResultsView({ post, claims: found, selected, onSelect, onOrigin, onEdit, onNew }: Props) {
   const { t, count, num } = useI18n();
+  // the verse the user chose for each claim that fits several («هل تقصد؟»); the result follows the choice
+  const [picks, setPicks] = useState<Record<number, number>>({});
+  const claims = useMemo(() => found.map((c, i) => applyPick(c, picks[i])), [found, picks]);
   const { segments, placed } = useMemo(() => segmentPost(post, claims.map((c) => ({ textAsWritten: c.claim.textAsWritten, arabicSpan: c.claim.arabicSpan, query: c.claim.query }))), [post, claims]);
   const summary = useMemo(() => summarize(claims), [claims]);
   const current = claims[selected] ?? claims[0];
@@ -135,7 +139,7 @@ export function ResultsView({ post, claims, selected, onSelect, onOrigin, onEdit
             style={{ boxShadow: "var(--shadow-sheet)" }}
           >
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
-            <ClaimDetail result={current} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} />
+            <ClaimDetail result={current} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
           </div>
         </>
       )}
