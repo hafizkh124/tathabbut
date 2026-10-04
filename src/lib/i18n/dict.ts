@@ -81,6 +81,7 @@ export const DICT = {
   "via.shamela": { ar: "المكتبة الشاملة", en: "Shamela Library", ur: "المکتبۃ الشاملہ" },
   "via.quranCom": { ar: "القرآن الكريم", en: "Quran.com", ur: "Quran.com" },
   "via.quranpedia": { ar: "موسوعة القرآن", en: "Quranpedia", ur: "Quranpedia" },
+  "via.exact": { ar: "يفتح الدرر السنية على هذا الحديث في كتابه", en: "Opens Dorar at this hadith, in its own book", ur: "الدرر السنیہ میں اسی کتاب میں یہی حدیث کھولتا ہے" },
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
   "action.copy": { ar: "نسخ", en: "Copy", ur: "کاپی" },

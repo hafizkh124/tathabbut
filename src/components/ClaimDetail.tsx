@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useState } from "react";
 import type { ClaimResult, NarrationView } from "@/lib/clientTypes";
+import { dorarSearchUrl } from "@/lib/dorarLink";
 import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah } from "@/lib/shareText";
@@ -11,6 +12,8 @@ import { Icon } from "./ui/Icon";
 interface Via {
   label: "via.dorar" | "via.shamela" | "via.quranCom" | "via.quranpedia";
   url: string;
+  /** the link opens the very hadith in its book (not just a search) */
+  exact?: boolean;
 }
 
 function viaLinks(r: ClaimResult): Via[] {
@@ -19,7 +22,14 @@ function viaLinks(r: ClaimResult): Via[] {
     out.push({ label: "via.quranCom", url: r.verse.externalUrls.quranCom }, { label: "via.quranpedia", url: r.verse.externalUrls.quranpedia });
   }
   const ext = r.dorar?.externalUrls ?? r.saying?.externalUrls;
-  if (ext) out.push({ label: "via.dorar", url: ext.dorar }, { label: "via.shamela", url: ext.shamela });
+  const first = r.dorar?.narrations[0];
+  if (ext) {
+    // Dorar: when the narration names its book, open that book at that hadith; otherwise the plain search
+    out.push(
+      first?.matn ? { label: "via.dorar", url: dorarSearchUrl(first.matn, first.source), exact: true } : { label: "via.dorar", url: ext.dorar },
+      { label: "via.shamela", url: ext.shamela },
+    );
+  }
   return out;
 }
 
@@ -36,7 +46,7 @@ function ViaRow({ links }: { links: Via[] }) {
           href={l.url}
           target="_blank"
           rel="noopener noreferrer"
-          title={t("via.opens")}
+          title={l.exact ? t("via.exact") : t("via.opens")}
           className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover"
         >
           <span>{t(l.label)}</span>
@@ -78,6 +88,16 @@ function NarrationRow({ n }: { n: NarrationView }) {
           </span>
         </Row>
       )}
+      <a
+        href={dorarSearchUrl(n.matn, n.source)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={t("via.exact")}
+        className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover"
+      >
+        <span>{t("via.dorar")}</span>
+        <Icon name="ext" size={11} />
+      </a>
     </li>
   );
 }
