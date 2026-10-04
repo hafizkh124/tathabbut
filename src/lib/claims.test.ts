@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { arabicRun, checkClaims, extractClaims, foldUrduLetters, recoverSlice, transcribeImage } from "./claims";
+import { arabicRun, checkClaims, cleanTopic, extractClaims, topicQuery, foldUrduLetters, recoverSlice, transcribeImage } from "./claims";
 
 // The post used in the live Gemini test of 2026-10-03.
 const POST = `واٹس ایپ پوسٹ:
@@ -134,5 +134,58 @@ describe("extractClaims / transcribeImage (model stubbed)", () => {
     const [prompt, opts] = g.mock.calls[0] as unknown as [string, { images: unknown[] }];
     expect(prompt).toContain("Do not correct");
     expect(opts.images).toHaveLength(1);
+  });
+});
+
+describe("questions: scope and topic", () => {
+  const POST_Q = "میں نے غصے میں بیوی کو طلاق دے دی، کیا طلاق ہو گئی؟";
+  const raw = (over: Record<string, string>) => [{ kind: "question", text_as_written: POST_Q, ...over }];
+
+  it("takes a question as personal unless the model says it is general (in doubt, personal)", () => {
+    expect(checkClaims(POST_Q, raw({})).claims[0].scope).toBe("personal");
+    expect(checkClaims(POST_Q, raw({ question_scope: "personal" })).claims[0].scope).toBe("personal");
+    expect(checkClaims(POST_Q, raw({ question_scope: "maybe" })).claims[0].scope).toBe("personal");
+    expect(checkClaims(POST_Q, raw({ question_scope: "general" })).claims[0].scope).toBe("general");
+  });
+
+  it("keeps the topic the model wrote when it is a few Arabic words", () => {
+    expect(checkClaims(POST_Q, raw({ topic_ar: "طلاق الغضبان" })).claims[0].topic).toBe("طلاق الغضبان");
+    expect(checkClaims(POST_Q, raw({ topic_ar: " «طَلَاقُ الغَضْبَانِ». " })).claims[0].topic).toBe("طَلَاقُ الغَضْبَانِ");
+  });
+
+  it("drops a topic that carries a story: digits, Latin or Urdu-only letters, too many words, too long", () => {
+    for (const bad of ["طلاق ثلاث مرات 3", "talaq", "طلاق گھر", "طلاق في حالة الغضب الشديد عند الزوج مع زوجته", "ا".repeat(61), "", "طل"]) {
+      expect(checkClaims(POST_Q, raw({ topic_ar: bad })).claims[0].topic, bad).toBeNull();
+    }
+  });
+
+  it("gives no scope or topic to a claim that is not a question", () => {
+    const { claims } = checkClaims(POST, [{ kind: "hadith", text_as_written: "إنما الأعمال بالنيات", arabic_span: "إنما الأعمال بالنيات", question_scope: "general", topic_ar: "النية" }]);
+    expect(claims[0]).not.toHaveProperty("scope");
+    expect(claims[0]).not.toHaveProperty("topic");
+  });
+});
+
+describe("cleanTopic", () => {
+  it("accepts two to six Arabic words", () => {
+    expect(cleanTopic("سجود السهو")).toBe("سجود السهو");
+    expect(cleanTopic("حكم الصلاة خلف الإمام المسافر")).toBe("حكم الصلاة خلف الإمام المسافر");
+  });
+  it("refuses undefined and a seventh word", () => {
+    expect(cleanTopic(undefined)).toBeNull();
+    expect(cleanTopic("حكم الصلاة خلف الإمام المسافر في السفر الطويل")).toBeNull();
+  });
+});
+
+describe("topicQuery", () => {
+  it("drops a generic opening word and keeps the matter", () => {
+    expect(topicQuery("حكم طلاق الغضبان الثلاث")).toBe("طلاق الغضبان الثلاث");
+    expect(topicQuery("أحكام سجود السهو")).toBe("سجود السهو");
+    expect(topicQuery("باب الغسل")).toBe("الغسل");
+  });
+  it("leaves a topic alone when nothing but a generic word, or too little, would remain", () => {
+    expect(topicQuery("سجود السهو")).toBe("سجود السهو");
+    expect(topicQuery("حكم")).toBe("حكم");
+    expect(topicQuery("حكم من")).toBe("حكم من");
   });
 });

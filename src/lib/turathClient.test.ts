@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ClaimResult } from "./clientTypes";
 import { STATES } from "./states";
-import { applyTurath, fetchTurath, turathKindOf } from "./turathClient";
+import { applyTurath, fetchTurath, turathKindOf, turathQueryOf } from "./turathClient";
 
 const claim = (over: Partial<ClaimResult["claim"]> = {}, rest: Partial<ClaimResult> = {}): ClaimResult => ({
   claim: { kind: "hadith", textAsWritten: "نص", spanCheck: "exact", arabicSpan: "نص عربي", query: "نص عربي", queryIsTranslation: false, language: "ar", attributedTo: null, citedSource: null, warnings: [], ...over },
@@ -19,9 +19,16 @@ describe("turathKindOf", () => {
     expect(turathKindOf(claim({ kind: "scholar_quote" }))).toBe("scholar_quote");
   });
 
-  it("does not ask for a verse, a question, another kind, or text without Arabic letters", () => {
+  it("asks about a question's topic, never its words, and not at all when it has no topic", () => {
+    const q = (topic: string | null) => claim({ kind: "question", query: "میں نے غصے میں طلاق دی", topic }, { basis: "kind", state: STATES.fatwa });
+    expect(turathKindOf(q("طلاق الغضبان"))).toBe("fiqh");
+    expect(turathQueryOf(q("طلاق الغضبان"), "fiqh")).toBe("طلاق الغضبان");
+    expect(turathQueryOf(q("حكم طلاق الغضبان"), "fiqh")).toBe("طلاق الغضبان"); // the generic opening word is not searched
+    expect(turathKindOf(q(null))).toBeNull();
+  });
+
+  it("does not ask for a verse, another kind, or text without Arabic letters", () => {
     expect(turathKindOf(claim({}, { basis: "quran", state: STATES.verseOk }))).toBeNull();
-    expect(turathKindOf(claim({ kind: "question" }, { basis: "kind", state: STATES.fatwa }))).toBeNull();
     expect(turathKindOf(claim({ kind: "quran" }))).toBeNull();
     expect(turathKindOf(claim({ query: "only english words" }))).toBeNull();
   });

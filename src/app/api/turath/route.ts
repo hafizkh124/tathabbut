@@ -1,7 +1,8 @@
-// POST /api/turath  { "query": "<the claim's Arabic text>", "kind": "hadith" | "scholar_quote", "state": "...", "basis": "...", "notes": [...] }
+// POST /api/turath  { "query": "<the claim's Arabic text, or for "fiqh" its topic>", "kind": "hadith" | "scholar_quote" | "fiqh", "state": "...", "basis": "...", "notes": [...] }
 //   →  { "turath": { status, references, partial? }, "patch": { state, basis, notes } | null }
 // Called by the screen AFTER /api/verify has answered, so the card never waits for Turath. `state`, `basis` and `notes`
 // are the claim's result from /api/verify; `patch` is the change Turath makes to it (see turathFallback.ts).
+import { cleanTopic } from "@/lib/claims";
 import { lookupTurath } from "@/lib/turath";
 import { turathPatch } from "@/lib/turathFallback";
 import { isLookupKind } from "@/lib/turathScope";
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
   const query = typeof body.query === "string" ? body.query.trim() : "";
   if (!query) return Response.json({ error: "empty query" }, { status: 400 });
   if (query.length > MAX_QUERY_LEN) return Response.json({ error: `query longer than ${MAX_QUERY_LEN} characters` }, { status: 400 });
-  if (!isLookupKind(body.kind)) return Response.json({ error: 'kind must be "hadith" or "scholar_quote"' }, { status: 400 });
+  if (!isLookupKind(body.kind)) return Response.json({ error: 'kind must be "hadith", "scholar_quote" or "fiqh"' }, { status: 400 });
+  // a fiqh lookup takes a topic of a few Arabic words, never a question's own words: a story cannot be sent through here
+  if (body.kind === "fiqh" && cleanTopic(query) !== query) return Response.json({ error: "fiqh query must be a short Arabic topic" }, { status: 400 });
 
   const turath = await lookupTurath(query, body.kind);
   const notes = Array.isArray(body.notes) ? body.notes.filter((n): n is string => typeof n === "string") : [];

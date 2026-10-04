@@ -42,6 +42,24 @@ describe("POST /api/turath", () => {
     expect(await res.json()).toEqual({ turath: { status: "unavailable", references: [] }, patch: null });
   });
 
+  it("takes a fiqh topic, searches it, and never patches the card", async () => {
+    vi.mocked(lookupTurath).mockResolvedValue({ status: "success", references: [reference] });
+    const res = await post({ query: "طلاق الغضبان", kind: "fiqh", state: "فتوى أو حالة شخصية — إحالة", basis: "kind", notes: [] });
+    const body = (await res.json()) as { patch: unknown };
+    expect(res.status).toBe(200);
+    expect(vi.mocked(lookupTurath)).toHaveBeenCalledWith("طلاق الغضبان", "fiqh");
+    expect(body.patch).toBeNull();
+  });
+
+  it.each([
+    ["a story instead of a topic", { query: "میں نے غصے میں بیوی کو تین طلاقیں دے دیں", kind: "fiqh" }],
+    ["a topic with a number", { query: "طلاق ثلاث مرات 3", kind: "fiqh" }],
+    ["a long Arabic sentence", { query: "هل يقع الطلاق إذا طلق الرجل زوجته وهو غضبان شديد الغضب", kind: "fiqh" }],
+  ])("rejects a fiqh query that is %s", async (_label, body) => {
+    expect((await post(body)).status).toBe(400);
+    expect(vi.mocked(lookupTurath)).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["not json", "{"],
     ["empty query", { query: "  ", kind: "hadith" }],

@@ -44,7 +44,7 @@ function Excerpt({ text, phrase, folded }: { text: string; phrase: string; folde
   );
 }
 
-function ReferenceCard({ r: ref_, phrase }: { r: TurathReference; phrase: string }) {
+function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathReference; phrase: string; showCategory?: boolean }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const catKey = ref_.category ? (`turath.cat.${ref_.category.id}` as Key) : null;
@@ -57,7 +57,7 @@ function ReferenceCard({ r: ref_, phrase }: { r: TurathReference; phrase: string
           {ref_.book.title}
           {ref_.author?.name ? ` — ${ref_.author.name}` : ""}
         </span>
-        {category && <span className="rounded-full border border-line px-2 py-0.5 text-[12px] text-muted">{category}</span>}
+        {showCategory && category && <span className="rounded-full border border-line px-2 py-0.5 text-[12px] text-muted">{category}</span>}
       </div>
       <PageLine ref_={ref_} />
       <p
@@ -128,6 +128,54 @@ export function TurathBox({ r }: { r: ClaimResult }) {
         </div>
       )}
       {partial}
+    </div>
+  );
+}
+
+/** Madhhab sections, in the order the schools are usually listed, then the fatwa collections. */
+const FIQH_SECTIONS = ["14", "15", "16", "17", "22"] as const;
+
+/**
+ * What the books of fiqh say on the topic of a question: one section per school, each with the passages of that school's
+ * own books, then the fatwa collections. No school is preferred and nothing is summed up (specialist, 2026-10-05); an empty
+ * school says so. The question's own words never reach here, only its topic did.
+ */
+export function FiqhBox({ r }: { r: ClaimResult }) {
+  const { t } = useI18n();
+  const turath = r.turath;
+  if (!turath) return null;
+  if (turath.status === "loading") {
+    return (
+      <p className="text-[13px] text-muted" role="status" aria-live="polite">
+        {t("turath.loading")}
+      </p>
+    );
+  }
+  if (turath.status === "unavailable") return <p className="text-[13px] text-muted">{t("turath.unavailable")}</p>;
+
+  return (
+    <div className="space-y-3 border-t border-line/60 pt-2">
+      <p className="text-[13px] text-muted">{t("fiqh.note")}</p>
+      {FIQH_SECTIONS.map((id) => {
+        const refs = turath.references.filter((x) => x.category?.id === id);
+        // the fatwa collections are an extra: shown only when they have something
+        if (id === "22" && refs.length === 0) return null;
+        return (
+          <section key={id} className="space-y-2" aria-label={t(`fiqh.m.${id}` as Key)}>
+            <h3 className="text-[14px] font-bold text-brand-ink">{t(`fiqh.m.${id}` as Key)}</h3>
+            {refs.length === 0 ? (
+              <p className="text-[13px] text-muted">{t("fiqh.empty")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {refs.map((ref_, i) => (
+                  <ReferenceCard key={`${ref_.bookId}:${ref_.pageLocator?.internalPage ?? i}`} r={ref_} phrase={r.claim.topic ?? ""} showCategory={false} />
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+      {turath.partial && <p className="text-[13px] text-muted">{t("turath.partial")}</p>}
     </div>
   );
 }

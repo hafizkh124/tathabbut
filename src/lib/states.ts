@@ -11,6 +11,8 @@ export const STATES = {
   verseTranslated: "آية (نص مترجم)",
   notFound: NOT_FOUND_STATE,
   fatwa: "فتوى أو حالة شخصية — إحالة",
+  /** A general question of fiqh: the views of the madhhabs are shown as the books give them, with no preference. Not a grade. */
+  fiqh: "مسألة فقهية",
   /** The text is in the books of Turath and nowhere Dorar looked. Not a grade: Turath gives no verdict. */
   turathFound: "موجود في كتب التراث",
 } as const;

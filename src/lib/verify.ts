@@ -146,7 +146,12 @@ function fromSaying(claim: Claim, s: SayingHit): VerifiedClaim {
 }
 
 export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim> {
-  if (claim.kind === "question") return { claim, state: STATES.fatwa, basis: "kind", notes: ["سؤال عن حكم أو حالة: يُحال إلى أهل العلم"] };
+  if (claim.kind === "question") {
+    // A general question with a usable topic is shown as fiqh (the books answer it, the screen asks them); a personal case, or
+    // a general one the model could not give a topic for, is a referral. In doubt it is personal (specialist's rule).
+    const general = claim.scope === "general" && Boolean(claim.topic);
+    return { claim, state: general ? STATES.fiqh : STATES.fatwa, basis: "kind", notes: [general ? "سؤال فقهي عام: أقوال المذاهب" : "سؤال عن حكم أو حالة: يُحال إلى أهل العلم"] };
+  }
 
   // Urdu is written in Arabic script too, so "has Arabic letters" is not enough: search only with the post's
   // Arabic wording, or with the model's Arabic rendering of an Urdu/English claim.

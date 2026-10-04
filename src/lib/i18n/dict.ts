@@ -76,6 +76,28 @@ export const DICT = {
   "verse.ref": { ar: "سورة {s}، الآية {a}", en: "Surah {s}, verse {a}", ur: "سورہ {s}، آیت {a}" },
   "narrations.more": { ar: "نتائج أخرى ({n})", en: "Other results ({n})", ur: "دیگر نتائج ({n})" },
   "narrations.weakVariants": { ar: "طرق وأسانيد ضعيفة ({n})", en: "Weak chains ({n})", ur: "دیگر ضعیف اسناد ({n})" },
+  "fatwa.warn": {
+    ar: "تنبيه قبل العمل: هذه معلومات علمية عامة فقط. والحكم في واقعة بعينها يرجع فيه إلى دار الإفتاء أو مفتٍ مؤهل بعد معرفة التفاصيل، فمدار الحكم على النية والقرائن.",
+    en: "Before you act: this is general scholarly information only. A ruling on a particular case belongs to a Dar al-Ifta or a qualified mufti who knows the details, because a ruling depends on intention and circumstances.",
+    ur: "تنبیہ برائے عملی فتویٰ: یہ معلومات صرف عمومی علمی فہم کے لیے ہیں۔ کسی بھی انفرادی واقعے کے حتمی فیصلے کے لیے دار الافتاء یا مستند مفتیانِ کرام سے ذاتی رجوع لازم ہے، کیونکہ حکم کا مدار نیت اور تفصیلی قرائن پر ہوتا ہے۔",
+  },
+  "fiqh.topic": { ar: "الموضوع الذي بحثنا فيه: {topic}", en: "Topic searched: {topic}", ur: "جس موضوع پر تلاش کی گئی: {topic}" },
+  "fiqh.refer": {
+    ar: "راجع دار الإفتاء أو المفتي الذي تثق به.",
+    en: "Please consult the Dar al-Ifta or the mufti you trust.",
+    ur: "اپنے معتمد دار الافتاء یا مفتی سے رجوع کریں۔",
+  },
+  "fiqh.note": {
+    ar: "هذه أقوال المذاهب الفقهية كما وردت في كتبها، دون ترجيح بينها.",
+    en: "These are the views of the schools of fiqh as their books give them, without preferring one over another.",
+    ur: "یہ فقہی مذاہب کے اقوال ہیں جیسے ان کی کتب میں آئے ہیں، ان میں کسی کو ترجیح نہیں دی گئی۔",
+  },
+  "fiqh.empty": { ar: "لم يُعثر في كتب هذا المذهب.", en: "Nothing found in this school's books.", ur: "اس مذہب کی کتب میں نہیں ملا۔" },
+  "fiqh.m.14": { ar: "المذهب الحنفي", en: "Hanafi school", ur: "حنفی مذہب" },
+  "fiqh.m.15": { ar: "المذهب المالكي", en: "Maliki school", ur: "مالکی مذہب" },
+  "fiqh.m.16": { ar: "المذهب الشافعي", en: "Shafi'i school", ur: "شافعی مذہب" },
+  "fiqh.m.17": { ar: "المذهب الحنبلي", en: "Hanbali school", ur: "حنبلی مذہب" },
+  "fiqh.m.22": { ar: "كتب الفتاوى", en: "Fatwa collections", ur: "کتبِ فتاویٰ" },
   "turath.title": { ar: "من كتب التراث", en: "From the books (Turath)", ur: "کتبِ تراث سے" },
   "turath.loading": { ar: "جارٍ البحث في الكتب…", en: "Searching the books…", ur: "کتابوں میں تلاش جاری ہے…" },
   "turath.unavailable": {
@@ -242,6 +264,7 @@ const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
     ur: p("فتویٰ یا ذاتی معاملہ — اہلِ علم سے رجوع کریں"),
   },
   "موجود في كتب التراث": { ar: p("موجود"), en: p("Found"), ur: p("موجود") },
+  "مسألة فقهية": { ar: p("مسألة فقهية"), en: p("Fiqh question"), ur: p("فقہی مسئلہ") },
   "قول منسوب خطأً إلى النبي ﷺ": {
     ar: p("قول منسوب خطأً إلى النبي ﷺ"),
     en: p("Wrongly attributed to the Prophet ﷺ"),

@@ -27,6 +27,10 @@ export interface Claim {
   citedSource: string | null;
   /** Things the checks noticed, e.g. the model altered the Arabic. */
   warnings: string[];
+  /** Only for a «question»: whether it is the asker's own case or a general rule. In doubt it is «personal». */
+  scope?: "personal" | "general";
+  /** Only for a «question»: the fiqh topic in Arabic (a few words, no names or story), the only thing the books are asked. */
+  topic?: string | null;
 }
 
 export interface Extraction {
@@ -43,6 +47,8 @@ interface RawClaim {
   arabic_translation?: string;
   attributed_to?: string;
   cited_source?: string;
+  question_scope?: string;
+  topic_ar?: string;
 }
 
 export const CLAIMS_SCHEMA = {
@@ -59,6 +65,8 @@ export const CLAIMS_SCHEMA = {
           arabic_translation: { type: "STRING" },
           attributed_to: { type: "STRING" },
           cited_source: { type: "STRING" },
+          question_scope: { type: "STRING", enum: ["personal", "general"] },
+          topic_ar: { type: "STRING" },
         },
         required: ["kind", "text_as_written"],
       },
@@ -75,6 +83,8 @@ For each claim return:
 - arabic_span: the Arabic wording inside text_as_written, copied character for character with any mistakes kept. Empty if the claim has no Arabic wording.
 - arabic_translation: only when arabic_span is empty: the Arabic wording this claim refers to, for searching hadith and Quran databases. Empty otherwise.
 - attributed_to and cited_source: exactly as written in the post, or empty.
+- question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
+- topic_ar (only for kind "question"): the fiqh topic of the question as the title of a chapter in a fiqh book, in Arabic, two or three words, naming the matter only and not starting with «حكم» or «أحكام» (for example «صلاة الجمعة للمسافر», «سجود السهو», «طلاق الغضبان»). It must contain no name, no number, no detail of the asker's story and no answer or ruling.
 Never judge whether a claim is authentic. Never add a claim that is not in the post.
 
 POST:
@@ -157,6 +167,32 @@ export function arabicRun(text: string): string | null {
 
 const MAX_CLAIMS = 12;
 
+const MAX_TOPIC_WORDS = 6;
+const MAX_TOPIC_CHARS = 60;
+
+/**
+ * The topic the books are asked about, or null. The model writes it, so it is checked: Arabic letters and spaces only
+ * (no digits, Latin or Urdu-only letters, so no name written in another script and no figure from a story), a few words, and short.
+ * Only this ever leaves for the books, never the asker's own words.
+ */
+export function cleanTopic(raw: string | undefined): string | null {
+  const t = squash(trimPunct(raw ?? ""));
+  if (!t || t.length > MAX_TOPIC_CHARS) return null;
+  if (!/^[ء-يً-ْ\s]+$/.test(t)) return null;
+  const words = t.split(" ");
+  return words.length <= MAX_TOPIC_WORDS && t.replace(/[ً-ْ\s]/g, "").length >= 3 ? t : null;
+}
+
+/** Words that open a topic without naming the matter; Turath's search needs every word, and they only narrow it. */
+const GENERIC_OPENERS = new Set(["حكم", "احكام", "أحكام", "مسألة", "مسائل", "باب", "كتاب"]);
+
+/** What the books are searched with: the topic without a generic opening word (the screen still shows the whole topic). */
+export function topicQuery(topic: string): string {
+  const words = topic.split(" ");
+  const rest = GENERIC_OPENERS.has(words[0]) ? words.slice(1).join(" ") : topic;
+  return rest.replace(/[ً-ْ\s]/g, "").length >= 3 ? rest : topic;
+}
+
 /** Applies every check to the model's raw answer. Pure, so it is tested without the model. */
 export function checkClaims(post: string, raw: RawClaim[]): Extraction {
   const claims: Claim[] = [];
@@ -202,8 +238,10 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
       const s = trimPunct(v ?? "");
       return s && findIn(post, s) ? s : null;
     };
+    const asked = kind === "question";
     claims.push({
       kind,
+      ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar) } : {}),
       textAsWritten: text,
       spanCheck,
       arabicSpan,

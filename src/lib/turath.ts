@@ -1,7 +1,7 @@
 import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, type TurathLookupOutcome, type TurathReference } from "./hadithMatch";
 import { searchTurath, type TurathSearchOptions, type TurathSearchResult } from "./turathApi";
 import { isSameText } from "./turathMatch";
-import { SCOPES, type TurathLookupKind } from "./turathScope";
+import { LOOKUP_LIMITS, SCOPES, type TurathLookupKind } from "./turathScope";
 
 /** One deadline for the whole lookup (specialist's decision, 2026-10-05: 5 s, so the screen never lags on the books). */
 export const TURATH_TIMEOUT_MS = 5_000;
@@ -20,11 +20,15 @@ export function createTurathLookup(search: TurathSearch = searchTurath) {
   return async (query: string, kind: TurathLookupKind): Promise<TurathLookupOutcome> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TURATH_TIMEOUT_MS);
+    const limits = LOOKUP_LIMITS[kind];
     try {
       const searches = await Promise.allSettled(
         SCOPES[kind].map(async (category) => {
-          const found = await search(query, { categoryId: category.id, maxPassages: MAX_TURATH_PASSAGES, maxChars: MAX_TURATH_PASSAGE_CHARS, signal: controller.signal });
-          return adaptTurathPassages(found.passages, category).filter((r) => isSameText(query, r.excerpt));
+          const found = await search(query, { categoryId: category.id, maxPassages: limits.fetch, maxChars: MAX_TURATH_PASSAGE_CHARS, signal: controller.signal });
+          const refs = adaptTurathPassages(found.passages, category);
+          const holds = (r: TurathReference) => isSameText(query, r.excerpt);
+          // a text must be in the passage; for a topic those that hold it come first, then Turath's own order
+          return (limits.strict ? refs.filter(holds) : [...refs.filter(holds), ...refs.filter((r) => !holds(r))]).slice(0, limits.keep);
         }),
       );
 
@@ -43,7 +47,7 @@ export function createTurathLookup(search: TurathSearch = searchTurath) {
       }
       return {
         status: "success",
-        references: references.slice(0, MAX_TURATH_PASSAGES),
+        references: references.slice(0, limits.total),
         ...(succeeded.length < searches.length ? { partial: true as const } : {}),
       };
     } catch {

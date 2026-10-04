@@ -96,3 +96,30 @@ describe("createTurathLookup", () => {
     }
   });
 });
+
+describe("createTurathLookup — a fiqh topic", () => {
+  const TOPIC = "سجود السهو";
+
+  it("searches the four madhhabs and the fatwa collections, two passages each, in that order", async () => {
+    const search = vi.fn(async (_q: string, o: TurathSearchOptions) => found([passage("كلام في الباب", `b${o.categoryId}`, 1), passage("كلام آخر", `c${o.categoryId}`, 2)]));
+    const out = await createTurathLookup(search)(TOPIC, "fiqh");
+
+    expect(search.mock.calls.map((c) => categoryOf(c[1]))).toEqual(["14", "15", "16", "17", "22"]);
+    expect(search.mock.calls.every((c) => c[1].maxPassages === 10)).toBe(true); // asked 10, kept 2
+    expect(out.status === "success" && out.references.map((r) => r.category?.id)).toEqual(["14", "14", "15", "15", "16", "16", "17", "17", "22", "22"]);
+  });
+
+  it("does not drop a passage that lacks the topic as a phrase, but puts those that hold it first", async () => {
+    const search = vi.fn(async (_q: string, o: TurathSearchOptions) =>
+      found(categoryOf(o) === "14" ? [passage("باب في أحكام الصلاة وما يجبر فيها", "50", 1), passage("باب سجود السهو وأحكامه", "51", 2), passage("كلام آخر", "52", 3)] : []),
+    );
+    const out = await createTurathLookup(search)(TOPIC, "fiqh");
+    expect(out.status === "success" && out.references.map((r) => r.bookId)).toEqual(["51", "50"]); // the phrase first, then Turath's order, two kept
+  });
+
+  it("says nothing for a school whose books have nothing, and keeps the others", async () => {
+    const search = vi.fn(async (_q: string, o: TurathSearchOptions) => found(categoryOf(o) === "16" ? [passage("باب", "60", 1)] : []));
+    const out = await createTurathLookup(search)(TOPIC, "fiqh");
+    expect(out.status === "success" && out.references.map((r) => r.category?.id)).toEqual(["16"]);
+  });
+});

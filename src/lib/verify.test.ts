@@ -244,3 +244,27 @@ describe("verifyClaim — Dorar ranking and prioritization", () => {
   });
 });
 
+
+describe("verifyClaim — questions", () => {
+  const question = (over: Partial<Claim>) => claim({ kind: "question", query: "سؤال", ...over });
+
+  it("a personal question is a referral, with no search", async () => {
+    const d = deps();
+    const r = await verifyClaim(question({ scope: "personal", topic: "طلاق الغضبان" }), d);
+    expect(r).toMatchObject({ state: STATES.fatwa, basis: "kind" });
+    expect(d.lookupDorar).not.toHaveBeenCalled();
+  });
+
+  it("in doubt (no scope) a question is a referral", async () => {
+    expect((await verifyClaim(question({ topic: "سجود السهو" }), deps())).state).toBe(STATES.fatwa);
+  });
+
+  it("a general question with a topic is a fiqh question: no grade, no referral", async () => {
+    const r = await verifyClaim(question({ scope: "general", topic: "سجود السهو" }), deps());
+    expect(r).toMatchObject({ state: STATES.fiqh, basis: "kind" });
+  });
+
+  it("a general question the model could not give a topic for is still a referral", async () => {
+    expect((await verifyClaim(question({ scope: "general", topic: null }), deps())).state).toBe(STATES.fatwa);
+  });
+});

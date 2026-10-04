@@ -10,7 +10,7 @@ import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
-import { TurathBox } from "./TurathBox";
+import { FiqhBox, TurathBox } from "./TurathBox";
 
 interface Via {
   label: "via.dorar" | "via.shamela" | "via.quranCom" | "via.quranpedia";
@@ -262,6 +262,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
   const [reported, setReported] = useState<string | null>(null);
   const tone = toneOf(r.state);
   const quote = r.claim.arabicSpan || r.claim.textAsWritten;
+  // a question is shown by its topic, never by its own words: the books were asked the topic only
+  const isQuestion = r.claim.kind === "question";
   const canShare = typeof navigator !== "undefined" && "share" in navigator;
   const reportedHere = reported === r.claim.textAsWritten;
 
@@ -299,7 +301,14 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
         <p className="text-[14px] text-muted">{t("notfound.hint")}</p>
       </div>
     ) : tone === "fatwa" ? (
-      <p className="text-base">{t("fatwa.body")}</p>
+      <div className="space-y-2">
+        <p role="note" className="rounded-xl border p-3 text-[14px] font-semibold leading-relaxed" style={{ background: "var(--t-weak-bg)", color: "var(--t-weak-fg)", borderColor: "var(--t-weak-bd)" }}>
+          {t("fatwa.warn")}
+        </p>
+        {r.claim.topic ? <p className="text-[14px]">{t("fiqh.topic", { topic: r.claim.topic })}</p> : <p className="text-base">{t("fatwa.body")}</p>}
+      </div>
+    ) : isQuestion && r.claim.topic ? (
+      <p className="text-[14px]">{t("fiqh.topic", { topic: r.claim.topic })}</p>
     ) : tone === "translated" ? (
       <p className="text-[14px] text-muted">{t("translated.body")}</p>
     ) : null;
@@ -313,7 +322,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
         {total > 1 && <span className="text-[13px] text-muted">{t("result.of", { i: num(index + 1), n: num(total) })}</span>}
       </div>
 
-      {tone !== "notFound" && tone !== "fatwa" && <p className="quran text-[22px] text-ink">{quote}</p>}
+      {tone !== "notFound" && tone !== "fatwa" && !isQuestion && <p className="quran text-[22px] text-ink">{quote}</p>}
       {message}
 
       {r.verse && (
@@ -332,7 +341,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
 
       <SourceBox r={r} />
 
-      <TurathBox r={r} />
+      {isQuestion ? <FiqhBox r={r} /> : <TurathBox r={r} />}
+      {tone === "fatwa" && r.claim.topic && <p className="text-[14px] font-semibold text-ink">{t("fiqh.refer")}</p>}
 
       <div className="flex gap-2.5 pt-1">
         {tone === "notFound" ? (
@@ -361,7 +371,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4">
-        {tone !== "fatwa" && tone !== "notFound" && (
+        {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (
           <Button variant="ghost" size="sm" onClick={() => onOrigin(r.claim.query || r.claim.textAsWritten)}>
             {t("action.origin")}
           </Button>

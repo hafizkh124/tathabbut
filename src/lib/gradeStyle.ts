@@ -51,6 +51,7 @@ const EXACT: Record<string, Tone> = {
   [STATES.notFound]: "notFound",
   [STATES.fatwa]: "fatwa",
   [STATES.turathFound]: "found",
+  [STATES.fiqh]: "found",
   // the specialist's own extra statuses (circulating_sayings)
   "قول منسوب خطأً إلى النبي ﷺ": "misquote",
   "لفظ أو ترجمة غير دقيقة": "misquote",

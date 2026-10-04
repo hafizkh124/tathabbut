@@ -38,3 +38,9 @@ describe("toneOf", () => {
     for (const t of Object.values(TONE_STYLE)) expect(t.icon).toBeTruthy();
   });
 });
+
+describe("fiqh question", () => {
+  it("is shown in the neutral tone, never as a grade", () => {
+    expect(toneOf(STATES.fiqh)).toBe("found");
+  });
+});
