@@ -8,23 +8,25 @@ const found: TurathLookupOutcome = { status: "success", references: [ref] };
 const notFound = (kind: string, notes: string[] = []) => ({ claim: { kind }, state: STATES.notFound, basis: "none", notes });
 
 describe("turathPatch", () => {
-  it("turns «not found» into «غير حاسم» when the books hold a hadith's text, saying Dorar has no verdict", () => {
+  it("turns «not found» into «موجود في كتب التراث» when the books hold a hadith's text", () => {
     expect(turathPatch(notFound("hadith", ["لا رواية مطابقة في الدرر"]), found)).toEqual({
-      state: STATES.unsure,
+      state: STATES.turathFound,
       basis: "turath",
-      reason: "no-ruling",
-      notes: ["ورد النص في كتب التراث؛ ولا حكم صريح في الدرر"],
+      notes: ["ورد النص في كتب التراث"],
     });
   });
 
-  it("does the same for a scholar's saying", () => {
-    expect(turathPatch(notFound("scholar_quote"), found)?.state).toBe(STATES.unsure);
+  it("does the same for a scholar's saying, and when Dorar could not be reached", () => {
+    expect(turathPatch(notFound("scholar_quote"), found)?.state).toBe(STATES.turathFound);
+    expect(turathPatch(notFound("hadith", ["تعذّر البحث في الدرر (HTTP 500)"]), found)?.state).toBe(STATES.turathFound);
   });
 
-  it("says so when Dorar could not be reached instead of claiming it has no verdict", () => {
-    const patch = turathPatch(notFound("hadith", ["تعذّر البحث في الدرر (HTTP 500)"]), found);
-    expect(patch?.reason).toBe("dorar-unavailable");
-    expect(patch?.notes[0]).toContain("تعذّر البحث في الدرر");
+  it("is never a grade and never «غير حاسم»: a passage may itself say «موضوع»", () => {
+    const patch = turathPatch(notFound("hadith"), found);
+    expect(patch?.state).not.toBe(STATES.unsure);
+    expect(patch?.state).not.toBe(STATES.maqbul);
+    expect(patch?.state).not.toBe(STATES.daif);
+    expect(patch?.state).not.toBe(STATES.shadid);
   });
 
   it("changes nothing when Turath has no reference or is unavailable", () => {

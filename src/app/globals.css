@@ -49,6 +49,10 @@
   --t-notFound-fg: #3f4a51;
   --t-notFound-bd: #9aa5ab;
   --t-notFound-line: #5f6b73;
+  --t-found-bg: #f1ede3;
+  --t-found-fg: #4f4630;
+  --t-found-bd: #d3c9ae;
+  --t-found-line: #8c7d52;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -97,6 +101,10 @@
     --t-notFound-fg: #b8c4cb;
     --t-notFound-bd: #5a6a72;
     --t-notFound-line: #8fa0aa;
+    --t-found-bg: #2a261b;
+    --t-found-fg: #d9ceb0;
+    --t-found-bd: #4f4630;
+    --t-found-line: #b3a272;
   }
 }
 

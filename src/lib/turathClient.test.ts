@@ -35,9 +35,9 @@ describe("applyTurath", () => {
     expect(applyTurath(c, found, null)).toEqual({ ...c, turath: found });
   });
 
-  it("changes the state and says why when Turath patches it", () => {
-    const out = applyTurath(claim(), found, { state: STATES.unsure, basis: "turath", reason: "no-ruling", notes: ["ورد النص في كتب التراث؛ ولا حكم صريح في الدرر"] });
-    expect(out).toMatchObject({ state: STATES.unsure, basis: "turath", turathReason: "no-ruling" });
+  it("changes the state when Turath patches it", () => {
+    const out = applyTurath(claim(), found, { state: STATES.turathFound, basis: "turath", notes: ["ورد النص في كتب التراث"] });
+    expect(out).toMatchObject({ state: STATES.turathFound, basis: "turath" });
     expect(out.notes).toHaveLength(2);
   });
 });

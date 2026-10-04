@@ -17,7 +17,7 @@ export function turathKindOf(c: ClaimResult): TurathLookupKind | null {
 /** A claim as it reads once the books answered: the references are kept, and the patch (if any) changes its state. */
 export function applyTurath(c: ClaimResult, turath: TurathView, patch: TurathPatch | null): ClaimResult {
   if (!patch) return { ...c, turath };
-  return { ...c, turath, state: patch.state, basis: patch.basis, notes: [...c.notes, ...patch.notes], turathReason: patch.reason };
+  return { ...c, turath, state: patch.state, basis: patch.basis, notes: [...c.notes, ...patch.notes] };
 }
 
 const UNAVAILABLE: TurathLookupOutcome = { status: "unavailable", references: [] };

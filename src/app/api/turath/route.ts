@@ -1,5 +1,5 @@
 // POST /api/turath  { "query": "<the claim's Arabic text>", "kind": "hadith" | "scholar_quote", "state": "...", "basis": "...", "notes": [...] }
-//   →  { "turath": { status, references, partial? }, "patch": { state, basis, reason, notes } | null }
+//   →  { "turath": { status, references, partial? }, "patch": { state, basis, notes } | null }
 // Called by the screen AFTER /api/verify has answered, so the card never waits for Turath. `state`, `basis` and `notes`
 // are the claim's result from /api/verify; `patch` is the change Turath makes to it (see turathFallback.ts).
 import { lookupTurath } from "@/lib/turath";

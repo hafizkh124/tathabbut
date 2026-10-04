@@ -88,13 +88,6 @@ export const DICT = {
     en: "Some kinds of books could not be searched, so more passages may exist.",
     ur: "کتابوں کی بعض اقسام میں تلاش نہ ہو سکی، اس لیے مزید نتائج ہو سکتے ہیں۔",
   },
-  // one word, so the line can never disagree with a ruling the passages below may state
-  "turath.basis.hadith": { ar: "موجود", en: "Found", ur: "موجود" },
-  "turath.basis.saying": {
-    ar: "ورد القول في «{book}»، وصحة نسبته غير محققة.",
-    en: "The saying is recorded in “{book}”. That the person named really said it has not been verified.",
-    ur: "یہ قول «{book}» میں نقل ہوا ہے؛ اس کی نسبت کی صحت محقق نہیں۔",
-  },
   "turath.page": { ar: "صفحة تراث {p}", en: "Turath page {p}", ur: "صفحۂ تراث {p}" },
   "turath.volume": { ar: "ج {v}", en: "vol. {v}", ur: "ج {v}" },
   "turath.printedPage": { ar: "ص {p}", en: "p. {p}", ur: "ص {p}" },
@@ -248,6 +241,7 @@ const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
     en: p("A fatwa or personal matter — refer to a scholar"),
     ur: p("فتویٰ یا ذاتی معاملہ — اہلِ علم سے رجوع کریں"),
   },
+  "موجود في كتب التراث": { ar: p("موجود"), en: p("Found"), ur: p("موجود") },
   "قول منسوب خطأً إلى النبي ﷺ": {
     ar: p("قول منسوب خطأً إلى النبي ﷺ"),
     en: p("Wrongly attributed to the Prophet ﷺ"),

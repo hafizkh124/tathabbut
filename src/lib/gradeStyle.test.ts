@@ -14,6 +14,7 @@ describe("toneOf", () => {
     expect(toneOf(STATES.verseTranslated)).toBe("translated");
     expect(toneOf(STATES.fatwa)).toBe("fatwa");
     expect(toneOf(STATES.notFound)).toBe("notFound");
+    expect(toneOf(STATES.turathFound)).toBe("found"); // not a grade, and not «غير حاسم»
   });
 
   it("reads the specialist's own statuses as a misquote", () => {

@@ -22,7 +22,7 @@ describe("POST /api/turath", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(lookupTurath)).toHaveBeenCalledWith("حديث تجريبي", "hadith");
     expect(body.turath).toEqual(outcome);
-    expect(body.patch).toMatchObject({ state: "غير حاسم", basis: "turath", reason: "no-ruling" });
+    expect(body.patch).toMatchObject({ state: "موجود في كتب التراث", basis: "turath" });
   });
 
   it("returns no patch when Dorar already gave a verdict, and still returns the references", async () => {

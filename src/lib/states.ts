@@ -11,6 +11,8 @@ export const STATES = {
   verseTranslated: "آية (نص مترجم)",
   notFound: NOT_FOUND_STATE,
   fatwa: "فتوى أو حالة شخصية — إحالة",
+  /** The text is in the books of Turath and nowhere Dorar looked. Not a grade: Turath gives no verdict. */
+  turathFound: "موجود في كتب التراث",
 } as const;
 export type State = (typeof STATES)[keyof typeof STATES] | string; // + the specialist's own statuses from circulating_sayings
 

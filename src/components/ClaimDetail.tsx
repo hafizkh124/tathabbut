@@ -10,7 +10,7 @@ import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
-import { TurathBasisLine, TurathBox } from "./TurathBox";
+import { TurathBox } from "./TurathBox";
 
 interface Via {
   label: "via.dorar" | "via.shamela" | "via.quranCom" | "via.quranpedia";
@@ -285,9 +285,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
   };
 
   const message =
-    r.basis === "turath" ? (
-      <TurathBasisLine r={r} />
-    ) : tone === "notFound" ? (
+    tone === "notFound" ? (
       <div className="space-y-2">
         <p className="text-base">{t("notfound.body")}</p>
         {r.claim.citedSource && (
