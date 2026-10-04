@@ -22,14 +22,43 @@ export interface OriginReport {
   query: string;
   earliestRecord: EarliestRecord;
   spreadPattern: string;
-  summaryUrdu: string;
+  summary: string;
+  lang: OriginLang;
   groundingSources: GroundingSource[];
   disclaimer: string;
   model?: string;
 }
 
-const DISCLAIMER_URDU =
-  "تنبیہ: یہ معلومات انٹرنیٹ پر عوامی طور پر دستیاب ریکارڈز اور سرچ انڈیکس کے تجزیے پر مبنی ہیں۔ سوشل میڈیا پر گردش کرنے والے پیغامات کی پہلی اصل حتمی طور پر طے کرنا تکنیکی طور پر ممکن نہیں ہوتا۔ یہ نتائج صرف آگاہی اور تحقیق میں مدد کے لیے ہیں۔";
+export type OriginLang = "ar" | "en" | "ur";
+
+const LANG_NAME: Record<OriginLang, string> = { ar: "Arabic", en: "English", ur: "Urdu" };
+
+const TEXT: Record<OriginLang, { disclaimer: string; date: string; platform: string; spread: string; summary: string }> = {
+  ur: {
+    disclaimer:
+      "تنبیہ: یہ معلومات انٹرنیٹ پر عوامی طور پر دستیاب ریکارڈز اور سرچ انڈیکس کے تجزیے پر مبنی ہیں۔ سوشل میڈیا پر گردش کرنے والے پیغامات کی پہلی اصل حتمی طور پر طے کرنا تکنیکی طور پر ممکن نہیں ہوتا۔ یہ نتائج صرف آگاہی اور تحقیق میں مدد کے لیے ہیں۔",
+    date: "معلوم نہیں",
+    platform: "انٹرنیٹ فورمز اور ویب سائٹس",
+    spread: "سوشل میڈیا اور میسجنگ ایپس پر گردش",
+    summary: "انٹرنیٹ پر عوامی ریکارڈز کے جائزے کے مطابق یہ تحریر مختلف فورمز اور پیغامات میں گردش کرتی رہی ہے۔",
+  },
+  ar: {
+    disclaimer:
+      "تنبيه: هذه المعلومات مبنية على تحليل السجلات العامة المتاحة على الإنترنت وفهارس البحث. لا يمكن تقنيًا تحديد الأصل الأول لرسائل مواقع التواصل بشكل قاطع. النتائج للتوعية والمساعدة على البحث فقط.",
+    date: "غير معروف",
+    platform: "المنتديات والمواقع الإلكترونية",
+    spread: "تداول على وسائل التواصل وتطبيقات المراسلة",
+    summary: "بحسب مراجعة السجلات العامة على الإنترنت، ظل هذا النص يتداول في منتديات ورسائل متعددة.",
+  },
+  en: {
+    disclaimer:
+      "Note: this is based on publicly available records and search indexes. It is technically impossible to settle the true first source of a message circulating on social media. The results are for awareness and research support only.",
+    date: "Unknown",
+    platform: "Internet forums and websites",
+    spread: "Circulation on social media and messaging apps",
+    summary: "According to public internet records, this text has been circulating in various forums and messages.",
+  },
+};
 
 interface GeminiGroundingResponse {
   candidates?: {
@@ -49,6 +78,8 @@ interface GeminiGroundingResponse {
 }
 
 export interface OriginTrackerDeps {
+  /** Language of the report; defaults to Urdu. */
+  lang?: OriginLang;
   fetch?: typeof fetch;
   apiKey?: string;
   model?: string;
@@ -72,6 +103,8 @@ export async function trackClaimOrigin(claimText: string, deps: OriginTrackerDep
   const key = deps.apiKey ?? process.env.GEMINI_API_KEY;
   if (!key) throw new GeminiError("GEMINI_API_KEY is not set");
 
+  const lang: OriginLang = deps.lang && deps.lang in TEXT ? deps.lang : "ur";
+  const tx = TEXT[lang];
   const f = deps.fetch ?? fetch;
   const model = deps.model ?? process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
@@ -84,16 +117,16 @@ Investigate:
 1. When did this specific wording, claim, or chain message first start appearing publicly on the internet (estimated year or date)?
 2. What kind of public platform, forum, or website is the earliest indexed public trace?
 3. How was it typically spread (e.g. email chain letter, WhatsApp forward, online discussion forum, blog, fake quote image)?
-4. A concise, neutral summary in clear Urdu explaining the earliest known digital circulation, without accusing any specific private individual or defamatory naming.
+4. A concise, neutral summary in clear ${LANG_NAME[lang]} explaining the earliest known digital circulation, without accusing any specific private individual or defamatory naming.
 
-Return ONLY a valid JSON object with the following fields:
+Return ONLY a valid JSON object with the following fields. Write every field value in ${LANG_NAME[lang]} (except sourceUrl):
 {
-  "estimatedDate": "e.g. 2008ء کے لگ بھگ یا 2012ء",
-  "sourcePlatform": "e.g. اسلامی فورمز / بلاگ اسپاٹ / ای میل زنجیری خطوط",
+  "estimatedDate": "e.g. around 2008, or 2012",
+  "sourcePlatform": "e.g. Islamic forums / blog / email chain letters",
   "sourceUrl": "e.g. earliest public URL if known, or leave empty",
-  "snippet": "مختصر اقتباس یا تعارف",
-  "spreadPattern": "e.g. واٹس ایپ فارورڈ میسج / فورمز پر گردش",
-  "summaryUrdu": "تفصیلی مگر جامع اردو خلاصہ کہ یہ شوشہ یا تحریر کب اور کس انداز میں انٹرنیٹ پر گردش میں آئی"
+  "snippet": "a short quote or introduction",
+  "spreadPattern": "e.g. WhatsApp forward / forum circulation",
+  "summary": "a detailed yet concise summary of when and how this text started circulating on the internet"
 }`;
 
   let res: Response;
@@ -142,26 +175,27 @@ Return ONLY a valid JSON object with the following fields:
     sourceUrl?: string;
     snippet?: string;
     spreadPattern?: string;
-    summaryUrdu?: string;
+    summary?: string;
   }>(partsText);
 
   const earliestRecord: EarliestRecord = {
-    estimatedDate: parsed?.estimatedDate ?? "معلوم نہیں",
-    sourcePlatform: parsed?.sourcePlatform ?? "انٹرنیٹ فورمز اور ویب سائٹس",
+    estimatedDate: parsed?.estimatedDate ?? tx.date,
+    sourcePlatform: parsed?.sourcePlatform ?? tx.platform,
     sourceUrl: parsed?.sourceUrl || groundingSources[0]?.url,
     snippet: parsed?.snippet ?? "",
   };
 
-  const spreadPattern = parsed?.spreadPattern ?? "سوشل میڈیا اور میسجنگ ایپس پر گردش";
-  const summaryUrdu = parsed?.summaryUrdu || (partsText.length > 50 ? partsText.slice(0, 300) : "انٹرنیٹ پر عوامی ریکارڈز کے جائزے کے مطابق یہ تحریر مختلف فورمز اور پیغامات میں گردش کرتی رہی ہے۔");
+  const spreadPattern = parsed?.spreadPattern ?? tx.spread;
+  const summary = parsed?.summary || (partsText.length > 50 ? partsText.slice(0, 300) : tx.summary);
 
   return {
     query: claimText,
     earliestRecord,
     spreadPattern,
-    summaryUrdu,
+    summary,
+    lang,
     groundingSources: groundingSources.slice(0, 5),
-    disclaimer: DISCLAIMER_URDU,
+    disclaimer: tx.disclaimer,
     model,
   };
 }

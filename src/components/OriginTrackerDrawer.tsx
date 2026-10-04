@@ -14,7 +14,8 @@ export interface OriginReportData {
     snippet?: string;
   };
   spreadPattern: string;
-  summaryUrdu: string;
+  summary: string;
+  lang: "ar" | "en" | "ur";
   groundingSources: Array<{ title: string; url: string }>;
   disclaimer: string;
 }
@@ -29,7 +30,7 @@ type Load = { status: "loading" } | { status: "failed" } | { status: "done"; rep
 
 /** The body is mounted only while the dialog is open, so each opening starts a fresh search. */
 function OriginBody({ claimQuery }: { claimQuery: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [load, setLoad] = useState<Load>({ status: "loading" });
 
   useEffect(() => {
@@ -37,7 +38,7 @@ function OriginBody({ claimQuery }: { claimQuery: string }) {
     fetch("/api/origin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: claimQuery }),
+      body: JSON.stringify({ text: claimQuery, lang: locale }),
     })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((data: { report?: OriginReportData }) => {
@@ -47,7 +48,7 @@ function OriginBody({ claimQuery }: { claimQuery: string }) {
     return () => {
       live = false;
     };
-  }, [claimQuery]);
+  }, [claimQuery, locale]);
 
   const report = load.status === "done" ? load.report : null;
 
@@ -86,12 +87,12 @@ function OriginBody({ claimQuery }: { claimQuery: string }) {
           </div>
           <div className="rounded-xl border border-line bg-surface p-3.5">
             <p className="text-[12px] font-semibold text-muted">{t("origin.spread")}</p>
-            <p className="text-[14px]">{report.spreadPattern}</p>
+            <p className="text-[14px]" lang={report.lang}>{report.spreadPattern}</p>
           </div>
           <div className="rounded-xl border border-line bg-surface p-3.5">
             <p className="text-[12px] font-semibold text-muted">{t("origin.summary")}</p>
-            <p className="whitespace-pre-line text-[14px]" lang="ur">
-              {report.summaryUrdu}
+            <p className="whitespace-pre-line text-[14px]" lang={report.lang}>
+              {report.summary}
             </p>
           </div>
           {report.groundingSources.length > 0 && (
@@ -109,7 +110,7 @@ function OriginBody({ claimQuery }: { claimQuery: string }) {
               </ul>
             </div>
           )}
-          <p className="rounded-lg bg-paper p-3 text-[12px] text-muted" lang="ur">
+          <p className="rounded-lg bg-paper p-3 text-[12px] text-muted" lang={report.lang}>
             {report.disclaimer}
           </p>
         </div>

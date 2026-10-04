@@ -31,7 +31,7 @@ describe("trackClaimOrigin", () => {
                   sourceUrl: "https://example.com/forum/thread/123",
                   snippet: "یہ میسج ای میل کے ذریعے پھیلنا شروع ہوا",
                   spreadPattern: "ای میل چینز اور ایس ایم ایس",
-                  summaryUrdu: "یہ تحریر سب سے پہلے 2008 کے قریب ای میل چینز کے ذریعے پھیلائی گئی تھی۔",
+                  summary: "یہ تحریر سب سے پہلے 2008 کے قریب ای میل چینز کے ذریعے پھیلائی گئی تھی۔",
                 }),
               },
             ],
@@ -73,8 +73,31 @@ describe("trackClaimOrigin", () => {
     expect(report.earliestRecord.sourcePlatform).toBe("اردو فورمز اور یاہو گروپس");
     expect(report.groundingSources.length).toBe(2);
     expect(report.groundingSources[0].url).toBe("https://example.com/forum/thread/123");
-    expect(report.summaryUrdu).toContain("2008 کے قریب");
+    expect(report.summary).toContain("2008 کے قریب");
     expect(report.disclaimer).toContain("تنبیہ");
+  });
+
+  it("asks for the requested language and returns that language's disclaimer and fallbacks", async () => {
+    const mockFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: "not json" }] } }] }),
+    }));
+    const f = mockFetch as unknown as typeof fetch;
+
+    const en = await trackClaimOrigin("x", { fetch: f, apiKey: "k", lang: "en" });
+    expect(en.lang).toBe("en");
+    expect(en.disclaimer).toMatch(/^Note:/);
+    expect(en.earliestRecord.estimatedDate).toBe("Unknown");
+    const sent = JSON.parse((mockFetch.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(sent.contents[0].parts[0].text).toContain("in clear English");
+
+    const ar = await trackClaimOrigin("x", { fetch: f, apiKey: "k", lang: "ar" });
+    expect(ar.disclaimer).toMatch(/^تنبيه/);
+    expect(ar.earliestRecord.estimatedDate).toBe("غير معروف");
+
+    const ur = await trackClaimOrigin("x", { fetch: f, apiKey: "k" });
+    expect(ur.lang).toBe("ur");
   });
 
   it("throws error when API key is missing", async () => {

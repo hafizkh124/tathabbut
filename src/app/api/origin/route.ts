@@ -8,8 +8,11 @@ const MAX_QUERY_LEN = 1_000;
 
 export async function POST(request: Request) {
   let text = "";
+  let lang: "ar" | "en" | "ur" = "ur";
   try {
-    text = String(((await request.json()) as { text?: unknown }).text ?? "").trim();
+    const body = (await request.json()) as { text?: unknown; lang?: unknown };
+    text = String(body.text ?? "").trim();
+    if (body.lang === "ar" || body.lang === "en" || body.lang === "ur") lang = body.lang;
   } catch {
     return Response.json({ error: "body must be JSON: { text }" }, { status: 400 });
   }
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
 
   const t0 = Date.now();
   try {
-    const report = await trackClaimOrigin(text);
+    const report = await trackClaimOrigin(text, { lang });
     return Response.json({
       report,
       ms: Date.now() - t0,
