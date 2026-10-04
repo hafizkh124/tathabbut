@@ -1,26 +1,193 @@
 @import "tailwindcss";
 
+/* Tathabbut design tokens. Brand = deep teal + gold. The grade colours (--t-*) belong to the verdicts only, never to the brand. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --paper: #faf8f3;
+  --surface: #ffffff;
+  --line: #e4dfd2;
+  --line-strong: #d3ccba;
+  --ink: #1a2321;
+  --muted: #55615e;
+  --brand: #0b3d3a;
+  --brand-hover: #14524d;
+  --brand-ink: #0b3d3a;
+  --brand-soft: #e3edea;
+  --on-brand: #ffffff;
+  --gold: #c8a24a;
+  --focus: #c8a24a;
+  --shadow-sheet: 0 -8px 24px rgba(11, 61, 58, 0.1);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --t-accepted-bg: #e6f2e4;
+  --t-accepted-fg: #1b5e20;
+  --t-accepted-bd: #a9d3a5;
+  --t-accepted-line: #2e7d32;
+  --t-weak-bg: #fbefd5;
+  --t-weak-fg: #7a4a00;
+  --t-weak-bd: #e8c987;
+  --t-weak-line: #b7791f;
+  --t-veryWeak-bg: #fbe5e3;
+  --t-veryWeak-fg: #8c1d18;
+  --t-veryWeak-bd: #ebb1ad;
+  --t-veryWeak-line: #b3261e;
+  --t-unsure-bg: #eceff1;
+  --t-unsure-fg: #3f4a51;
+  --t-unsure-bd: #c5cdd2;
+  --t-unsure-line: #5f6b73;
+  --t-misquote-bg: #fde9dd;
+  --t-misquote-fg: #8f3008;
+  --t-misquote-bd: #f2b999;
+  --t-misquote-line: #c2410c;
+  --t-translated-bg: #e3eef6;
+  --t-translated-fg: #234a68;
+  --t-translated-bd: #a9c7dd;
+  --t-translated-line: #3b6a8f;
+  --t-fatwa-bg: #e6e9f7;
+  --t-fatwa-fg: #2c3a7e;
+  --t-fatwa-bd: #b4bce3;
+  --t-fatwa-line: #3f51a3;
+  --t-notFound-bg: #faf8f3;
+  --t-notFound-fg: #3f4a51;
+  --t-notFound-bd: #9aa5ab;
+  --t-notFound-line: #5f6b73;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #0e1716;
+    --surface: #15221f;
+    --line: #263633;
+    --line-strong: #35504b;
+    --ink: #e8efed;
+    --muted: #9db0ab;
+    --brand: #14524d;
+    --brand-hover: #1b665f;
+    --brand-ink: #cfe0dc;
+    --brand-soft: #14231f;
+    --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
+
+    --t-accepted-bg: #16301a;
+    --t-accepted-fg: #9bd79f;
+    --t-accepted-bd: #2c5a31;
+    --t-accepted-line: #6fbf73;
+    --t-weak-bg: #3a2a0b;
+    --t-weak-fg: #f0c36b;
+    --t-weak-bd: #6b4e16;
+    --t-weak-line: #e0a63a;
+    --t-veryWeak-bg: #3e1613;
+    --t-veryWeak-fg: #f4a29c;
+    --t-veryWeak-bd: #7a2a25;
+    --t-veryWeak-line: #e5635b;
+    --t-unsure-bg: #232c31;
+    --t-unsure-fg: #b8c4cb;
+    --t-unsure-bd: #40505a;
+    --t-unsure-line: #8fa0aa;
+    --t-misquote-bg: #3d1e0f;
+    --t-misquote-fg: #f5b28a;
+    --t-misquote-bd: #7a3c1b;
+    --t-misquote-line: #ec8a54;
+    --t-translated-bg: #14293a;
+    --t-translated-fg: #9cc3e0;
+    --t-translated-bd: #2e5878;
+    --t-translated-line: #6aa3cf;
+    --t-fatwa-bg: #1e2347;
+    --t-fatwa-fg: #aeb8f0;
+    --t-fatwa-bd: #3d468c;
+    --t-fatwa-line: #8c99e6;
+    --t-notFound-bg: #0e1716;
+    --t-notFound-fg: #b8c4cb;
+    --t-notFound-bd: #5a6a72;
+    --t-notFound-line: #8fa0aa;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-readex), system-ui, sans-serif;
+  --font-quran: var(--font-amiri), "Traditional Arabic", serif;
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-sheet-up: sheet-up 0.22s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-readex), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Urdu is set in Nastaliq: tall ascenders and descenders need a roomier line, and a little space above the baseline in
+   buttons and chips, otherwise dots and tails are clipped. Arabic text inside an Urdu page keeps its own font. */
+html[lang="ur"] body {
+  font-family: var(--font-nastaliq), var(--font-readex), serif;
+  line-height: 2.2;
+}
+html[lang="ur"] .nastaliq-pad {
+  padding-top: 0.5em;
+  line-height: 2.1;
+}
+html[lang="ur"] button,
+html[lang="ur"] input,
+html[lang="ur"] textarea {
+  font-family: var(--font-nastaliq), var(--font-readex), serif;
+}
+
+/* The words of the Quran and hadith: always Arabic, always Amiri, whatever the interface language is. */
+.quran {
+  font-family: var(--font-amiri), "Traditional Arabic", serif;
+  direction: rtl;
+  unicode-bidi: isolate;
+  line-height: 2.1;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Amiri for Arabic text, without forcing the direction (a pasted post may be Urdu or English with Arabic inside). */
+.font-quran {
+  font-family: var(--font-amiri), "Traditional Arabic", serif;
 }

@@ -4,23 +4,15 @@
 // read through gradeMap.
 import type { Claim } from "./claims";
 import type { DorarResult } from "./dorar";
-import { NOT_FOUND_STATE, type Grade } from "./gradeMap";
+import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import type { LookupOutcome } from "./lookup";
 import { compareWithVerse, type VerseHit, type WordingCheck } from "./quranCheck";
 
-export const STATES = {
-  maqbul: "مقبول",
-  daif: "ضعيف",
-  shadid: "شديد الضعف أو لا أصل له",
-  unsure: "غير حاسم",
-  verseOk: "آية صحيحة النقل",
-  verseWrong: "آية منقولة بخطأ",
-  verseTranslated: "آية (نص مترجم)",
-  notFound: NOT_FOUND_STATE,
-  fatwa: "فتوى أو حالة شخصية — إحالة",
-} as const;
-export type State = (typeof STATES)[keyof typeof STATES] | string; // + the specialist's own statuses from circulating_sayings
+import { STATES, type State } from "./states";
+
+export { STATES };
+export type { State };
 
 export interface SayingHit {
   id: number;

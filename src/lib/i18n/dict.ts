@@ -1,0 +1,210 @@
+// Every word the user sees, in three languages. The Arabic text of the Quran and hadith is never translated here: it is shown as it is.
+// Rule: say what the user needs in plain words; never explain how the system works.
+export type Locale = "ar" | "en" | "ur";
+export const LOCALES: Locale[] = ["ar", "en", "ur"];
+export const DEFAULT_LOCALE: Locale = "ar";
+export const DIR: Record<Locale, "rtl" | "ltr"> = { ar: "rtl", en: "ltr", ur: "rtl" };
+
+type Entry = { ar: string; en: string; ur: string };
+
+export const DICT = {
+  "notice": {
+    ar: "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة",
+    en: "AI that quotes from reliable Islamic sources",
+    ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے",
+  },
+  "lang.label": { ar: "اللغة", en: "Language", ur: "زبان" },
+
+  "home.title": { ar: "ما الذي وصلك؟", en: "What did you receive?", ur: "آپ کو کیا موصول ہوا؟" },
+  "home.sub": {
+    ar: "ألصق ما وصلك من آية أو حديث أو رسالة، ونتحقق لك منه.",
+    en: "Paste the verse, hadith or message you received and we will check it for you.",
+    ur: "جو آیت، حدیث یا پیغام آپ کو ملا ہے وہ یہاں ڈالیں، ہم اس کی تصدیق کر دیں گے۔",
+  },
+  "home.label": { ar: "النص", en: "Text", ur: "متن" },
+  "home.placeholder": {
+    ar: "ألصق هنا النص الذي تريد التحقق منه…",
+    en: "Paste the text you want to check here…",
+    ur: "جس متن کی تصدیق کرنی ہے وہ یہاں ڈالیں…",
+  },
+  "home.hint": { ar: "يمكنك لصق الرسالة كاملة", en: "You can paste the whole message", ur: "پورا پیغام بھی ڈال سکتے ہیں" },
+  "home.image": { ar: "صورة", en: "Image", ur: "تصویر" },
+  "home.voice": { ar: "صوت", en: "Voice", ur: "آواز" },
+  "home.soon": { ar: "قريبًا", en: "Soon", ur: "جلد" },
+  "home.verify": { ar: "تحقّق", en: "Check", ur: "تصدیق کریں" },
+  "home.examples": { ar: "جرّب مثالًا", en: "Try an example", ur: "ایک مثال آزمائیں" },
+  "home.history": { ar: "السجل", en: "History", ur: "تاریخ" },
+  "example.verse": { ar: "آية فيها خطأ", en: "A verse with a mistake", ur: "آیت میں غلطی" },
+  "example.hadith": { ar: "حديث مشهور", en: "A famous hadith", ur: "مشہور حدیث" },
+  "example.saying": { ar: "قول متداول", en: "A saying in circulation", ur: "مشہور مقولہ" },
+  "example.question": { ar: "سؤال فقهي", en: "A fiqh question", ur: "فقہی سوال" },
+
+  "loading.title": { ar: "جارٍ التحقق من المصادر…", en: "Checking the sources…", ur: "ماخذ کی جانچ ہو رہی ہے…" },
+  "step.read": { ar: "قراءة النص", en: "Reading the text", ur: "متن پڑھنا" },
+  "step.find": { ar: "تحديد الآيات والأحاديث", en: "Finding the verses and hadiths", ur: "آیات اور احادیث الگ کرنا" },
+  "step.match": { ar: "مطابقة النص مع المصادر", en: "Matching with the sources", ur: "ماخذ سے ملانا" },
+  "step.fetch": { ar: "جلب النتائج", en: "Getting the results", ur: "نتائج لانا" },
+
+  "result.title": { ar: "نتيجة التحقق", en: "Result", ur: "نتیجۂ تحقیق" },
+  "result.count.one": { ar: "نص واحد", en: "1 text", ur: "ایک عبارت" },
+  "result.count.two": { ar: "نصّان", en: "2 texts", ur: "دو عبارتیں" },
+  "result.count.many": { ar: "{n} نصوص", en: "{n} texts", ur: "{n} عبارتیں" },
+  "result.of": { ar: "{i} من {n}", en: "{i} of {n}", ur: "{i} از {n}" },
+  "result.tap": { ar: "اضغط على النص الملوّن لعرض التفاصيل", en: "Tap a coloured text to see the details", ur: "تفصیل کے لیے رنگین عبارت پر ٹیپ کریں" },
+  "result.unplaced": { ar: "نتائج أخرى في الرسالة", en: "Other results in the message", ur: "پیغام کے دیگر نتائج" },
+  "result.new": { ar: "تحقّق من نص آخر", en: "Check another text", ur: "کوئی اور متن جانچیں" },
+  "result.yourText": { ar: "نصّك", en: "Your text", ur: "آپ کا متن" },
+
+  "label.source": { ar: "المصدر", en: "Source", ur: "ماخذ" },
+  "label.via": { ar: "عبر", en: "Via", ur: "بواسطہ" },
+  "label.scholar": { ar: "المحدّث", en: "Scholar", ur: "محدث" },
+  "label.words": { ar: "قوله", en: "His words", ur: "ان کا قول" },
+  "label.narrator": { ar: "الراوي", en: "Narrator", ur: "راوی" },
+  "label.text": { ar: "النص", en: "Text", ur: "متن" },
+  "label.attributed": { ar: "نُسب إلى", en: "Attributed to", ur: "منسوب کیا گیا" },
+  "label.correct": { ar: "الصواب", en: "The correct form", ur: "درست صورت" },
+  "label.note": { ar: "ملاحظة", en: "Note", ur: "نوٹ" },
+  "label.mushaf": { ar: "نص مصحف حفص", en: "Hafs mushaf text", ur: "مصحفِ حفص کا متن" },
+  "label.pages": { ar: "ج {v}، ص {p}", en: "vol. {v}, p. {p}", ur: "ج {v}، ص {p}" },
+  "verse.ref": { ar: "سورة {s}، الآية {a}", en: "Surah {s}, verse {a}", ur: "سورہ {s}، آیت {a}" },
+  "narrations.more": { ar: "روايات أخرى ({n})", en: "More narrations ({n})", ur: "مزید روایات ({n})" },
+  "narrations.fewer": { ar: "إخفاء", en: "Hide", ur: "چھپائیں" },
+  "diff.replaced": { ar: "كُتب «{typed}» والصواب «{correct}»", en: "Written “{typed}”, should be “{correct}”", ur: "«{typed}» لکھا ہے، درست «{correct}» ہے" },
+  "diff.missing": { ar: "سقطت كلمة «{correct}»", en: "Missing the word “{correct}”", ur: "لفظ «{correct}» رہ گیا ہے" },
+  "diff.added": { ar: "كلمة زائدة «{typed}»", en: "Extra word “{typed}”", ur: "اضافی لفظ «{typed}»" },
+  "empty.body": { ar: "لم نجد في هذا النص آية أو حديثًا نتحقق منه.", en: "We found no verse or hadith to check in this text.", ur: "اس متن میں تصدیق کے لیے کوئی آیت یا حدیث نہیں ملی۔" },
+  "note.disputed": { ar: "اختلفت أقوال المحدّثين في هذا النص", en: "Scholars differ on this text", ur: "اس متن پر محدثین کے اقوال مختلف ہیں" },
+  "note.caution": { ar: "في كلام المحدّث تقييد، فاقرأه كاملًا", en: "The scholar's wording is qualified; read it in full", ur: "محدث کے الفاظ میں قید ہے، انہیں پورا پڑھیں" },
+  "diff.title": { ar: "الفرق عن النص الصحيح", en: "Difference from the correct text", ur: "درست متن سے فرق" },
+
+  "via.dorar": { ar: "الدرر السنية", en: "Dorar al-Saniyyah", ur: "الدرر السنیہ" },
+  "via.shamela": { ar: "المكتبة الشاملة", en: "Shamela Library", ur: "المکتبۃ الشاملہ" },
+  "via.quranCom": { ar: "القرآن الكريم", en: "Quran.com", ur: "Quran.com" },
+  "via.quranpedia": { ar: "موسوعة القرآن", en: "Quranpedia", ur: "Quranpedia" },
+  "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
+
+  "action.copy": { ar: "نسخ", en: "Copy", ur: "کاپی" },
+  "action.copied": { ar: "تم النسخ", en: "Copied", ur: "کاپی ہو گیا" },
+  "action.share": { ar: "مشاركة", en: "Share", ur: "شیئر" },
+  "action.report": { ar: "هل في هذه النتيجة خطأ؟ أبلغ عنه", en: "Is this result wrong? Report it", ur: "کیا یہ نتیجہ غلط ہے؟ اطلاع دیں" },
+  "action.reported": { ar: "شكرًا، وصل بلاغك", en: "Thank you, your report was received", ur: "شکریہ، آپ کی اطلاع مل گئی" },
+  "action.origin": { ar: "من أين انتشر؟", en: "Where did it spread from?", ur: "یہ کہاں سے پھیلا؟" },
+  "action.close": { ar: "إغلاق", en: "Close", ur: "بند کریں" },
+  "action.edit": { ar: "تعديل النص", en: "Edit the text", ur: "متن میں تبدیلی" },
+  "action.editRetry": { ar: "تعديل النص وإعادة المحاولة", en: "Edit the text and try again", ur: "متن بدل کر دوبارہ کوشش کریں" },
+  "action.copyText": { ar: "نسخ النص", en: "Copy the text", ur: "متن کاپی کریں" },
+  "action.retry": { ar: "إعادة المحاولة", en: "Try again", ur: "دوبارہ کوشش کریں" },
+
+  "notfound.body": {
+    ar: "لم نجد هذا النص في المصادر المعتبرة التي نعتمد عليها.",
+    en: "We could not find this text in the reliable sources we use.",
+    ur: "یہ متن ہمارے معتبر ماخذ میں نہیں ملا۔",
+  },
+  "notfound.hint": {
+    ar: "لا نخمّن النتيجة. إن كنت تقصد نصًّا آخر فعدّل الصياغة، وإلا فراجع أهل العلم.",
+    en: "We do not guess the result. If you meant another text, change the wording; otherwise ask a scholar.",
+    ur: "ہم اندازے سے نتیجہ نہیں دیتے۔ کوئی اور متن مراد ہو تو الفاظ بدلیں، ورنہ اہلِ علم سے رجوع کریں۔",
+  },
+  "fatwa.body": {
+    ar: "هذا سؤال عن حكم أو حالة شخصية، والجواب فيه لأهل العلم.",
+    en: "This is a question about a ruling or a personal case, and the answer belongs to the scholars.",
+    ur: "یہ کسی حکم یا ذاتی صورتِ حال کا سوال ہے، اس کا جواب اہلِ علم دیں گے۔",
+  },
+  "translated.body": {
+    ar: "النص مترجم، فنعرض الآية للمقارنة ولا نحكم على لفظه.",
+    en: "The text is a translation, so we show the verse for comparison and do not judge its wording.",
+    ur: "متن ترجمہ ہے، اس لیے ہم آیت موازنے کے لیے دکھاتے ہیں اور الفاظ پر فیصلہ نہیں دیتے۔",
+  },
+
+  "error.title": { ar: "تعذّر إكمال التحقق", en: "We could not finish the check", ur: "تصدیق مکمل نہ ہو سکی" },
+  "error.network": {
+    ar: "تحقّق من اتصالك بالإنترنت ثم أعد المحاولة. نصّك محفوظ ولم يضِع.",
+    en: "Check your internet connection and try again. Your text is saved.",
+    ur: "انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔ آپ کا متن محفوظ ہے۔",
+  },
+  "error.tooLong": {
+    ar: "النص أطول مما نستطيع قراءته مرة واحدة. جرّب جزءًا أقصر.",
+    en: "The text is longer than we can read at once. Try a shorter part.",
+    ur: "متن ایک بار میں پڑھنے سے لمبا ہے۔ کوئی چھوٹا حصہ آزمائیں۔",
+  },
+  "error.read": {
+    ar: "لم نستطع قراءة هذا النص الآن. أعد المحاولة بعد قليل.",
+    en: "We could not read this text just now. Please try again in a moment.",
+    ur: "ابھی یہ متن پڑھا نہ جا سکا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+  },
+
+  "origin.title": { ar: "من أين انتشر؟", en: "Where did it spread from?", ur: "یہ کہاں سے پھیلا؟" },
+  "origin.loading": { ar: "نبحث في الأرشيف العام…", en: "Searching public archives…", ur: "عوامی آرکائیوز میں تلاش جاری ہے…" },
+  "origin.earliest": { ar: "أقدم ظهور علني", en: "Earliest public record", ur: "سب سے پرانا عوامی ریکارڈ" },
+  "origin.platform": { ar: "أول ظهور في", en: "First seen on", ur: "پہلی بار کہاں ملا" },
+  "origin.spread": { ar: "كيف انتشر", en: "How it spread", ur: "کیسے پھیلا" },
+  "origin.summary": { ar: "الخلاصة", en: "Summary", ur: "خلاصہ" },
+  "origin.links": { ar: "روابط ذات صلة", en: "Related links", ur: "متعلقہ روابط" },
+  "origin.unknown": { ar: "غير معروف", en: "Unknown", ur: "نامعلوم" },
+  "origin.failed": { ar: "تعذّر البحث الآن. أعد المحاولة بعد قليل.", en: "The search failed. Please try again in a moment.", ur: "تلاش مکمل نہ ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔" },
+} satisfies Record<string, Entry>;
+
+export type Key = keyof typeof DICT;
+
+type Pair = { short: string; long: string };
+/** Labels of a state, keyed by the state's Arabic wording (the backend's own words). */
+const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
+  "مقبول": {
+    ar: { short: "مقبول", long: "مقبول (صحيح أو حسن)" },
+    en: { short: "Accepted", long: "Accepted (sound or good)" },
+    ur: { short: "مقبول", long: "مقبول (صحیح یا حسن)" },
+  },
+  "ضعيف": { ar: p("ضعيف"), en: p("Weak"), ur: p("ضعیف") },
+  "شديد الضعف أو لا أصل له": { ar: p("شديد الضعف أو لا أصل له"), en: p("Very weak or baseless"), ur: p("شدید ضعیف یا بے اصل") },
+  "غير حاسم": { ar: p("غير حاسم"), en: p("Inconclusive"), ur: p("غیر حاسم") },
+  "آية صحيحة النقل": { ar: p("آية صحيحة النقل"), en: p("Verse quoted correctly"), ur: p("آیت درست نقل ہوئی") },
+  "آية منقولة بخطأ": { ar: p("آية منقولة بخطأ"), en: p("Verse misquoted"), ur: p("آیت غلط نقل ہوئی") },
+  "آية (نص مترجم)": { ar: p("آية (نص مترجم)"), en: p("Verse (translated text)"), ur: p("آیت (ترجمہ شدہ متن)") },
+  "لم يُعثر عليه — إحالة": {
+    ar: p("لم يُعثر عليه — إحالة"),
+    en: p("Not found — refer to a scholar"),
+    ur: p("نہیں ملا — اہلِ علم سے رجوع کریں"),
+  },
+  "فتوى أو حالة شخصية — إحالة": {
+    ar: p("فتوى أو حالة شخصية — إحالة"),
+    en: p("A fatwa or personal matter — refer to a scholar"),
+    ur: p("فتویٰ یا ذاتی معاملہ — اہلِ علم سے رجوع کریں"),
+  },
+  "قول منسوب خطأً إلى النبي ﷺ": {
+    ar: p("قول منسوب خطأً إلى النبي ﷺ"),
+    en: p("Wrongly attributed to the Prophet ﷺ"),
+    ur: p("نبی صلی اللہ علیہ وسلم کی طرف غلط منسوب قول"),
+  },
+  "لفظ أو ترجمة غير دقيقة": { ar: p("لفظ أو ترجمة غير دقيقة"), en: p("Inexact wording or translation"), ur: p("لفظ یا ترجمہ غیر درست") },
+  "قول منسوب خطأً إلى عالم": { ar: p("قول منسوب خطأً إلى عالم"), en: p("Wrongly attributed to a scholar"), ur: p("عالم کی طرف غلط منسوب قول") },
+};
+
+function p(label: string): Pair {
+  return { short: label, long: label };
+}
+
+/** A state's label in the user's language; a wording we do not know is shown as the backend wrote it. */
+export function stateLabel(state: string, locale: Locale, long = false): string {
+  const e = STATE_LABELS[state.trim()]?.[locale];
+  return e ? (long ? e.long : e.short) : state;
+}
+
+export function translate(locale: Locale, key: Key, params?: Record<string, string | number>): string {
+  const raw: string = DICT[key][locale];
+  return params ? raw.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m)) : raw;
+}
+
+/** «نصّان» / «2 texts» / «ثلاثة»: the count line under the result title. */
+export function countLabel(locale: Locale, n: number): string {
+  if (n === 1) return translate(locale, "result.count.one");
+  if (n === 2) return translate(locale, "result.count.two");
+  return translate(locale, "result.count.many", { n });
+}
+
+/** Numbers in the user's own digits: Arabic-Indic for Arabic, Eastern Arabic-Indic (Urdu) for Urdu, Latin for English. */
+export function digits(locale: Locale, value: number | string): string {
+  const s = String(value);
+  if (locale === "en") return s;
+  const base = locale === "ar" ? 0x0660 : 0x06f0;
+  return s.replace(/\d/g, (d) => String.fromCharCode(base + Number(d)));
+}
