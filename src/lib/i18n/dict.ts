@@ -29,6 +29,13 @@ export const DICT = {
   },
   "home.hint": { ar: "يمكنك لصق الرسالة كاملة", en: "You can paste the whole message", ur: "پورا پیغام بھی ڈال سکتے ہیں" },
   "home.image": { ar: "صورة", en: "Image", ur: "تصویر" },
+  "home.camera": { ar: "كاميرا", en: "Camera", ur: "کیمرہ" },
+  "home.drop": { ar: "أفلت الصورة هنا لقراءتها", en: "Drop the picture here", ur: "تصویر یہاں چھوڑیں" },
+  "home.imageHint": {
+    ar: "اسحب صورة إلى هنا، أو الصقها بـ Ctrl+V",
+    en: "Drag a picture here, or paste it with Ctrl+V",
+    ur: "تصویر یہاں گھسیٹیں، یا Ctrl+V سے چسپاں کریں",
+  },
   "home.voice": { ar: "صوت", en: "Voice", ur: "آواز" },
   "home.soon": { ar: "قريبًا", en: "Soon", ur: "جلد" },
   "home.verify": { ar: "تحقّق", en: "Check", ur: "تصدیق کریں" },
