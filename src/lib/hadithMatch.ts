@@ -20,6 +20,8 @@ export interface TurathReference {
   url: string;
   /** Turath's own order: 0 = the best match of its category */
   provenance?: { rank: number; totalMatches: number; truncated: boolean };
+  /** The server's signature on this excerpt (turathSign.ts): only a signed excerpt can be sent to /api/translate. */
+  sig?: string;
   /** The Turath category the passage was searched in (the book's type shown to the reader). */
   category?: { id: string; title: string };
 }

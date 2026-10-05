@@ -1,9 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { ClaimResult } from "@/lib/clientTypes";
 import type { TurathReference } from "@/lib/hadithMatch";
 import { DICT, type Key } from "@/lib/i18n/dict";
 import { useI18n } from "@/lib/i18n/i18n";
+import { fetchTranslation } from "@/lib/translateClient";
 import { topicQuery } from "@/lib/topic";
 import { findPhrase } from "@/lib/turathText";
 import { Icon } from "./ui/Icon";
@@ -45,9 +46,33 @@ function Excerpt({ text, phrase, folded }: { text: string; phrase: string; folde
   );
 }
 
+/** The machine translation of a passage into the interface language (Urdu or English), asked for when the card is on screen.
+ *  Arabic needs none. A passage the server did not sign, or a translation that failed, simply shows the Arabic alone. */
+function useTranslation(ref_: TurathReference): { state: "off" | "loading" | "done" | "failed"; text?: string } {
+  const { locale } = useI18n();
+  const to = locale === "ur" || locale === "en" ? locale : null;
+  const sig = ref_.sig;
+  const key = `${to}:${sig}`;
+  const [result, setResult] = useState<{ key: string; text: string | null } | null>(null);
+  useEffect(() => {
+    if (!to || !sig) return;
+    let live = true;
+    fetchTranslation(ref_.excerpt, sig, to).then((text) => {
+      if (live) setResult({ key, text });
+    });
+    return () => {
+      live = false;
+    };
+  }, [to, sig, key, ref_.excerpt]);
+  if (!to || !sig) return { state: "off" };
+  if (!result || result.key !== key) return { state: "loading" };
+  return result.text ? { state: "done", text: result.text } : { state: "failed" };
+}
+
 function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathReference; phrase: string; showCategory?: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
+  const translation = useTranslation(ref_);
   const catKey = ref_.category ? (`turath.cat.${ref_.category.id}` as Key) : null;
   const category = ref_.category ? (catKey && catKey in DICT ? t(catKey) : ref_.category.title) : null;
   const long = ref_.excerpt.length > 400;
@@ -69,6 +94,27 @@ function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathRefe
       >
         <Excerpt text={ref_.excerpt} phrase={phrase} folded={!open && long} />
       </p>
+      {translation.state === "loading" && (
+        <p className="text-[13px] text-muted" role="status" aria-live="polite">
+          {t("translate.loading")}
+        </p>
+      )}
+      {translation.state === "done" && (
+        <div className="space-y-1 rounded-lg border-s-2 border-line-strong bg-surface px-3 py-2">
+          <p className="text-[12px] font-semibold text-muted">{t("translate.label")}</p>
+          <p
+            lang={locale}
+            dir={locale === "ur" ? "rtl" : "ltr"}
+            className="whitespace-pre-line text-[15px] text-ink"
+            style={{
+              ...(locale === "ur" ? { fontFamily: "var(--font-nastaliq), serif", lineHeight: 2.4 } : { lineHeight: 1.7 }),
+              ...(open || !long ? {} : { display: "-webkit-box", WebkitLineClamp: FOLDED_LINES, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }),
+            }}
+          >
+            {translation.text}
+          </p>
+        </div>
+      )}
       {long && (
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="min-h-11 text-[13px] text-brand-ink underline underline-offset-[5px] cursor-pointer">
           {open ? t("narrations.fewer") : t("turath.expand")}

@@ -4,12 +4,28 @@ import { lookupTurath } from "@/lib/turath";
 import { POST } from "./route";
 
 vi.mock("@/lib/turath", () => ({ lookupTurath: vi.fn() }));
+vi.mock("@/lib/turathSign", () => ({ signExcerpt: (t: string) => `sig:${t}` }));
+
+// an in-memory cache in place of Supabase, so the test is hermetic and can see what is remembered
+const rows = new Map<string, TurathLookupOutcome>();
+vi.mock("@/lib/turathCache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/turathCache")>()),
+  supabaseTurathCache: () => ({
+    get: async (kind: string, q: string) => rows.get(`${kind}:${q}`) ?? null,
+    put: async (kind: string, q: string, o: TurathLookupOutcome) => {
+      if (o.status === "success" && !o.partial) rows.set(`${kind}:${q}`, o);
+    },
+  }),
+}));
 
 const reference = { excerpt: "نص من كتاب", citation: "كتاب العلل، ص 12", book: { id: "42", title: "كتاب العلل" }, bookId: "42", url: "https://app.turath.io/book/42/6" };
 const post = (body: unknown) =>
   POST(new Request("http://localhost/api/turath", { method: "POST", headers: { "Content-Type": "application/json" }, body: typeof body === "string" ? body : JSON.stringify(body) }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  rows.clear();
+});
 
 describe("POST /api/turath", () => {
   it("returns the references and the patch for a hadith Dorar did not find", async () => {
@@ -21,8 +37,26 @@ describe("POST /api/turath", () => {
 
     expect(res.status).toBe(200);
     expect(vi.mocked(lookupTurath)).toHaveBeenCalledWith("حديث تجريبي", "hadith");
-    expect(body.turath).toEqual(outcome);
+    expect(body.turath).toEqual({ status: "success", references: [{ ...reference, sig: `sig:${reference.excerpt}` }] });
     expect(body.patch).toMatchObject({ state: "موجود في كتب التراث", basis: "turath" });
+  });
+
+  it("answers a repeated question from the cache without asking Turath again, and signs the excerpts again", async () => {
+    vi.mocked(lookupTurath).mockResolvedValue({ status: "success", references: [reference] });
+    const ask = () => post({ query: "حديث مكرر", kind: "hadith", state: "ضعيف", basis: "dorar", notes: [] });
+    await ask();
+    const second = (await (await ask()).json()) as { turath: TurathLookupOutcome };
+
+    expect(vi.mocked(lookupTurath)).toHaveBeenCalledOnce();
+    expect(second.turath.references[0]).toMatchObject({ sig: `sig:${reference.excerpt}` });
+    expect([...rows.values()].every((o) => o.references.every((r) => !("sig" in r)))).toBe(true); // no signature is stored
+  });
+
+  it("does not remember an unavailable lookup", async () => {
+    vi.mocked(lookupTurath).mockResolvedValue({ status: "unavailable", references: [] });
+    await post({ query: "حديث", kind: "hadith", state: "ضعيف", basis: "dorar", notes: [] });
+    await post({ query: "حديث", kind: "hadith", state: "ضعيف", basis: "dorar", notes: [] });
+    expect(vi.mocked(lookupTurath)).toHaveBeenCalledTimes(2);
   });
 
   it("returns no patch when Dorar already gave a verdict, and still returns the references", async () => {

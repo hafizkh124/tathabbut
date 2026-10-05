@@ -50,6 +50,8 @@ Schema in `supabase/migrations/`.
 | `circulating_sayings` | Specialist's list: text, status, verdict, verdict author, reference, correct text, notes | ≈100–150 (55 loaded so far) |
 | `glossary_terms` | Approved Arabic / English / Urdu terms (table not created yet) | ≈10–20 |
 | `dorar_cache` | Raw Dorar responses per normalized query, with fetch time; private (service key only) | As queried |
+| `turath_cache` | The answer to a Turath lookup per normalized query and kind (hadith, scholar_quote, fiqh), 30-day TTL; private (service key only) | As queried |
+| `turath_translations` | The machine translation of a Turath passage per SHA-256 of the Arabic text and language (ur, en); private (service key only) | As translated |
 | `review_queue` | Unresolved texts, no user identity (`/admin` page not built yet) | — |
 | `data_sources` | Source name, version, link, licence notes | — |
 

@@ -93,6 +93,8 @@ export const DICT = {
     en: "These are passages from books of fiqh and fatwa as written, without preferring any view.",
     ur: "یہ فقہ و فتاویٰ کی کتب کے اقتباسات ہیں جیسے لکھے ہیں، اقوال میں کسی کو ترجیح نہیں دی گئی۔",
   },
+  "translate.label": { ar: "ترجمة آلية", en: "Machine translation — check it against the Arabic", ur: "مشینی ترجمہ — اصل عربی سے ملا کر دیکھیں" },
+  "translate.loading": { ar: "جارٍ الترجمة…", en: "Translating…", ur: "ترجمہ ہو رہا ہے…" },
   "turath.title": { ar: "من كتب التراث", en: "From the books (Turath)", ur: "کتبِ تراث سے" },
   "turath.loading": { ar: "جارٍ البحث في الكتب…", en: "Searching the books…", ur: "کتابوں میں تلاش جاری ہے…" },
   "turath.unavailable": {
