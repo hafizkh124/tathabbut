@@ -6,7 +6,7 @@ import { DICT, type Key } from "@/lib/i18n/dict";
 import { useI18n } from "@/lib/i18n/i18n";
 import { fetchTranslation } from "@/lib/translateClient";
 import { topicQuery } from "@/lib/topic";
-import { findPhrase } from "@/lib/turathText";
+import { findClosest } from "@/lib/turathText";
 import { shamelaPageUrl } from "@/lib/viaLinks";
 import { Icon } from "./ui/Icon";
 
@@ -28,11 +28,12 @@ function PageLine({ ref_ }: { ref_: TurathReference }) {
   return parts.length ? <p className="text-muted">{parts.join(" · ")}</p> : null;
 }
 
-/** The passage with the asked phrase marked. Folded, a passage whose phrase lies far in starts just before it, so the fold never hides it. */
+/** The passage with the asked phrase (or the stretch closest to it) marked. Folded, the passage starts a line or two before the
+ *  mark, so the fold never hides what the reader is looking for and a little of what leads to it is still there. */
 function Excerpt({ text, phrase, folded }: { text: string; phrase: string; folded: boolean }) {
-  const hit = findPhrase(text, phrase);
+  const hit = findClosest(text, phrase);
   if (!hit) return <>{text}</>;
-  const skip = folded && hit[0] > 220 ? text.lastIndexOf(" ", hit[0] - 120) + 1 : 0;
+  const skip = folded && hit[0] > 110 ? text.lastIndexOf(" ", hit[0] - 90) + 1 : 0;
   const body = text.slice(skip);
   const [a, b] = [hit[0] - skip, hit[1] - skip];
   return (
@@ -140,9 +141,11 @@ function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathRefe
 
 /** The passages of the books that hold the claim's text, under the result. It never changes the result by itself: the state is
  *  changed only by the server's patch (turathFallback.ts), and no passage is read as a verdict. */
-export function TurathBox({ r, title = "turath.title", note, phrase }: { r: ClaimResult; title?: Key; note?: Key; phrase?: string }) {
+export function TurathBox({ r, title = "turath.title", note, phrase, startOpen }: { r: ClaimResult; title?: Key; note?: Key; phrase?: string; startOpen?: boolean }) {
   const { t, num } = useI18n();
   const [more, setMore] = useState(false);
+  // Closed unless the books are the answer itself: the text was found only in them, or a general fiqh question (specialist, 2026-10-05).
+  const [open, setOpen] = useState(startOpen ?? r.state === "موجود في كتب التراث");
   const turath = r.turath;
   if (!turath) return null;
 
@@ -160,29 +163,45 @@ export function TurathBox({ r, title = "turath.title", note, phrase }: { r: Clai
 
   const [shown, rest] = [turath.references.slice(0, SHOWN), turath.references.slice(SHOWN)];
   return (
-    <div className="space-y-2 border-t border-line/60 pt-2">
-      <p className="text-[13px] font-semibold text-muted">{t(title)}</p>
-      {note && <p className="text-[13px] text-muted">{t(note)}</p>}
-      <ul className="space-y-2">
-        {shown.map((ref_, i) => (
-          <ReferenceCard key={`${ref_.bookId}:${ref_.pageLocator?.internalPage ?? i}`} r={ref_} phrase={phrase ?? r.claim.query} />
-        ))}
-      </ul>
-      {rest.length > 0 && (
-        <div className="space-y-2">
-          <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="min-h-11 text-[14px] text-brand-ink underline underline-offset-[5px] cursor-pointer">
-            {more ? t("narrations.fewer") : t("narrations.more", { n: num(rest.length) })}
-          </button>
-          {more && (
-            <ul className="space-y-2">
-              {rest.map((ref_, i) => (
-                <ReferenceCard key={`${ref_.bookId}:${ref_.pageLocator?.internalPage ?? i}:more`} r={ref_} phrase={phrase ?? r.claim.query} />
-              ))}
-            </ul>
+    <div className="border-t border-line/60 pt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 text-start text-[14px] font-semibold text-brand-ink"
+      >
+        <span>
+          {t(title)} <span className="font-normal text-muted">({num(turath.references.length)})</span>
+        </span>
+        <span aria-hidden className={`text-muted transition-transform ${open ? "rotate-180" : ""}`}>
+          <Icon name="chevron" size={16} />
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-2 pb-1">
+          {note && <p className="text-[13px] text-muted">{t(note)}</p>}
+          <ul className="space-y-2">
+            {shown.map((ref_, i) => (
+              <ReferenceCard key={`${ref_.bookId}:${ref_.pageLocator?.internalPage ?? i}`} r={ref_} phrase={phrase ?? r.claim.query} />
+            ))}
+          </ul>
+          {rest.length > 0 && (
+            <div className="space-y-2">
+              <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="min-h-11 text-[14px] text-brand-ink underline underline-offset-[5px] cursor-pointer">
+                {more ? t("narrations.fewer") : t("narrations.more", { n: num(rest.length) })}
+              </button>
+              {more && (
+                <ul className="space-y-2">
+                  {rest.map((ref_, i) => (
+                    <ReferenceCard key={`${ref_.bookId}:${ref_.pageLocator?.internalPage ?? i}:more`} r={ref_} phrase={phrase ?? r.claim.query} />
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
+          {partial}
         </div>
       )}
-      {partial}
     </div>
   );
 }
@@ -193,5 +212,5 @@ export function TurathBox({ r, title = "turath.title", note, phrase }: { r: Clai
  * (specialist, 2026-10-05). The question's own words never reach here, only its topic did, and the topic is what is marked.
  */
 export function FiqhBox({ r }: { r: ClaimResult }) {
-  return <TurathBox r={r} title="fiqh.title" note="fiqh.note" phrase={topicQuery(r.claim.topic ?? "")} />;
+  return <TurathBox r={r} title="fiqh.title" note="fiqh.note" phrase={topicQuery(r.claim.topic ?? "")} startOpen={r.claim.scope === "general"} />;
 }
