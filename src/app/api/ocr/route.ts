@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const t0 = Date.now();
   try {
     const r = await readImage(checked.image);
-    return Response.json({ text: r.text, uncertain: r.uncertain, model: r.model, ms: { read: r.ms, total: Date.now() - t0 } });
+    return Response.json({ text: r.text, uncertain: r.uncertain, model: r.model, usage: r.usage, ms: { read: r.ms, total: Date.now() - t0 } });
   } catch {
     return Response.json({ error: "could not read the image" }, { status: 502 });
   }

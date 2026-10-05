@@ -5,7 +5,7 @@
 // always the post's own text. The model's Arabic is used only to translate a claim written in Urdu or English, and
 // such a query is flagged so that it is never used to judge wording.
 import { normalizeArabic } from "./arabic";
-import { generateJson, type GeminiImage, type GenerateResult } from "./gemini";
+import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
 import { cleanTopic } from "./topic";
 
 export { cleanTopic, topicQuery } from "./topic";
@@ -43,6 +43,8 @@ export interface Extraction {
   dropped: { text: string; reason: string }[];
   model?: string;
   ms?: number;
+  /** tokens of the extraction call (for the evaluation's cost figure) */
+  usage?: GeminiUsage;
 }
 
 interface RawClaim {
@@ -249,7 +251,7 @@ export async function extractClaims(post: string, deps: { generate?: Generate } 
   const text = post.trim();
   if (!text) return { claims: [], dropped: [] };
   const r = await generate<{ claims?: RawClaim[] }>(claimsPrompt(text), { schema: CLAIMS_SCHEMA });
-  return { ...checkClaims(text, r.data.claims ?? []), model: r.model, ms: r.ms };
+  return { ...checkClaims(text, r.data.claims ?? []), model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
 }
 
 /** Reads the text of a screenshot as it is, so the claims can then be checked against what the image says. */

@@ -1,0 +1,10 @@
+# mock runs check the harness only; live runs are kept as evidence
+runs/*-mock-*/
+# full-text rows fetched by fetch-sources.ts (large; re-fetch instead of committing)
+sources/hf-rows.json
+# third-party texts (Sahih International, HadeethEnc grades, quranlab/hadith): kept local, not published (2026-10-06).
+# Rebuild: fetch the sources, then npm run eval:build. Run reports (report.md) are published.
+dataset.json
+sources/v1-snapshot.json
+runs/*/results.json
+screenshots/

@@ -1,0 +1,226 @@
+[
+ {
+  "from": "quran_exact_37_29",
+  "path": "screenshots/quran_exact_37_29.png"
+ },
+ {
+  "from": "quran_exact_40_36",
+  "path": "screenshots/quran_exact_40_36.png"
+ },
+ {
+  "from": "quran_exact_40_76",
+  "path": "screenshots/quran_exact_40_76.png"
+ },
+ {
+  "from": "quran_exact_3_60",
+  "path": "screenshots/quran_exact_3_60.png"
+ },
+ {
+  "from": "quran_exact_81_18",
+  "path": "screenshots/quran_exact_81_18.png"
+ },
+ {
+  "from": "quran_exact_2_210",
+  "path": "screenshots/quran_exact_2_210.png"
+ },
+ {
+  "from": "quran_exact_5_100",
+  "path": "screenshots/quran_exact_5_100.png"
+ },
+ {
+  "from": "quran_exact_7_15",
+  "path": "screenshots/quran_exact_7_15.png"
+ },
+ {
+  "from": "quran_distorted_2_267",
+  "path": "screenshots/quran_distorted_2_267.png"
+ },
+ {
+  "from": "quran_distorted_17_85",
+  "path": "screenshots/quran_distorted_17_85.png"
+ },
+ {
+  "from": "quran_distorted_20_22",
+  "path": "screenshots/quran_distorted_20_22.png"
+ },
+ {
+  "from": "quran_distorted_9_15",
+  "path": "screenshots/quran_distorted_9_15.png"
+ },
+ {
+  "from": "quran_distorted_6_93",
+  "path": "screenshots/quran_distorted_6_93.png"
+ },
+ {
+  "from": "quran_distorted_16_53",
+  "path": "screenshots/quran_distorted_16_53.png"
+ },
+ {
+  "from": "quran_distorted_37_70",
+  "path": "screenshots/quran_distorted_37_70.png"
+ },
+ {
+  "from": "quran_distorted_22_15",
+  "path": "screenshots/quran_distorted_22_15.png"
+ },
+ {
+  "from": "quran_translation_ur_102_6",
+  "path": "screenshots/quran_translation_ur_102_6.png"
+ },
+ {
+  "from": "quran_translation_en_31_31",
+  "path": "screenshots/quran_translation_en_31_31.png"
+ },
+ {
+  "from": "quran_translation_ur_39_39",
+  "path": "screenshots/quran_translation_ur_39_39.png"
+ },
+ {
+  "from": "quran_translation_ur_63_8",
+  "path": "screenshots/quran_translation_ur_63_8.png"
+ },
+ {
+  "from": "hadith_sahih_bukhari_61",
+  "path": "screenshots/hadith_sahih_bukhari_61.png"
+ },
+ {
+  "from": "hadith_sahih_hadeethenc_2b9a3ca8",
+  "path": "screenshots/hadith_sahih_hadeethenc_2b9a3ca8.png"
+ },
+ {
+  "from": "hadith_sahih_bukhari_108",
+  "path": "screenshots/hadith_sahih_bukhari_108.png"
+ },
+ {
+  "from": "hadith_sahih_muslim_188",
+  "path": "screenshots/hadith_sahih_muslim_188.png"
+ },
+ {
+  "from": "hadith_sahih_muslim_195",
+  "path": "screenshots/hadith_sahih_muslim_195.png"
+ },
+ {
+  "from": "hadith_sahih_hadeethenc_fe327518",
+  "path": "screenshots/hadith_sahih_hadeethenc_fe327518.png"
+ },
+ {
+  "from": "hadith_weak_tirmidhi_50",
+  "path": "screenshots/hadith_weak_tirmidhi_50.png"
+ },
+ {
+  "from": "hadith_weak_tirmidhi_206",
+  "path": "screenshots/hadith_weak_tirmidhi_206.png"
+ },
+ {
+  "from": "hadith_weak_ibnmajah_208",
+  "path": "screenshots/hadith_weak_ibnmajah_208.png"
+ },
+ {
+  "from": "hadith_weak_ibnmajah_70",
+  "path": "screenshots/hadith_weak_ibnmajah_70.png"
+ },
+ {
+  "from": "saying_21_2",
+  "path": "screenshots/saying_21_2.png"
+ },
+ {
+  "from": "saying_17_3",
+  "path": "screenshots/saying_17_3.png"
+ },
+ {
+  "from": "saying_46_1",
+  "path": "screenshots/saying_46_1.png"
+ },
+ {
+  "from": "saying_45_3",
+  "path": "screenshots/saying_45_3.png"
+ },
+ {
+  "from": "saying_22_1",
+  "path": "screenshots/saying_22_1.png"
+ },
+ {
+  "from": "saying_50_2",
+  "path": "screenshots/saying_50_2.png"
+ },
+ {
+  "from": "no_source_19_1",
+  "path": "screenshots/no_source_19_1.png"
+ },
+ {
+  "from": "no_source_18_2",
+  "path": "screenshots/no_source_18_2.png"
+ },
+ {
+  "from": "no_source_4_2",
+  "path": "screenshots/no_source_4_2.png"
+ },
+ {
+  "from": "no_source_1_1",
+  "path": "screenshots/no_source_1_1.png"
+ },
+ {
+  "from": "fiqh_personal_7_1",
+  "path": "screenshots/fiqh_personal_7_1.png"
+ },
+ {
+  "from": "fiqh_personal_13_3",
+  "path": "screenshots/fiqh_personal_13_3.png"
+ },
+ {
+  "from": "fiqh_personal_1_3",
+  "path": "screenshots/fiqh_personal_1_3.png"
+ },
+ {
+  "from": "fiqh_personal_12_2",
+  "path": "screenshots/fiqh_personal_12_2.png"
+ },
+ {
+  "from": "multilingual_en_2e0e6457",
+  "path": "screenshots/multilingual_en_2e0e6457.png"
+ },
+ {
+  "from": "multilingual_ur_76e34d8f",
+  "path": "screenshots/multilingual_ur_76e34d8f.png"
+ },
+ {
+  "from": "multilingual_ur_e92f173c",
+  "path": "screenshots/multilingual_ur_e92f173c.png"
+ },
+ {
+  "from": "multilingual_ur_1b5552a1",
+  "path": "screenshots/multilingual_ur_1b5552a1.png"
+ },
+ {
+  "from": "multi_claim_22",
+  "path": "screenshots/multi_claim_22.png"
+ },
+ {
+  "from": "multi_claim_30",
+  "path": "screenshots/multi_claim_30.png"
+ },
+ {
+  "from": "multi_claim_13",
+  "path": "screenshots/multi_claim_13.png"
+ },
+ {
+  "from": "multi_claim_24",
+  "path": "screenshots/multi_claim_24.png"
+ },
+ {
+  "from": "multi_claim_59",
+  "path": "screenshots/multi_claim_59.png"
+ },
+ {
+  "from": "multi_claim_21",
+  "path": "screenshots/multi_claim_21.png"
+ },
+ {
+  "from": "multi_claim_23",
+  "path": "screenshots/multi_claim_23.png"
+ },
+ {
+  "from": "multi_claim_29",
+  "path": "screenshots/multi_claim_29.png"
+ }
+]

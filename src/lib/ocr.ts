@@ -1,7 +1,7 @@
 // Reads the text of a screenshot or photo (Gemini vision) so it can be checked like pasted text.
 // The model is told to copy, never to correct: it tends to quietly fix a misquoted verse (checked 2026-10-03), which would hide
 // exactly the mistake we are looking for. So the person always sees the reading next to the picture and confirms it.
-import { generateJson, type GeminiImage, type GenerateResult } from "./gemini";
+import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
 
 export const OCR_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 /** Decoded size. The browser shrinks pictures first; a request body on the host is limited to ~4.5 MB. */
@@ -61,8 +61,8 @@ export function validateImage(body: { image?: unknown; mimeType?: unknown }): Im
 
 type Generate = <T>(prompt: string, opts: { schema: object; images?: GeminiImage[] }) => Promise<GenerateResult<T>>;
 
-export async function readImage(image: GeminiImage, deps: { generate?: Generate } = {}): Promise<OcrReading & { model: string; ms: number }> {
+export async function readImage(image: GeminiImage, deps: { generate?: Generate } = {}): Promise<OcrReading & { model: string; ms: number; usage?: GeminiUsage }> {
   const generate = deps.generate ?? generateJson;
   const r = await generate<{ text?: unknown; uncertain?: unknown }>(OCR_PROMPT, { schema: OCR_SCHEMA, images: [image] });
-  return { ...checkReading(r.data), model: r.model, ms: r.ms };
+  return { ...checkReading(r.data), model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
 }

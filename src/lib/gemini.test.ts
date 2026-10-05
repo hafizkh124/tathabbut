@@ -27,6 +27,12 @@ describe("generateJson", () => {
     expect(body.generationConfig).toMatchObject({ responseMimeType: "application/json", responseSchema: schema, temperature: 0, thinkingConfig: { thinkingLevel: "low" } });
   });
 
+  it("reports the token counts Gemini returns (for the evaluation's cost figure)", async () => {
+    const body = { candidates: [{ content: { parts: [{ text: "{}" }] } }], usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 30, thoughtsTokenCount: 10, totalTokenCount: 160 } };
+    const r = await generateJson("x", { schema }, { fetch: vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })), sleep: noSleep });
+    expect(r.usage).toEqual({ promptTokens: 120, outputTokens: 30, thoughtsTokens: 10, totalTokens: 160 });
+  });
+
   it("ignores thought parts and parses only the answer", async () => {
     const r = await generateJson("x", { schema }, { fetch: vi.fn().mockResolvedValue(ok({ claims: [] })), sleep: noSleep });
     expect(r.data).toEqual({ claims: [] });

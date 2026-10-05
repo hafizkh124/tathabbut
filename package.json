@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval": "tsx --env-file=.env.local eval/run-eval.ts",
+    "eval:build": "tsx eval/build-dataset.ts",
+    "eval:mock": "tsx eval/run-eval.ts --mode mock"
   },
   "dependencies": {
     "next": "16.3.8",

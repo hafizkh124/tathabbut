@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     })),
     dropped: extraction.dropped,
     model: extraction.model,
+    usage: extraction.usage,
     ms: { extract: extraction.ms, total: Date.now() - t0 },
   });
 }
