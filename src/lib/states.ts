@@ -8,6 +8,7 @@ export const STATES = {
   unsure: "غير حاسم",
   verseOk: "آية صحيحة النقل",
   verseWrong: "آية منقولة بخطأ",
+  verseContext: "آية اقتطع سياقها",
   verseTranslated: "آية (نص مترجم)",
   notFound: NOT_FOUND_STATE,
   fatwa: "فتوى أو حالة شخصية — إحالة",
@@ -19,4 +20,4 @@ export const STATES = {
 export type State = (typeof STATES)[keyof typeof STATES] | string; // + the specialist's own statuses from circulating_sayings
 
 /** The state of a quoted verse from how the quote compares with it (no comparison = a translated text). */
-export const stateOfVerse = (wording: { exact: boolean } | undefined) => (!wording ? STATES.verseTranslated : wording.exact ? STATES.verseOk : STATES.verseWrong);
+export const stateOfVerse = (wording: { exact: boolean; contextOmitted?: true } | undefined) => (!wording ? STATES.verseTranslated : wording.contextOmitted ? STATES.verseContext : wording.exact ? STATES.verseOk : STATES.verseWrong);

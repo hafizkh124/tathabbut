@@ -1,5 +1,15 @@
 # 4. Verification Rules
 
+## Specialist-approved clarifications — 5 October 2026
+
+- The Sahihayn's own records are displayed as inclusion in the collection: «امام بخاری نے اپنی صحیح میں روایت کیا ہے۔» / «امام مسلم نے اپنی صحیح میں روایت کیا ہے۔» Dorar's wholly bracketed additions have their own attribution label, rather than «His words». Another scholar's judgement remains attributed to that scholar. The same collection attribution is included in shared replies.
+- The specific quotation «ولا تقربوا الصلاة» (or «لا تقربوا الصلاة») from 4:43 receives an omitted-context warning and the full verse. Ordinary partial quotations are not automatically flagged. This adds state «آية اقتطع سياقها».
+- «إن الله لا يغير ما بقوم حتى يغيروا أنفسهم» is a misquotation of 13:11. Its correction preserves the related stretch through «ما بأنفسهم» and shows the word differences. These examples are development examples, not held-out evaluation data.
+- For «واحمرارها في العصر» in the passage about the sun, the approved Urdu translation is «اور عصر میں سورج کے سرخ ہونے سے»; no added «زرد». The prompt includes the example; a targeted Urdu check rejects the observed wrong colour addition, including in an older cached answer. This narrow check does not certify every machine translation's meaning.
+- The personal-case warning now says «کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔», with the same meaning in Arabic and English. It is preserved in shared personal-case replies.
+
+Implemented locally and covered by automated checks. Production rollout and real-interface rechecking are tracked separately in the joint work plan.
+
 These rules decide what a user sees. They are **deterministic code**, not model output. The scholarly decisions
 in them (the grade scheme, the circulating-texts list) were made by the project's hadith specialist.
 

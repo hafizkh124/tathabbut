@@ -9,6 +9,15 @@ import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, selectRelevant, summariz
 const results = parseDorarHtml(readFileSync(join(__dirname, "__fixtures__", "dorar_talab_al_ilm.html"), "utf-8"));
 
 describe("selectRelevant", () => {
+  it("does not match a forwarding promise to the ten companions promised Paradise (live case, 2026-10-05)", () => {
+    const unrelated = [{ rank: 1, matn: "[عن] عبدالرحمن بن الأخنس، قال: خطب المغيرة بن شعبة، فنال من علي، فقام سعيد بن زيد، فقال: ما تريد إلى هذا؟ أشهد على رسول الله لقال: عشرة في الجنة: رسول الله في الجنة، وأبو بكر في الجنة", verdict: "رجاله ثقات، إلا عبد الرحمن بن الاخنس لم يوثقه غير ابن حبان.", muhaddith: "شعيب الأرناؤوط", source: "تخريج سير أعلام النبلاء", number: "1/104" }];
+    expect(selectRelevant("من أرسل هذا إلى عشرة فله الجنة", unrelated)).toEqual([]);
+  });
+
+  it("keeps a short quote when all its content words are present in the longer narration", () => {
+    expect(selectRelevant("من أرسل هذا إلى عشرة فله الجنة", [{ rank: 1, matn: "نص اختباري مصطنع: من أرسل هذا إلى عشرة فله الجنة", verdict: "موضوع" }])).toHaveLength(1);
+  });
+
   it("keeps the narrations of this text and grades each with the specialist's rules", () => {
     const rel = selectRelevant("اطلبوا العلم ولو بالصين", results);
     expect(rel.length).toBeGreaterThan(5);

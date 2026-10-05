@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compareWithVerse, searchForm, type VerseHit } from "./quranCheck";
+import { stateOfVerse, STATES } from "./states";
 
 // 2:153 and 51:56 as stored in quran_verses (quranpedia Hafs, standard spelling).
 const v2_153: VerseHit = {
@@ -20,6 +21,24 @@ const v51_56: VerseHit = {
 };
 
 describe("compareWithVerse", () => {
+  it("flags only the approved context omission in 4:43 and preserves the complete verse", () => {
+    const verse = { ...v2_153, surah: 4, ayah: 43, text_uthmani: "يَا أَيُّهَا الَّذِينَ آمَنُوا لَا تَقْرَبُوا الصَّلَاةَ وَأَنْتُمْ سُكَارَى حَتَّى تَعْلَمُوا مَا تَقُولُونَ" };
+    for (const quote of ["ولا تقربوا الصلاة", "لا تقربوا الصلاة"]) {
+      const r = compareWithVerse(quote, verse);
+      expect(r.contextOmitted).toBe(true);
+      expect(stateOfVerse(r)).toBe(STATES.verseContext);
+    }
+    expect(compareWithVerse("لا تقربوا الصلاة وأنتم سكارى", verse).contextOmitted).toBeUndefined();
+    expect(compareWithVerse("إن الله مع الصابرين", v2_153).contextOmitted).toBeUndefined();
+  });
+
+  it("reports the approved wording error in 13:11 (test set T028)", () => {
+    const verse = { ...v2_153, surah: 13, ayah: 11, text_uthmani: "إِنَّ اللَّهَ لَا يُغَيِّرُ مَا بِقَوْمٍ حَتَّى يُغَيِّرُوا مَا بِأَنْفُسِهِمْ" };
+    const r = compareWithVerse("إن الله لا يغير ما بقوم حتى يغيروا أنفسهم", verse);
+    expect(stateOfVerse(r)).toBe(STATES.verseWrong);
+    expect(r.diffs.length).toBeGreaterThan(0);
+    expect(r.correctText).toContain("بِأَنْفُسِهِمْ");
+  });
   it("accepts a correct partial quotation, whatever the harakat or hamza", () => {
     expect(compareWithVerse("إن الله مع الصابرين", v2_153)).toMatchObject({ exact: true, diffs: [], correctText: "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ" });
     expect(compareWithVerse("ان اللہ مع الصابرين", v2_153).exact).toBe(true); // Urdu keyboard ہ

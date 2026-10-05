@@ -102,7 +102,9 @@ export function selectRelevant(query: string, results: DorarResult[], minCoverag
     const contained = m.includes(q) || (m.split(" ").length >= 3 && q.includes(m));
     const matchedBy = contained
       ? "contained"
-      : coverage !== null && coverage >= minCoverage && (matnOverlap(qTok, mTok) ?? 0) >= minCoverage
+      // With only three content words, two shared nouns do not identify a narration:
+      // «أرسل ... عشرة ... الجنة» must not match «عشرة في الجنة» while losing the action.
+      : coverage !== null && coverage >= (qTok.size <= 3 ? 1 : minCoverage) && (matnOverlap(qTok, mTok) ?? 0) >= minCoverage
         ? "overlap"
         : coverage === null && qWords.length > 0 && qWords.every((w) => m.includes(w))
           ? "all-words"

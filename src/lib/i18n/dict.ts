@@ -66,6 +66,8 @@ export const DICT = {
   "label.via": { ar: "عبر", en: "Via", ur: "بواسطہ" },
   "label.scholar": { ar: "المحدّث", en: "Scholar", ur: "محدث" },
   "label.words": { ar: "قوله", en: "His words", ur: "ان کا قول" },
+  "label.dorarGrade": { ar: "حكم أضافته الدرر السنية", en: "Grading added by Dorar al-Saniyya", ur: "الدرر السنیہ کا درج کردہ حکم" },
+  "verse.contextWarning": { ar: "اقتُطع سياق الآية؛ اقرأ العبارة في سياقها الكامل أدناه.", en: "The verse's context was omitted. Read the full relevant wording below.", ur: "آیت کا سیاق حذف ہوا ہے؛ ذیل میں مکمل متعلقہ عبارت پڑھیں۔" },
   "label.narrator": { ar: "الراوي", en: "Narrator", ur: "راوی" },
   "label.text": { ar: "النص", en: "Text", ur: "متن" },
   "label.attributed": { ar: "نُسب إلى", en: "Attributed to", ur: "منسوب کیا گیا" },
@@ -77,9 +79,9 @@ export const DICT = {
   "narrations.more": { ar: "نتائج أخرى ({n})", en: "Other results ({n})", ur: "دیگر نتائج ({n})" },
   "narrations.weakVariants": { ar: "طرق وأسانيد ضعيفة ({n})", en: "Weak chains ({n})", ur: "دیگر ضعیف اسناد ({n})" },
   "fatwa.warn": {
-    ar: "تنبيه قبل العمل: هذه معلومات علمية عامة فقط. والحكم في واقعة بعينها يرجع فيه إلى دار الإفتاء أو مفتٍ مؤهل بعد معرفة التفاصيل، فمدار الحكم على النية والقرائن.",
-    en: "Before you act: this is general scholarly information only. A ruling on a particular case belongs to a Dar al-Ifta or a qualified mufti who knows the details, because a ruling depends on intention and circumstances.",
-    ur: "تنبیہ برائے عملی فتویٰ: یہ معلومات صرف عمومی علمی فہم کے لیے ہیں۔ کسی بھی انفرادی واقعے کے حتمی فیصلے کے لیے دار الافتاء یا مستند مفتیانِ کرام سے ذاتی رجوع لازم ہے، کیونکہ حکم کا مدار نیت اور تفصیلی قرائن پر ہوتا ہے۔",
+    ar: "تنبيه قبل العمل: هذه معلومات علمية عامة فقط. والحكم في واقعة بعينها يرجع فيه إلى دار الإفتاء أو مفتٍ مؤهل، لأن الحكم يتعلق بالتفاصيل الكاملة للواقعة.",
+    en: "Before you act: this is general scholarly information only. A ruling on a particular case belongs to a Dar al-Ifta or a qualified mufti, because a ruling depends on the full details of the case.",
+    ur: "تنبیہ برائے عملی فتویٰ: یہ معلومات صرف عمومی علمی فہم کے لیے ہیں۔ کسی بھی انفرادی واقعے کے حتمی فیصلے کے لیے دار الافتاء یا مستند مفتیانِ کرام سے ذاتی رجوع لازم ہے، کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔",
   },
   "fiqh.topic": { ar: "الموضوع الذي بحثنا فيه: {topic}", en: "Topic searched: {topic}", ur: "جس موضوع پر تلاش کی گئی: {topic}" },
   "fiqh.refer": {
@@ -254,6 +256,7 @@ const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
   "غير حاسم": { ar: p("غير حاسم"), en: p("Inconclusive"), ur: p("غیر حاسم") },
   "آية صحيحة النقل": { ar: p("آية صحيحة النقل"), en: p("Verse quoted correctly"), ur: p("آیت درست نقل ہوئی") },
   "آية منقولة بخطأ": { ar: p("آية منقولة بخطأ"), en: p("Verse misquoted"), ur: p("آیت غلط نقل ہوئی") },
+  "آية اقتطع سياقها": { ar: p("اقتُطع سياق الآية"), en: p("Verse context omitted"), ur: p("آیت کا سیاق حذف ہوا ہے") },
   "آية (نص مترجم)": { ar: p("آية (نص مترجم)"), en: p("Verse (translated text)"), ur: p("آیت (ترجمہ شدہ متن)") },
   "لم يُعثر عليه — إحالة": {
     ar: p("لم يُعثر عليه — إحالة"),

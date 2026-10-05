@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from "react";
 import type { ClaimResult, NarrationView } from "@/lib/clientTypes";
 import { dorarSearchUrl } from "@/lib/dorarLink";
+import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
 import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah } from "@/lib/shareText";
@@ -84,13 +85,7 @@ function NarrationRow({ n }: { n: NarrationView }) {
           {n.reference ? `، ${n.reference}` : ""}
         </Row>
       )}
-      {n.verdict && (
-        <Row label={t("label.words")}>
-          <span lang="ar" dir="rtl">
-            {n.verdict}
-          </span>
-        </Row>
-      )}
+      <NarrationVerdict n={n} />
       <a
         href={dorarSearchUrl(n.matn, n.source)}
         target="_blank"
@@ -103,6 +98,17 @@ function NarrationRow({ n }: { n: NarrationView }) {
       </a>
     </li>
   );
+}
+
+function NarrationVerdict({ n }: { n: NarrationView }) {
+  const { t, locale } = useI18n();
+  const attribution = sahihAttribution(n, locale);
+  return <>
+    {attribution && <p>{attribution}</p>}
+    {n.verdict && <Row label={t(isDorarAddition(n.verdict) ? "label.dorarGrade" : "label.words")}>
+      <span lang="ar" dir="rtl">{n.verdict}</span>
+    </Row>}
+  </>;
 }
 
 function SourceBox({ r }: { r: ClaimResult }) {
@@ -137,13 +143,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
             </Row>
           )}
           {first?.muhaddith && <Row label={t("label.scholar")}>{first.muhaddith}</Row>}
-          {first?.verdict && (
-            <Row label={t("label.words")}>
-              <span lang="ar" dir="rtl">
-                {first.verdict}
-              </span>
-            </Row>
-          )}
+          {first && <NarrationVerdict n={first} />}
           {first?.display?.caution && <p className="pt-1 text-[13px] text-muted">{t("note.caution")}</p>}
           <ViaRow links={viaLinks(r)} />
         </div>
@@ -327,6 +327,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
 
       {r.verse && (
         <div className="space-y-2">
+          {r.verse.wording?.contextOmitted && <p role="note" className="rounded-xl border border-line bg-paper p-3 text-[14px]">{t("verse.contextWarning")}</p>}
           <Diffs r={r} />
           {(tone === "misquote" || tone === "translated") && (
             <div className="rounded-xl border border-line bg-paper p-3">

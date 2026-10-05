@@ -47,6 +47,7 @@ const EXACT: Record<string, Tone> = {
   [GRADES[3]]: "unsure",
   [STATES.verseOk]: "verse",
   [STATES.verseWrong]: "misquote",
+  [STATES.verseContext]: "misquote",
   [STATES.verseTranslated]: "translated",
   [STATES.notFound]: "notFound",
   [STATES.fatwa]: "fatwa",

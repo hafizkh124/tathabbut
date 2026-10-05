@@ -23,6 +23,8 @@ export type WordDiff =
 
 export interface WordingCheck {
   exact: boolean;
+  /** Specialist-approved omitted context for the specific quotation of 4:43. */
+  contextOmitted?: true;
   /** The verse's own words (with harakat) for the stretch that was quoted. */
   correctText: string;
   diffs: WordDiff[];
@@ -68,9 +70,16 @@ export function compareWithVerse(quoted: string, verse: VerseHit): WordingCheck 
   const typedShown = quoted.split(/\s+/).filter((w) => words(w).length > 0);
   const typed = typedShown.map((w) => words(w).join(""));
   const { clean, shown } = verseWords(verse);
+  // Specialist-reviewed 13:11 omission: keep the whole related stretch rather
+  // than letting edit distance shorten it before «ما بأنفسهم».
+  const reviewedQuote = verse.surah === 13 && verse.ayah === 11
+    && typed.join(" ") === "ان الله لا يغير ما بقوم حتي يغيروا انفسهم";
+  const reviewedWords = words("إن الله لا يغير ما بقوم حتى يغيروا ما بأنفسهم");
+  const reviewedStart = reviewedQuote ? clean.findIndex((_, i) => reviewedWords.every((w, j) => clean[i + j] === w)) : -1;
   let best = { cost: Infinity, start: 0, len: 0, ops: [] as ReturnType<typeof align>["ops"] };
   for (let len = Math.max(1, typed.length - 2); len <= Math.min(clean.length, typed.length + 2); len++) {
     for (let start = 0; start + len <= clean.length; start++) {
+      if (reviewedStart >= 0 && (start !== reviewedStart || len !== reviewedWords.length)) continue;
       const r = align(typed, clean.slice(start, start + len));
       if (r.cost < best.cost || (r.cost === best.cost && len === typed.length && best.len !== typed.length)) best = { cost: r.cost, start, len, ops: r.ops };
     }
@@ -82,7 +91,8 @@ export function compareWithVerse(quoted: string, verse: VerseHit): WordingCheck 
     else if (o.op === "added") diffs.push({ op: "added", typed: typedShown[o.ai] });
     else if (o.op === "missing") diffs.push({ op: "missing", correct: window[o.bj] });
   }
-  return { exact: best.cost === 0, correctText: window.join(" "), diffs, distance: typed.length ? best.cost / typed.length : 1 };
+  const contextOmitted = verse.surah === 4 && verse.ayah === 43 && /^و?لا تقربوا الصلاه$/.test(typed.join(" "));
+  return { exact: best.cost === 0, ...(contextOmitted ? { contextOmitted: true as const } : {}), correctText: window.join(" "), diffs, distance: typed.length ? best.cost / typed.length : 1 };
 }
 
 /** Normalized form used for the database search (same as quran_verses.text_clean). */

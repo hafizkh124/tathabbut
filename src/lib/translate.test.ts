@@ -39,6 +39,12 @@ describe("translationPrompt", () => {
 });
 
 describe("checkTranslation", () => {
+  it("accepts red and rejects added yellow for the specialist-approved passage", () => {
+    const source = "ويسقط سجود السهو بطلوع الشمس بعد السلام في الفجر واحمرارها في العصر";
+    expect(checkTranslation(source, "فجر میں سلام کے بعد سورج نکلنے سے اور عصر میں سورج کے سرخ ہونے سے سجدہ سہو ساقط ہوتا ہے۔", "ur")).toContain("سرخ");
+    expect(() => checkTranslation(source, "فجر میں سورج نکلنے سے اور عصر میں اس کے زرد/سرخ ہونے سے سجدہ سہو ساقط ہوتا ہے۔", "ur")).toThrow(TranslateError);
+    expect(() => checkTranslation(source, "فجر میں سورج نکلنے سے اور عصر میں اس کے زرد ہونے سے سجدہ سہو ساقط ہوتا ہے۔", "ur")).toThrow(TranslateError);
+  });
   it("accepts a plausible translation", () => {
     expect(checkTranslation(AR, "  Chapter on the prostration of forgetfulness: two prostrations are required.  ", "en")).toBe("Chapter on the prostration of forgetfulness: two prostrations are required.");
     expect(checkTranslation(AR, "باب سجدۂ سہو: ترکِ واجب پر دو سجدے لازم ہیں۔", "ur")).toContain("سجدۂ سہو");
@@ -60,6 +66,17 @@ describe("checkTranslation", () => {
 });
 
 describe("translateExcerpt", () => {
+  it("regenerates an older cached yellow/red translation instead of serving it", async () => {
+    const source = "بطلوع الشمس بعد السلام في الفجر واحمرارها في العصر";
+    const cache = memory();
+    await cache.put(source, "ur", "فجر میں سورج نکلنے اور عصر میں سورج کے زرد/سرخ ہونے سے۔", "old");
+    const generate = gen("فجر میں سلام کے بعد سورج نکلنے سے اور عصر میں سورج کے سرخ ہونے سے۔");
+    const r = await translateExcerpt(source, "ur", { generate, cache });
+    expect(r.cached).toBe(false);
+    expect(r.translation).not.toContain("زرد");
+    expect(generate).toHaveBeenCalledOnce();
+    expect((await translateExcerpt(source, "ur", { generate, cache })).cached).toBe(true);
+  });
   it("translates once, caches by passage and language, then answers from the cache", async () => {
     const generate = gen("Chapter on the prostration of forgetfulness: two prostrations are required.");
     const cache = memory();
