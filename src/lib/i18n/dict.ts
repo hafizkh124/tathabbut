@@ -74,6 +74,14 @@ export const DICT = {
   "label.correct": { ar: "الصواب", en: "The correct form", ur: "درست صورت" },
   "label.note": { ar: "ملاحظة", en: "Note", ur: "نوٹ" },
   "label.mushaf": { ar: "نص مصحف حفص", en: "Hafs mushaf text", ur: "مصحفِ حفص کا متن" },
+  "label.matchedArabic": { ar: "النص العربي الموافق لهذه العبارة المترجمة", en: "Arabic text matched to this translated wording", ur: "اس ترجمہ شدہ عبارت سے ملنے والا عربی متن" },
+  "note.translationMatch": { ar: "المطابقة مع النص العربي؛ لا يُحكم بها على دقة ألفاظ الترجمة.", en: "The match is to the Arabic text; it does not verify the translation word for word.", ur: "یہ مطابقت عربی متن سے ہے؛ اس سے ترجمے کے ہر لفظ کی تصدیق مراد نہیں۔" },
+  "note.halikIsnad": { ar: "هذا الحكم بالضعف الشديد يخص هذا الإسناد.", en: "This severe-weakness verdict applies to this chain of transmission.", ur: "شدید ضعف کا یہ حکم اسی سند کے بارے میں ہے۔" },
+  "note.narratorCriticism": { ar: "هذا جرح لراوٍ في هذا الإسناد؛ لا يُفهم منه وحده حكم نهائي على جميع طرق الحديث.", en: "This criticizes a narrator in this chain; it alone is not a final verdict on every route of the narration.", ur: "یہ اس سند کے راوی کی جرح ہے؛ اسے تنہا روایت کی تمام سندوں کا حتمی حکم نہ سمجھیں۔" },
+  "label.narrationText": { ar: "نص الرواية في المصدر", en: "Narration text in the source", ur: "ماخذ میں روایت کا متن" },
+  "note.additionalWording": { ar: "في هذه الرواية ألفاظ إضافية؛ اقرأ حكمها منسوبًا إلى هذا النص أو إسناده.", en: "This narration has additional wording; read its verdict as applying to this text or its chain.", ur: "اس روایت میں اضافی الفاظ ہیں؛ اس کا حکم اسی متن یا اس کی سند کے حوالے سے پڑھیں۔" },
+  "note.differentWording": { ar: "ألفاظ هذه الرواية تختلف عن العبارة المدخلة؛ اقرأ حكمها مع نصها وإسنادها.", en: "This narration differs from the supplied wording; read its verdict together with its text and chain.", ur: "اس روایت کے الفاظ فراہم کردہ عبارت سے مختلف ہیں؛ اس کا حکم اس کے متن اور سند کے ساتھ پڑھیں۔" },
+  "note.variantSummary": { ar: "تتضمن النتائج روايات بألفاظ إضافية أو مختلفة وأحكامها؛ لا تجعل حكم نص منها حكمًا على كل صيغة.", en: "Results include narrations with additional or different wording and their verdicts; do not treat one text's verdict as applying to every wording.", ur: "نتائج میں اضافی یا مختلف الفاظ والی روایتیں اور ان کے احکام بھی ہیں؛ ایک متن کا حکم ہر لفظی صورت کا حکم نہ سمجھیں۔" },
   "label.pages": { ar: "ج {v}، ص {p}", en: "vol. {v}, p. {p}", ur: "ج {v}، ص {p}" },
   "verse.ref": { ar: "سورة {s}، الآية {a}", en: "Surah {s}, verse {a}", ur: "سورہ {s}، آیت {a}" },
   "narrations.more": { ar: "نتائج أخرى ({n})", en: "Other results ({n})", ur: "دیگر نتائج ({n})" },
@@ -261,7 +269,7 @@ const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
   "لم يُعثر عليه — إحالة": {
     ar: p("لم يُعثر عليه — إحالة"),
     en: p("Not found — refer to a scholar"),
-    ur: p("نہیں ملا — اہلِ علم سے رجوع کریں"),
+    ur: p("اس عبارت کا معتبر حوالہ نہیں ملا — اہلِ علم سے رجوع کریں"),
   },
   "فتوى أو حالة شخصية — إحالة": {
     ar: p("فتوى أو حالة شخصية — إحالة"),

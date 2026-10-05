@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   if (q.length > MAX_QUERY_LENGTH) return Response.json({ error: "q too long" }, { status: 400 });
 
   const r = await lookupDorar(q, { cache: supabaseDorarCache() });
-  if (!r.ok) return Response.json({ error: r.error, detail: r.detail ?? null }, { status: 502 });
+  if (!r.ok) return Response.json({ error: r.error }, { status: 502 });
   return Response.json(
     { source: "dorar.net", origin: r.origin, fetchedAt: r.fetchedAt ?? null, query: q, results: r.results },
     // Repeated questions are also answered from Vercel's edge cache, without touching Supabase or Dorar.

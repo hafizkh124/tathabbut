@@ -5,10 +5,10 @@ import type { Key } from "@/lib/i18n/dict";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 
-export type ErrorKind = "network" | "tooLong" | "read" | "ocr" | "noText" | "badImage";
-const BODY: Record<ErrorKind, Key> = { network: "error.network", tooLong: "error.tooLong", read: "error.read", ocr: "error.ocr", noText: "error.noText", badImage: "error.badImage" };
+export type ErrorKind = "network" | "pictureNetwork" | "tooLong" | "read" | "ocr" | "noText" | "badImage";
+const BODY: Record<ErrorKind, Key> = { network: "error.network", pictureNetwork: "error.network", tooLong: "error.tooLong", read: "error.read", ocr: "error.ocr", noText: "error.noText", badImage: "error.badImage" };
 /** Errors about a picture have no text to keep: the only way on is back to choose another. */
-const PICTURE: ErrorKind[] = ["ocr", "noText", "badImage"];
+const PICTURE: ErrorKind[] = ["pictureNetwork", "ocr", "noText", "badImage"];
 
 export function ErrorView({ kind, text, onRetry, onEdit }: { kind: ErrorKind; text: string; onRetry: () => void; onEdit: () => void }) {
   const { t } = useI18n();

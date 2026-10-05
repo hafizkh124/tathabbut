@@ -20,8 +20,8 @@ export interface GradeResult {
   confidence: Confidence;
   /** Why, in Arabic, for the specialist's review queue. */
   reason: string;
-  /** The verdict is about the chain only («إسناده صحيح»), which the specialist accepts as a verdict on the hadith. */
-  scope: "isnad" | "hadith";
+  /** Preserve whether the wording concerns the narration, its chain, or a narrator's criticism. */
+  scope: "isnad" | "hadith" | "narrator";
   /** Dorar puts its own additions in [..]; the wording is the encyclopaedia's, not the muhaddith's. */
   bracketed: boolean;
 }
@@ -45,6 +45,7 @@ const DISPUTE = re(word(["بعضهم", "اختلف", "خلاف", "يحتمل"]))
 
 /** Stage 1: wordings that decide by themselves; first match wins. */
 const SPECIAL: { pattern: RegExp; grade: Grade; confidence: Confidence; reason: string }[] = [
+  { pattern: re("^اسناده هالك$"), grade: SHADID, confidence: "high", reason: "قرار المختص 2026-10-05: ضعف شديد في هذا الإسناد" },
   { pattern: re("(اخرجه|رواه|خرجه|اورده) (البخاري|مسلم|الشيخان)"), grade: MAQBUL, confidence: "high", reason: "إخراج البخاري/مسلم" },
   { pattern: DISPUTE, grade: UNSURE, confidence: "low", reason: "فيه اختلاف أو احتمال" },
   { pattern: re("^(قيل|زعم|يقال|قال بعضهم)"), grade: UNSURE, confidence: "low", reason: "صيغة تمريض/حكاية قول" },
@@ -86,13 +87,17 @@ const QUALIFIERS = re(
 );
 const SCOPE_ISNAD = re("اسناد|سنده|سندها|رجاله|رجالها|طريق|اسانيد");
 const NARRATOR_START = re("^(فيه|في اسناده|في السند|في سنده|فيها) ");
+// Conservative presentation cue: a chain defect alone («فيه انقطاع») is
+// not labelled as criticism of a narrator. Unrecognized wording stays as is.
+const NARRATOR_CRITICISM = re("يروي|يحدث|رواياته|كذاب|متروك الحديث|منكر الحديث|لا يحل الاحتجاج بخبره|ضعفه بين");
 /** Longer wordings carry names and side remarks that mislead word rules, so they are left to the specialist. */
 const LONG = 40;
 
 export function classifyVerdict(verdict: string, muhaddith = ""): GradeResult {
   const bracketed = verdict.trim().startsWith("[");
   const text = normalizeArabic(verdict.replace(/[[\]]/g, " "));
-  const scope = SCOPE_ISNAD.test(text) ? "isnad" : "hadith";
+  const scope = NARRATOR_START.test(text) && NARRATOR_CRITICISM.test(text)
+    ? "narrator" : SCOPE_ISNAD.test(text) ? "isnad" : "hadith";
   const out = (grade: Grade, confidence: Confidence, reason: string): GradeResult => ({ grade, confidence, reason, scope, bracketed });
 
   if (re("^" + OWN_SAHIH).test(text) && SAHIHAYN.has(normalizeArabic(muhaddith))) {

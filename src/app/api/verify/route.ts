@@ -28,8 +28,8 @@ export async function POST(request: Request) {
   let extraction;
   try {
     extraction = await extractClaims(text);
-  } catch (err) {
-    return Response.json({ error: "could not read the post", detail: (err as Error).message.slice(0, 200) }, { status: 502 });
+  } catch {
+    return Response.json({ error: "could not read the post" }, { status: 502 });
   }
   const cache = supabaseDorarCache();
   const results = await verifyClaims(extraction.claims, {
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
       // each muhaddith's verdict as shown on the card (policy A: a caution on a medium-confidence grade)
       dorar: r.dorar && {
         ...r.dorar,
-        narrations: r.dorar.narrations.slice(0, 8).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
-        weakVariants: r.dorar.weakVariants?.slice(0, 8).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
+        narrations: r.dorar.narrations.slice(0, 15).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
+        weakVariants: r.dorar.weakVariants?.slice(0, 15).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
       },
     })),
     dropped: extraction.dropped,

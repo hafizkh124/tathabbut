@@ -7,6 +7,7 @@ import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
+import { matchedArabic } from "@/lib/matchedArabic";
 import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
@@ -104,10 +105,17 @@ function NarrationVerdict({ n }: { n: NarrationView }) {
   const { t, locale } = useI18n();
   const attribution = sahihAttribution(n, locale);
   return <>
+    {n.textVariant && <div className="space-y-1">
+      <p role="note" className="text-[13px] text-muted">{t(n.textVariant === "additional" ? "note.additionalWording" : "note.differentWording")}</p>
+      <p className="text-[12px] text-muted">{t("label.narrationText")}</p>
+      <p lang="ar" dir="rtl" className="quran text-[18px]">{n.matn}</p>
+    </div>}
     {attribution && <p>{attribution}</p>}
     {n.verdict && <Row label={t(isDorarAddition(n.verdict) ? "label.dorarGrade" : "label.words")}>
       <span lang="ar" dir="rtl">{n.verdict}</span>
     </Row>}
+    {n.scope === "isnad" && /هالك/.test(n.verdict ?? "") && <p className="text-[13px] text-muted">{t("note.halikIsnad")}</p>}
+    {n.scope === "narrator" && <p role="note" className="text-[13px] text-muted">{t("note.narratorCriticism")}</p>}
   </>;
 }
 
@@ -135,6 +143,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
     return (
       <div className="space-y-2">
         {r.dorar.summary.disputed && <p className="text-[13px] text-muted">{t("note.disputed")}</p>}
+        {[...r.dorar.narrations, ...(weakList ?? [])].some((n) => n.textVariant) && <p role="note" className="text-[13px] text-muted">{t("note.variantSummary")}</p>}
         <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
           {first?.source && (
             <Row label={t("label.source")}>
@@ -324,6 +333,13 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
 
       {tone !== "notFound" && tone !== "fatwa" && !isQuestion && <p className="quran text-[22px] text-ink">{quote}</p>}
       {message}
+      {matchedArabic(r) && (
+        <div role="note" className="space-y-1 rounded-xl border border-line bg-paper p-3">
+          <p className="text-[12px] text-muted">{t("label.matchedArabic")}</p>
+          <p lang="ar" dir="rtl" className="quran text-[22px]">{matchedArabic(r)}</p>
+          <p className="text-[13px] text-muted">{t("note.translationMatch")}</p>
+        </div>
+      )}
 
       {r.verse && (
         <div className="space-y-2">

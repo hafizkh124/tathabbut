@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorView, type ErrorKind } from "@/components/ErrorView";
 import { Header } from "@/components/Header";
-import { InputPanel } from "@/components/InputPanel";
+import { InputPanel, MAX_TEXT } from "@/components/InputPanel";
 import { LoadingView } from "@/components/LoadingView";
 import { OriginTrackerDrawer } from "@/components/OriginTrackerDrawer";
 import { ResultsView } from "@/components/ResultsView";
@@ -60,6 +60,10 @@ export default function Home() {
       keepPreview(null);
       setPost(submitted);
       setSelected(0);
+      if (submitted.length > MAX_TEXT) {
+        setPhase({ name: "error", kind: "tooLong" });
+        return;
+      }
       setPhase({ name: "loading" });
       window.scrollTo({ top: 0 });
 
@@ -123,7 +127,7 @@ export default function Home() {
         setPhase({ name: "confirm", text: data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
       } catch {
         URL.revokeObjectURL(prepared.previewUrl);
-        if (id === run.current) setPhase({ name: "error", kind: "network" });
+        if (id === run.current) setPhase({ name: "error", kind: "pictureNetwork" });
       }
     },
     [keepPreview],

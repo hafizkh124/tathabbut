@@ -1,5 +1,14 @@
 # 4. Verification Rules
 
+## Second review: approved decisions received — 5 October 2026
+
+- A translated hadith claim shows the first retrieved narration's Arabic matn with a translation-match label and a warning that this is not word-for-word verification of the translation. Shared replies preserve this distinction; the reconstructed search query is never displayed as the source text.
+- The specific verdict «إسناده هالك» is severe weakness, explicitly restricted to that chain. It does not automatically reclassify every narrator criticism containing «هالك». The existing aggregate policy remains unchanged. Matching narrations returned to the interface are now capped at Dorar's 15-result limit instead of 8, so a reordered chain verdict does not disappear from the available evidence.
+- Narrator criticism has a distinct scope and a note beside the complete source wording: it concerns a narrator in this chain, not a final verdict on every route. Shared replies preserve the note, scholar and exact source wording. This changes presentation metadata, not grades or aggregate policy. Detection is conservative; a chain defect such as «في إسناده انقطاع» is not automatically treated as criticism of a narrator.
+- The specialist chose to keep longer/differing narrations together, with an explicit wording-and-verdict warning. Each such result displays the full retrieved matn beside its own source and verdict; shared replies preserve these differences. This does not change the aggregate-grade policy.
+- A quotation's explicitly named weekday and prayer must occur in the retrieved narration before the existing text-matching rules may accept it. This rejects the observed Thursday/Asr quotation falsely matched to a Maghrib narration. It is a limited lexical safeguard, not proof of complete semantic identity; alternative time expressions and broader retrieval recall need separate evaluation.
+- When no matching reference is found, the approved Urdu wording is «اس عبارت کا معتبر حوالہ نہیں ملا — اہلِ علم سے رجوع کریں». No grade is inferred from a different narration.
+
 ## Specialist-approved clarifications — 5 October 2026
 
 - The Sahihayn's own records are displayed as inclusion in the collection: «امام بخاری نے اپنی صحیح میں روایت کیا ہے۔» / «امام مسلم نے اپنی صحیح میں روایت کیا ہے۔» Dorar's wholly bracketed additions have their own attribution label, rather than «His words». Another scholar's judgement remains attributed to that scholar. The same collection attribution is included in shared replies.

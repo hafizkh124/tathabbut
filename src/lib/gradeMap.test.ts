@@ -11,6 +11,19 @@ const g = (verdict: string, muhaddith = "") => classifyVerdict(verdict, muhaddit
 
 // Each block is one of the specialist's decisions (2026-10-03).
 describe("classifyVerdict — the specialist's categories", () => {
+  it("distinguishes narrator criticism from a chain defect without changing its grade", () => {
+    const verdict = "[فيه] عثمان بن خالد يروي المقلوبات عن الثقات ويري عن الأثبات أسانيد ليس من رواياتهم كأنه كان يقلب الأسانيد لا يحل الاحتجاج بخبره";
+    expect(classifyVerdict(verdict)).toMatchObject({ scope: "narrator", grade: UNSURE });
+    expect(classifyVerdict("[فيه] حسين بن عبد الله متروك الحديث").scope).toBe("narrator");
+    expect(classifyVerdict("في إسناده انقطاع")).toMatchObject({ scope: "isnad", grade: DAIF });
+    expect(classifyVerdict("فيه اختلاف").scope).not.toBe("narrator");
+    expect(classifyVerdict("إسناده هالك").scope).toBe("isnad");
+  });
+  it("keeps the approved halik verdict severe and scoped to its chain", () => {
+    expect(classifyVerdict("إسناده هالك")).toMatchObject({ grade: SHADID, scope: "isnad" });
+    expect(classifyVerdict("ضعيف").grade).toBe(DAIF);
+    expect(classifyVerdict("[فيه] مطر هالك")).toMatchObject({ grade: UNSURE });
+  });
   it("مقبول: صحيح، حسن، قوي، جيد، ثبت … including verdicts on the chain", () => {
     for (const v of ["صحيح", "[صحيح]", "حسن", "حسن لغيره", "صحيح لغيره", "إسناده صحيح", "إسناده حسن", "إسناده قوي", "إسنادها جيد", "رواية صحيحة", "صحيح الإسناد", "[متواتر]", "متواتر", "حديث متواتر"]) {
       expect(g(v), v).toBe(MAQBUL);
@@ -164,6 +177,9 @@ describe.skipIf(!existsSync(golden))("classifyVerdict — same result as the rev
 
   it(`agrees on all ${rows.length} pairs`, () => {
     const diff = rows
+      // This single 5 October specialist decision supersedes the older workbook.
+      // Keep its source data intact and continue checking every pair.
+      .map((r) => r.verdict === "إسناده هالك" ? { ...r, grade: SHADID, confidence: "high" } : r)
       .map((r) => ({ r, got: classifyVerdict(r.verdict, r.muhaddith) }))
       .filter(({ r, got }) => got.grade !== r.grade || got.confidence !== r.confidence)
       .map(({ r, got }) => `${r.verdict.slice(0, 50)} | ${r.muhaddith}: want ${r.grade}/${r.confidence}, got ${got.grade}/${got.confidence}`);

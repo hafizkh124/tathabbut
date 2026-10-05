@@ -27,8 +27,7 @@ export async function POST(request: Request) {
   try {
     const r = await translateExcerpt(text, body.to, { cache });
     return Response.json({ translation: r.translation, cached: r.cached });
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: "could not translate", detail: detail.slice(0, 200) }, { status: 502 });
+  } catch {
+    return Response.json({ error: "could not translate" }, { status: 502 });
   }
 }

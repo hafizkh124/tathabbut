@@ -125,6 +125,13 @@ describe("verifyClaim — Quran", () => {
 });
 
 describe("verifyClaim — Dorar", () => {
+  it("abstains for the manufactured Thursday/Asr quote when only the unrelated Maghrib text is returned", async () => {
+    const query = "من صلى ركعتين يوم الخميس بعد العصر غفر الله له ذنوب أربعين سنة";
+    const d = deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, origin: "live" as const, results: [{ rank: 1, matn: "أفضل الصلاة عند الله صلاة المغرب وفيه من صلى بعدها ركعتين بنى الله له قصرين في الجنة ومن صلى بعدها أربع ركعات غفر له الله ذنوب عشرين أو قال أربعين سنة", verdict: "[لم أجد له إسنادا]", source: "طبقات الشافعية الكبرى" }] })) });
+    const r = await verifyClaim(arabic("hadith", query), d);
+    expect(r.state).toBe(STATES.notFound);
+    expect(r.dorar).toBeUndefined();
+  });
   it("summarizes the narrations of this text graded by the specialist's rules", async () => {
     const r = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "cache" as const })) }));
     expect(r.basis).toBe("dorar");

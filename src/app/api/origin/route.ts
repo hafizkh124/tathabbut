@@ -29,8 +29,7 @@ export async function POST(request: Request) {
       report,
       ms: Date.now() - t0,
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: "could not investigate origin", detail: message.slice(0, 200) }, { status: 502 });
+  } catch {
+    return Response.json({ error: "could not investigate origin" }, { status: 502 });
   }
 }

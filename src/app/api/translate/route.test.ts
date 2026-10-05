@@ -44,10 +44,10 @@ describe("POST /api/translate", () => {
     expect(vi.mocked(translateExcerpt)).not.toHaveBeenCalled();
   });
 
-  it("answers 502, without leaking more than a short reason, when the translation fails", async () => {
-    vi.mocked(translateExcerpt).mockRejectedValue(new Error("x".repeat(500)));
+  it("answers 502 without exposing provider errors or private excerpt text", async () => {
+    vi.mocked(translateExcerpt).mockRejectedValue(new Error("api-key=secret; private excerpt"));
     const res = await post({ text: TEXT, sig, to: "ur" });
     expect(res.status).toBe(502);
-    expect(((await res.json()) as { detail: string }).detail.length).toBeLessThanOrEqual(200);
+    expect(await res.json()).toEqual({ error: "could not translate" });
   });
 });

@@ -74,6 +74,9 @@ export function adaptTurathPassages(passages: TurathPassage[], category?: { id: 
 }
 
 export interface GradedNarration extends DorarResult {
+  /** Visible wording difference; does not change the narration's grade. */
+  textVariant?: "additional" | "different";
+  scope?: "isnad" | "hadith" | "narrator";
   grade: Grade;
   confidence: "high" | "medium" | "low";
   caution: boolean;
@@ -82,6 +85,15 @@ export interface GradedNarration extends DorarResult {
 }
 
 const letters = (s: string) => normalizeArabic(s).replace(/[^ء-ي\s]/g, " ").replace(/\s+/g, " ").trim();
+
+/** A named day/prayer in the quotation must occur in the retrieved text.
+ * This catches the observed Thursday/Asr vs Maghrib mismatch without changing
+ * the existing coverage threshold. It is not a general semantic verifier. */
+function preservesExplicitContext(query: string, matn: string): boolean {
+  const required = query.match(/(?<![ء-ي])(?:الاحد|الاثنين|الثلاثاء|الاربعاء|الخميس|الجمعه|السبت|الفجر|الظهر|العصر|المغرب|العشاء)(?![ء-ي])/g) ?? [];
+  const sourceWords = new Set(matn.split(" "));
+  return required.every((word) => sourceWords.has(word));
+}
 
 /**
  * A narration is this text when one contains the other, when it has most of THE POST'S content words, or (for a
@@ -97,6 +109,7 @@ export function selectRelevant(query: string, results: DorarResult[], minCoverag
   const out: GradedNarration[] = [];
   for (const r of results) {
     const m = letters(r.matn);
+    if (!preservesExplicitContext(q, m)) continue;
     const mTok = matnTokens(r.matn);
     const coverage = qTok.size >= 3 && mTok.size >= 3 ? [...qTok].filter((w) => mTok.has(w)).length / qTok.size : null;
     const contained = m.includes(q) || (m.split(" ").length >= 3 && q.includes(m));
@@ -110,8 +123,9 @@ export function selectRelevant(query: string, results: DorarResult[], minCoverag
           ? "all-words"
           : null;
     if (!matchedBy) continue;
+    const textVariant = m === q ? undefined : ` ${m} `.includes(` ${q} `) ? "additional" as const : "different" as const;
     const g = classifyVerdict(r.verdict ?? "", r.muhaddith ?? "");
-    out.push({ ...r, grade: g.grade, confidence: g.confidence, caution: displayGrade(g).caution, matchedBy });
+    out.push({ ...r, ...(textVariant ? { textVariant } : {}), scope: g.scope, grade: g.grade, confidence: g.confidence, caution: displayGrade(g).caution, matchedBy });
   }
   return out;
 }

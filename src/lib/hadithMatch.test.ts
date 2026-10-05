@@ -9,6 +9,29 @@ import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, selectRelevant, summariz
 const results = parseDorarHtml(readFileSync(join(__dirname, "__fixtures__", "dorar_talab_al_ilm.html"), "utf-8"));
 
 describe("selectRelevant", () => {
+  it("rejects the manufactured Thursday/Asr quotation against a Maghrib narration", () => {
+    const query = "من صلى ركعتين يوم الخميس بعد العصر غفر الله له ذنوب أربعين سنة";
+    const matn = "أفضل الصلاة عند الله صلاة المغرب وفيه من صلى بعدها ركعتين بنى الله له قصرين في الجنة ومن صلى بعدها أربع ركعات غفر له الله ذنوب عشرين أو قال أربعين سنة";
+    expect(selectRelevant(query, [{ rank: 1, matn, verdict: "[لم أجد له إسنادا]" }])).toEqual([]);
+    expect(selectRelevant(query, [{ rank: 1, matn: query, verdict: "موضوع" }])).toHaveLength(1);
+  });
+  it("preserves both shorter and expanded narrations and marks the wording difference", () => {
+    const query = "الجنة تحت أقدام الأمهات";
+    const r = selectRelevant(query, [
+      { rank: 1, matn: query, verdict: "ضعيف" },
+      { rank: 2, matn: `${query} من شئن أدخلن ومن شئن أخرجن`, verdict: "موضوع" },
+    ]);
+    expect(r).toHaveLength(2);
+    expect(r[0].textVariant).toBeUndefined();
+    expect(r[1]).toMatchObject({ textVariant: "additional", grade: "شديد الضعف أو لا أصل له" });
+  });
+  it("keeps the declared day and prayer while rejecting a change of either", () => {
+    const query = "من صلى ركعتين يوم الخميس بعد العصر غفر الله له ذنوب أربعين سنة";
+    for (const matn of [query.replace("الخميس", "السبت"), query.replace("العصر", "المغرب")]) {
+      expect(selectRelevant(query, [{ rank: 1, matn, verdict: "ضعيف" }])).toEqual([]);
+    }
+    expect(selectRelevant(query, [{ rank: 1, matn: `نص اختباري ${query}`, verdict: "موضوع" }])).toHaveLength(1);
+  });
   it("does not match a forwarding promise to the ten companions promised Paradise (live case, 2026-10-05)", () => {
     const unrelated = [{ rank: 1, matn: "[عن] عبدالرحمن بن الأخنس، قال: خطب المغيرة بن شعبة، فنال من علي، فقام سعيد بن زيد، فقال: ما تريد إلى هذا؟ أشهد على رسول الله لقال: عشرة في الجنة: رسول الله في الجنة، وأبو بكر في الجنة", verdict: "رجاله ثقات، إلا عبد الرحمن بن الاخنس لم يوثقه غير ابن حبان.", muhaddith: "شعيب الأرناؤوط", source: "تخريج سير أعلام النبلاء", number: "1/104" }];
     expect(selectRelevant("من أرسل هذا إلى عشرة فله الجنة", unrelated)).toEqual([]);
