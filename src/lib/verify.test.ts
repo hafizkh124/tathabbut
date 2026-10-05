@@ -163,6 +163,26 @@ describe("verifyClaims", () => {
 });
 
 describe("verifyClaim — «هل تقصد؟» candidates", () => {
+  const prayerVerse: VerseHit = { surah: 4, ayah: 43, surah_name_ar: "سورة النساء", text_uthmani: "يَا أَيُّهَا الَّذِينَ آمَنُوا لَا تَقْرَبُوا الصَّلَاةَ وَأَنْتُمْ سُكَارَى", text_clean: "يا ايها الذين امنوا لا تقربوا الصلاه وانتم سكاري", score: 0.75 };
+  const prohibitions: VerseHit[] = [
+    { surah: 6, ayah: 151, surah_name_ar: "سورة الأنعام", text_uthmani: "وَلَا تَقْرَبُوا الْفَوَاحِشَ مَا ظَهَرَ مِنْهَا وَمَا بَطَنَ", text_clean: "ولا تقربوا الفواحش ما ظهر منها وما بطن", score: 0.9 },
+    { surah: 17, ayah: 32, surah_name_ar: "سورة الإسراء", text_uthmani: "وَلَا تَقْرَبُوا الزِّنَا إِنَّهُ كَانَ فَاحِشَةً", text_clean: "ولا تقربوا الزنا انه كان فاحشه", score: 0.85 },
+  ];
+
+  it("does not offer unrelated prohibitions beside the reviewed short prayer quotation", async () => {
+    const r = await verifyClaim(arabic("quran", "ولا تقربوا الصلاة"), deps({ matchVerses: vi.fn(async () => [...prohibitions, prayerVerse]) }));
+    expect(r.state).toBe(STATES.verseContext);
+    expect(r.verse).toMatchObject({ surah: 4, ayah: 43 });
+    expect(r.verse?.candidates).toBeUndefined();
+  });
+
+  it("keeps a short quotation with a spelling error while removing a distant substituted noun", async () => {
+    const r = await verifyClaim(arabic("quran", "لا تقربوا الصلات"), deps({ matchVerses: vi.fn(async () => [...prohibitions, prayerVerse]) }));
+    expect(r.state).toBe(STATES.verseWrong);
+    expect(r.verse).toMatchObject({ surah: 4, ayah: 43 });
+    expect(r.verse?.candidates).toBeUndefined();
+  });
+
   const v8_46: VerseHit = {
     surah: 8,
     ayah: 46,

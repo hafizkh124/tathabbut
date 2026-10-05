@@ -8,7 +8,7 @@ import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
-import { compareWithVerse, type VerseHit, type WordingCheck } from "./quranCheck";
+import { compareWithVerse, searchForm, type VerseHit, type WordingCheck } from "./quranCheck";
 
 import { STATES, stateOfVerse, type State } from "./states";
 
@@ -105,6 +105,22 @@ function verseResult(claim: Claim, v: VerseHit, wording: WordingCheck | undefine
  *  (live case 2026-10-04: «إن الله مع الصابرون» also drew a verse that shares only two of its four words). */
 const MAX_CANDIDATES = 3;
 const CANDIDATE_MARGIN = 0.2;
+// Word edits alone tie «ولا → لا» with «الصلاة → الزنا». Compare the
+// actual aligned text as well, without changing the scholarly wording check.
+
+function characterDistance(quoted: string, correctText: string): number {
+  const a = searchForm(quoted).replace(/\s/g, "");
+  const b = searchForm(correctText).replace(/\s/g, "");
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[b.length] / Math.max(a.length, b.length, 1);
+}
 
 /** The best verse for a quote, checked word by word; null when no verse is close enough to be "this verse".
  *  A phrase that sits in several verses (or fits one verse only roughly) gives the user the near ones to choose from. */
@@ -115,8 +131,12 @@ async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): P
     const ranked = hits
       .map((v) => ({ v, w: compareWithVerse(quoted, v) }))
       .filter((r) => r.w.distance <= MAX_VERSE_DISTANCE)
-      .sort((a, b) => a.w.distance - b.w.distance || b.v.score - a.v.score);
-    ranked.splice(0, ranked.length, ...ranked.filter((r) => r.w.distance <= ranked[0].w.distance + CANDIDATE_MARGIN).slice(0, MAX_CANDIDATES));
+      .map((r) => ({ ...r, characterDistance: characterDistance(quoted, r.w.correctText) }))
+      .sort((a, b) => a.w.distance - b.w.distance || a.characterDistance - b.characterDistance || b.v.score - a.v.score);
+    ranked.splice(0, ranked.length, ...ranked.filter((r) =>
+      r.w.distance <= ranked[0].w.distance + CANDIDATE_MARGIN
+      && r.characterDistance <= ranked[0].characterDistance
+    ).slice(0, MAX_CANDIDATES));
     if (ranked.length) return verseResult(claim, ranked[0].v, ranked[0].w, [], ranked.map((r) => verseView(r.v, r.w)));
     return null;
   }

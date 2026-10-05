@@ -10,6 +10,10 @@
 
 Implemented locally and covered by automated checks. Production rollout and real-interface rechecking are tracked separately in the joint work plan.
 
+## Quran candidate refinement — 5 October 2026
+
+Candidate ranking still starts with word edit distance. Ties are now resolved by normalized character edit distance over the aligned quotation, before the retrieval score. Alternatives must also be at least as close in characters as the top candidate, within the existing word-distance margin. This removes the unrelated «ولا تقربوا الفواحش» and «ولا تقربوا الزنا» alternatives beside «ولا تقربوا الصلاة», while keeping identical phrases found in several verses. No new similarity threshold or scholarly verdict was introduced. This is a retrieval heuristic checked against development examples; broader held-out evaluation of candidate recall remains necessary.
+
 These rules decide what a user sees. They are **deterministic code**, not model output. The scholarly decisions
 in them (the grade scheme, the circulating-texts list) were made by the project's hadith specialist.
 
