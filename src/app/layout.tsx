@@ -10,9 +10,13 @@ const amiri = Amiri({ variable: "--font-amiri", subsets: ["arabic", "latin"], we
 // Urdu interface: Readex Pro lacks some Urdu letters, so Urdu is set in Nastaliq.
 const nastaliq = Noto_Nastaliq_Urdu({ variable: "--font-nastaliq", subsets: ["arabic", "latin"], weight: ["400", "500", "600", "700"] });
 
+const DESCRIPTION = "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة للتحقق من الآيات والأحاديث والأقوال المتداولة.";
+
 export const metadata: Metadata = {
   title: "تَثَبُّت",
-  description: "﴿فَتَثَبَّتُوا﴾ (قراءة حمزة والكسائي وخلف) — ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة للتحقق من الآيات والأحاديث والأقوال المتداولة.",
+  description: DESCRIPTION,
+  openGraph: { title: "تَثَبُّت · Tathabbut", description: DESCRIPTION, type: "website", locale: "ar", siteName: "تَثَبُّت" },
+  twitter: { card: "summary_large_image", title: "تَثَبُّت · Tathabbut", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {

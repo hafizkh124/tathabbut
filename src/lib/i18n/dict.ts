@@ -140,7 +140,7 @@ export const DICT = {
   "note.caution": { ar: "في كلام المحدّث تقييد، فاقرأه كاملًا", en: "The scholar's wording is qualified; read it in full", ur: "محدث کے الفاظ میں قید ہے، انہیں پورا پڑھیں" },
   "diff.title": { ar: "الفرق عن النص الصحيح", en: "Difference from the correct text", ur: "درست متن سے فرق" },
 
-  "via.dorar": { ar: "الدرر السنية", en: "Dorar al-Saniyyah", ur: "الدرر السنیہ" },
+  "via.dorar": { ar: "الدرر السنية", en: "Dorar al-Saniyya", ur: "الدرر السنیہ" },
   "via.shamela": { ar: "المكتبة الشاملة", en: "Shamela Library", ur: "المکتبۃ الشاملہ" },
   "via.quranCom": { ar: "القرآن الكريم", en: "Quran.com", ur: "Quran.com" },
   "via.quranpedia": { ar: "موسوعة القرآن", en: "Quranpedia", ur: "Quranpedia" },
