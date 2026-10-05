@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
 import { matchedArabic } from "@/lib/matchedArabic";
+import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
 import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
@@ -15,27 +16,29 @@ import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
 
 interface Via {
-  label: "via.dorar" | "via.shamela" | "via.quranCom" | "via.quranpedia";
+  label: "via.dorar" | "via.quranpedia" | "via.alulama";
+  /** shown instead of the label for a site we have no name for */
+  host?: string;
   url: string;
   /** the link opens the very hadith in its book (not just a search) */
   exact?: boolean;
 }
 
+/** Only the site the text was read from: quranpedia for a verse, Dorar for Dorar's narrations and for the list entries whose
+ *  verdict was copied from Dorar, and the article's own site for an entry that cites one. Never a site we did not read. */
 function viaLinks(r: ClaimResult): Via[] {
-  const out: Via[] = [];
-  if (r.verse?.externalUrls) {
-    out.push({ label: "via.quranCom", url: r.verse.externalUrls.quranCom }, { label: "via.quranpedia", url: r.verse.externalUrls.quranpedia });
+  if (r.verse) return [{ label: "via.quranpedia", url: quranpediaUrl(r.verse.surah, r.verse.ayah) }];
+  if (r.dorar) {
+    const first = r.dorar.narrations[0];
+    if (first?.matn) return [{ label: "via.dorar", url: dorarSearchUrl(first.matn, first.source), exact: true }];
+    return r.dorar.externalUrls ? [{ label: "via.dorar", url: r.dorar.externalUrls.dorar }] : [];
   }
-  const ext = r.dorar?.externalUrls ?? r.saying?.externalUrls;
-  const first = r.dorar?.narrations[0];
-  if (ext) {
-    // Dorar: when the narration names its book, open that book at that hadith; otherwise the plain search
-    out.push(
-      first?.matn ? { label: "via.dorar", url: dorarSearchUrl(first.matn, first.source), exact: true } : { label: "via.dorar", url: ext.dorar },
-      { label: "via.shamela", url: ext.shamela },
-    );
+  if (r.saying) {
+    const ref = splitReferenceUrl(r.saying.reference ?? "");
+    if (ref.url) return [{ label: ref.site ?? "via.alulama", host: ref.site ? undefined : ref.host, url: ref.url }];
+    return r.saying.externalUrls ? [{ label: "via.dorar", url: r.saying.externalUrls.dorar }] : [];
   }
-  return out;
+  return [];
 }
 
 /** «Via»: the sites the text was read from. Small links, not buttons; each opens the site. */
@@ -51,10 +54,10 @@ function ViaRow({ links }: { links: Via[] }) {
           href={l.url}
           target="_blank"
           rel="noopener noreferrer"
-          title={l.exact ? t("via.exact") : t("via.opens")}
+          title={l.exact ? t("via.exact") : undefined}
           className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover"
         >
-          <span>{t(l.label)}</span>
+          <span>{l.host ?? t(l.label)}</span>
           <Icon name="ext" size={11} />
         </a>
       ))}
@@ -199,7 +202,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
       <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
         {s.reference && (
           <Row label={t("label.source")}>
-            <span className="font-semibold text-brand-ink">{s.reference}</span>
+            <span className="font-semibold text-brand-ink">{splitReferenceUrl(s.reference).text}</span>
           </Row>
         )}
         {s.verdict_by && <Row label={t("label.scholar")}>{s.verdict_by}</Row>}

@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n/i18n";
 import { fetchTranslation } from "@/lib/translateClient";
 import { topicQuery } from "@/lib/topic";
 import { findPhrase } from "@/lib/turathText";
+import { shamelaPageUrl } from "@/lib/viaLinks";
 import { Icon } from "./ui/Icon";
 
 /** The references shown at once; the rest are behind «Other results». */
@@ -22,8 +23,8 @@ function PageLine({ ref_ }: { ref_: TurathReference }) {
   if (loc.volume && loc.printedPage !== undefined) parts.push(t("label.pages", { v: num(loc.volume), p: num(loc.printedPage) }));
   else if (loc.printedPage !== undefined) parts.push(t("turath.printedPage", { p: num(loc.printedPage) }));
   else if (loc.volume) parts.push(t("turath.volume", { v: num(loc.volume) }));
-  // Turath's own page key is shown apart from the printed page and never as one
-  if (loc.internalPage !== undefined) parts.push(t("turath.page", { p: num(loc.internalPage) }));
+  // Turath's own page key is not shown: it differs from the printed page in most books (207 of 225 hits compared on
+  // 2026-10-05), so it would read as a second, wrong page number. It is used only inside the links.
   return parts.length ? <p className="text-muted">{parts.join(" · ")}</p> : null;
 }
 
@@ -122,10 +123,16 @@ function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathRefe
       )}
       <div className="flex flex-wrap items-center gap-x-4 pt-0.5">
         <span className="text-muted">{t("label.via")}:</span>
-        <a href={ref_.url} target="_blank" rel="noopener noreferrer" title={t("via.opens")} className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover">
+        <a href={ref_.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover">
           <span>{t("via.turath")}</span>
           <Icon name="ext" size={11} />
         </a>
+        {ref_.pageLocator?.internalPage !== undefined && (
+          <a href={shamelaPageUrl(ref_.book.id, ref_.pageLocator.internalPage)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 py-2 text-[14px] text-brand-ink underline underline-offset-[5px] hover:text-brand-hover">
+            <span>{t("via.shamela")}</span>
+            <Icon name="ext" size={11} />
+          </a>
+        )}
       </div>
     </li>
   );

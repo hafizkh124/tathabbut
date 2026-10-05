@@ -141,6 +141,7 @@ export const DICT = {
   "diff.title": { ar: "الفرق عن النص الصحيح", en: "Difference from the correct text", ur: "درست متن سے فرق" },
 
   "via.dorar": { ar: "الدرر السنية", en: "Dorar al-Saniyya", ur: "الدرر السنیہ" },
+  "via.alulama": { ar: "موقع العلماء", en: "Al-Ulama website", ur: "موقع العلماء" },
   "via.shamela": { ar: "المكتبة الشاملة", en: "Shamela Library", ur: "المکتبۃ الشاملہ" },
   "via.quranCom": { ar: "القرآن الكريم", en: "Quran.com", ur: "Quran.com" },
   "via.quranpedia": { ar: "موسوعة القرآن", en: "Quranpedia", ur: "Quranpedia" },
