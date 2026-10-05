@@ -89,7 +89,7 @@ const SCOPE_ISNAD = re("اسناد|سنده|سندها|رجاله|رجالها|�
 const NARRATOR_START = re("^(فيه|في اسناده|في السند|في سنده|فيها) ");
 // Conservative presentation cue: a chain defect alone («فيه انقطاع») is
 // not labelled as criticism of a narrator. Unrecognized wording stays as is.
-const NARRATOR_CRITICISM = re("يروي|يحدث|رواياته|كذاب|متروك الحديث|منكر الحديث|لا يحل الاحتجاج بخبره|ضعفه بين");
+const NARRATOR_CRITICISM = re("يروي|روي احاديث مناكير|كلهم كذبه|يحدث|رواياته|كذاب|متروك الحديث|منكر الحديث|لا يحل الاحتجاج بخبره|ضعفه بين| بن .*(?:ضعيف|مع ضعفه)");
 /** Longer wordings carry names and side remarks that mislead word rules, so they are left to the specialist. */
 const LONG = 40;
 

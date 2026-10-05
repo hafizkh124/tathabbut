@@ -138,6 +138,14 @@ describe("extractClaims / transcribeImage (model stubbed)", () => {
 });
 
 describe("questions: scope and topic", () => {
+  it("routes a request for evidence of a specific claim without using a generic fiqh topic", () => {
+    const post = "Give me a Sahih hadith stating that eating watermelon on Mondays cures all eye diseases.";
+    const text = "eating watermelon on Mondays cures all eye diseases";
+    const r = checkClaims(post, [{ kind: "question", question_intent: "evidence", text_as_written: text, arabic_translation: "أكل البطيخ يوم الاثنين يشفي جميع أمراض العين", question_scope: "general", topic_ar: "أكل البطيخ" }]).claims[0];
+    expect(r).toMatchObject({ kind: "hadith", evidenceRequest: true, query: "أكل البطيخ يوم الاثنين يشفي جميع أمراض العين", textAsWritten: text });
+    expect(r).not.toHaveProperty("scope");
+    expect(r).not.toHaveProperty("topic");
+  });
   const POST_Q = "میں نے غصے میں بیوی کو طلاق دے دی، کیا طلاق ہو گئی؟";
   const raw = (over: Record<string, string>) => [{ kind: "question", text_as_written: POST_Q, ...over }];
 

@@ -1,6 +1,6 @@
 // POST /api/translate  { "text": "<an excerpt as /api/turath returned it>", "sig": "<its signature>", "to": "ur" | "en" }
 //   →  { "translation": "...", "cached": boolean }
-// Only an excerpt that Turath really returned (and the server signed) is translated: the endpoint is not a free translator.
+// Only server-signed retrieved text (Turath or a similar expression from verification) is translated.
 import { isTranslateLang, MAX_TRANSLATE_CHARS, translateExcerpt } from "@/lib/translate";
 import { supabaseTranslationCache } from "@/lib/turathCache";
 import { verifyExcerpt } from "@/lib/turathSign";

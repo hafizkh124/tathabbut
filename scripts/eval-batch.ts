@@ -58,7 +58,7 @@ function formatSource(r: VerifiedClaim): string {
   return "-";
 }
 
-async function verifyText(text: string, cache: any) {
+async function verifyText(text: string, cache: ReturnType<typeof supabaseDorarCache>) {
   const t0 = Date.now();
   const extraction = await extractClaims(text);
   const results = await verifyClaims(extraction.claims, {
@@ -115,8 +115,8 @@ async function main() {
 
       console.log(`  ✓ State: ${toolState} | Latency: ${latencySeconds}s | Source: ${toolSource}`);
       results.push(record);
-    } catch (err: any) {
-      console.error(`  ✗ Error on ${item.id}:`, err?.message || err);
+    } catch (err) {
+      console.error(`  ✗ Error on ${item.id}:`, err instanceof Error ? err.message : err);
       results.push({
         id: item.id,
         category: item.category,
@@ -128,7 +128,7 @@ async function main() {
         basis: "none",
         notes: [],
         claimsCount: 0,
-        error: String(err?.message || err),
+        error: err instanceof Error ? err.message : String(err),
       });
     }
 

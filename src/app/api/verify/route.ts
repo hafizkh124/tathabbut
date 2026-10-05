@@ -8,6 +8,7 @@ import { lookupDorar } from "@/lib/lookup";
 import { matchVerses } from "@/lib/quranCheck";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { verifyClaims } from "@/lib/verify";
+import { signExcerpt } from "@/lib/turathSign";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   return Response.json({
     claims: results.map((r) => ({
       ...r,
+      similarExpressions: r.similarExpressions?.map((x) => ({ ...x, sig: signExcerpt(x.text) })),
       // each muhaddith's verdict as shown on the card (policy A: a caution on a medium-confidence grade)
       dorar: r.dorar && {
         ...r.dorar,

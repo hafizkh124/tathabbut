@@ -9,6 +9,13 @@ import { adaptTurathPassages, MAX_TURATH_PASSAGE_CHARS, selectRelevant, summariz
 const results = parseDorarHtml(readFileSync(join(__dirname, "__fixtures__", "dorar_talab_al_ilm.html"), "utf-8"));
 
 describe("selectRelevant", () => {
+  it("does not grade a two-rakah Rajab claim using a twelve-rakah narration", () => {
+    const query = "من صلى ركعتين في أول ليلة من رجب كتب له أجر مائة حجة مقبولة";
+    const matn = "في رجب ليلة يكتب للعامل فيها حسنات مائة سنة فمن صلى فيها اثنتي عشرة ركعة يقرأ في كل ركعة فاتحة الكتاب يتشهد في كل ركعتين";
+    expect(selectRelevant(query, [{ rank: 1, matn, verdict: "في إسناده بعض الضعف" }])).toEqual([]);
+    expect(selectRelevant(query, [{ rank: 1, matn: matn.replace("عشرة", "عشر"), verdict: "منكر" }])).toEqual([]);
+    expect(selectRelevant(query, [{ rank: 1, matn: query, verdict: "موضوع" }])).toHaveLength(1);
+  });
   it("rejects the manufactured Thursday/Asr quotation against a Maghrib narration", () => {
     const query = "من صلى ركعتين يوم الخميس بعد العصر غفر الله له ذنوب أربعين سنة";
     const matn = "أفضل الصلاة عند الله صلاة المغرب وفيه من صلى بعدها ركعتين بنى الله له قصرين في الجنة ومن صلى بعدها أربع ركعات غفر له الله ذنوب عشرين أو قال أربعين سنة";

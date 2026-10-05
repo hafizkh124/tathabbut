@@ -11,6 +11,7 @@ import type { LookupOutcome } from "./lookup";
 import { compareWithVerse, searchForm, type VerseHit, type WordingCheck } from "./quranCheck";
 
 import { STATES, stateOfVerse, type State } from "./states";
+import { similarSaying, similarNarrations, type SimilarExpression } from "./similarExpressions";
 
 export { STATES, stateOfVerse };
 export type { State };
@@ -47,6 +48,8 @@ export interface VerseView {
 }
 
 export interface VerifiedClaim {
+  /** Retrieved suggestions shown when nothing matched; never evidence for the claim's own state. */
+  similarExpressions?: SimilarExpression[];
   claim: Claim;
   state: State;
   /** where the state comes from */
@@ -182,8 +185,11 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
     return verse ?? { claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] };
   }
   // 1) the specialist's own list
+  let nearbySayings: SimilarExpression[] = [];
   if (canSearch) {
-    const [s] = (await deps.matchSayings(claim.query)).filter((h) => h.score >= SAYING_MIN);
+    const hits = await deps.matchSayings(claim.query);
+    nearbySayings = hits.filter((h) => h.score >= 0.5 && h.score < SAYING_MIN && h.text_ar.length <= 1500).slice(0, 3).map(similarSaying);
+    const [s] = hits.filter((h) => h.score >= SAYING_MIN);
     if (s && (claim.kind !== "scholar_quote" || s.claimed_attribution)) return fromSaying(claim, s);
   }
   // A scholar's saying that is not in the specialist's list is still looked up: Dorar and the hadith books record the
@@ -198,10 +204,20 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   // 3) Dorar
   if (!canSearch) return { claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] };
   const looked = await deps.lookupDorar(claim.query);
-  if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`] };
+  if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings };
   const rawNarrations = selectRelevant(claim.query, looked.results);
   const notes: string[] = [];
-  if (!rawNarrations.length) return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"] };
+  if (!rawNarrations.length) {
+    // Nothing matched: up to three retrieved near texts as suggestions, each with its own source and verdict.
+    const seen = new Set<string>();
+    const similarExpressions = [...nearbySayings, ...similarNarrations(claim.query, looked.results)].filter((x) => {
+      const key = searchForm(x.text);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 3);
+    return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"], similarExpressions };
+  }
   const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
   const summary = summarizeGrades(rawNarrations);
   const encodedQuery = encodeURIComponent(claim.query);

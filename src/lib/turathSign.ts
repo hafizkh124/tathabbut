@@ -1,5 +1,5 @@
-// A signature on a Turath excerpt, made by the server when it returns the excerpt and checked by /api/translate. It lets only a
-// passage that Turath really returned be translated, so the translation endpoint cannot be used as a free translator for any text.
+// A signature on a retrieved Turath excerpt or a retrieved similar expression, checked by /api/translate.
+// Only server-selected source text can be translated; arbitrary client text is never signed.
 // The key never leaves the server: a dedicated one when set, else a secret the deployment already has.
 import { createHmac, timingSafeEqual } from "node:crypto";
 

@@ -15,8 +15,14 @@ describe("classifyVerdict — the specialist's categories", () => {
     const verdict = "[فيه] عثمان بن خالد يروي المقلوبات عن الثقات ويري عن الأثبات أسانيد ليس من رواياتهم كأنه كان يقلب الأسانيد لا يحل الاحتجاج بخبره";
     expect(classifyVerdict(verdict)).toMatchObject({ scope: "narrator", grade: UNSURE });
     expect(classifyVerdict("[فيه] حسين بن عبد الله متروك الحديث").scope).toBe("narrator");
+    expect(classifyVerdict("[فيه] أبو الصلت روى أحاديث مناكير")).toMatchObject({ scope: "narrator", grade: SHADID });
+    expect(classifyVerdict("فيه أبو الصلت الهروي واسمه عبد السلام وفيه عثمان بن خالد إسماعيل بن محمد بن يوسف وكلهم كذبه").scope).toBe("narrator");
+    expect(classifyVerdict("حديث منكر").scope).toBe("hadith");
     expect(classifyVerdict("في إسناده انقطاع")).toMatchObject({ scope: "isnad", grade: DAIF });
     expect(classifyVerdict("فيه اختلاف").scope).not.toBe("narrator");
+    expect(classifyVerdict("[فيه] عثمان بن سعد الكاتب ضعيف")).toMatchObject({ scope: "narrator", grade: DAIF });
+    expect(classifyVerdict("[فيه] عثمان بن سعد هو حسن الحديث ومع ضعفه يكتب حديثه").scope).toBe("narrator");
+    expect(classifyVerdict("فيه انقطاع وهو ضعيف").scope).not.toBe("narrator");
     expect(classifyVerdict("إسناده هالك").scope).toBe("isnad");
   });
   it("keeps the approved halik verdict severe and scoped to its chain", () => {

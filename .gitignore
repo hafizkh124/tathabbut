@@ -45,3 +45,10 @@ next-env.d.ts
 
 # local caches of third-party answers (never published)
 /.cache/
+
+# local evaluation records (kept private, 2026-10-06)
+/evaluation-audit/
+/EVALUATION_REPORT.md
+/TESTING_AND_EVALUATION_MASTER_REPORT.md
+/evaluate_testset.py
+/generate_final_report.py

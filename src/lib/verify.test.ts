@@ -87,6 +87,16 @@ describe("verifyClaim — routing and authority", () => {
   });
 });
 
+describe("verifyClaim — similar expressions", () => {
+  it("keeps a near saying below the verification threshold as a suggestion only", async () => {
+    const s = saying({ score: 0.55 });
+    const r = await verifyClaim(arabic("hadith", "عبارة مختلفة عن المصدر"), deps({ matchSayings: vi.fn(async () => [s]) }));
+    expect(r.state).toBe(STATES.notFound);
+    expect(r.saying).toBeUndefined();
+    expect(r.similarExpressions?.[0].text).toBe(s.text_ar);
+  });
+});
+
 describe("verifyClaim — Quran", () => {
   it("a claimed verse takes precedence over an unrelated fuzzy saying", async () => {
     const d = deps({ matchSayings: vi.fn(async () => [saying({})]), matchVerses: vi.fn(async () => [v2_153]) });

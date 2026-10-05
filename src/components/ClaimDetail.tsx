@@ -15,6 +15,7 @@ import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
 import { ShareDialog } from "./ShareDialog";
+import { SimilarExpressions } from "./SimilarExpressions";
 
 interface Via {
   label: "via.dorar" | "via.quranpedia" | "via.alulama";
@@ -367,6 +368,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       {r.claim.kind === "scholar_quote" && r.dorar && <p className="text-[13px] text-muted">{t("note.scholar")}</p>}
 
       <SourceBox r={r} />
+      {r.similarExpressions?.length ? <SimilarExpressions key={r.claim.textAsWritten} candidates={r.similarExpressions} /> : null}
 
       {isQuestion ? <FiqhBox r={r} /> : <TurathBox r={r} />}
       {tone === "fatwa" && r.claim.topic && <p className="text-[14px] font-semibold text-ink">{t("fiqh.refer")}</p>}

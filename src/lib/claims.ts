@@ -30,6 +30,8 @@ export interface Claim {
   citedSource: string | null;
   /** Things the checks noticed, e.g. the model altered the Arabic. */
   warnings: string[];
+  /** A request for the source of a specific proposition, routed to hadith verification. */
+  evidenceRequest?: true;
   /** Only for a «question»: whether it is the asker's own case or a general rule. In doubt it is «personal». */
   scope?: "personal" | "general";
   /** Only for a «question»: the fiqh topic in Arabic (a few words, no names or story), the only thing the books are asked. */
@@ -44,6 +46,7 @@ export interface Extraction {
 }
 
 interface RawClaim {
+  question_intent?: string;
   kind?: string;
   text_as_written?: string;
   arabic_span?: string;
@@ -69,6 +72,7 @@ export const CLAIMS_SCHEMA = {
           attributed_to: { type: "STRING" },
           cited_source: { type: "STRING" },
           question_scope: { type: "STRING", enum: ["personal", "general"] },
+          question_intent: { type: "STRING", enum: ["ruling", "evidence"] },
           topic_ar: { type: "STRING" },
         },
         required: ["kind", "text_as_written"],
@@ -86,6 +90,7 @@ For each claim return:
 - arabic_span: the Arabic wording inside text_as_written, copied character for character with any mistakes kept. Empty if the claim has no Arabic wording.
 - arabic_translation: only when arabic_span is empty: the Arabic wording this claim refers to, for searching hadith and Quran databases. Empty otherwise.
 - attributed_to and cited_source: exactly as written in the post, or empty.
+- question_intent (only for kind "question"): "evidence" when the user requests a hadith/reference proving a SPECIFIC stated proposition. Copy that proposition character for character into text_as_written and arabic_span if Arabic; translate only that proposition for arabic_translation, preserving its day, quantities and promised benefit. For example, asking for a sahih hadith that eating watermelon on Mondays cures all eye diseases is a source request for that precise claim, not a fiqh question. Do not replace it with a generic topic about watermelon. A question asking for a ruling or fatwa is "ruling". A request with no specific proposition stays "ruling". Never invent a supporting hadith.
 - question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
 - topic_ar (only for kind "question"): the fiqh topic of the question as the title of a chapter in a fiqh book, in Arabic, two or three words, naming the matter only and not starting with «حكم» or «أحكام» (for example «صلاة الجمعة للمسافر», «سجود السهو», «طلاق الغضبان»). It must contain no name, no number, no detail of the asker's story and no answer or ruling.
 Never judge whether a claim is authentic. Never add a claim that is not in the post.
@@ -210,7 +215,9 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
       : /[A-Za-z]/.test(text) && !/[؀-ۿ]/.test(text)
         ? "en"
         : "ur";
-    const kind = (CLAIM_KINDS as readonly string[]).includes(r.kind ?? "") ? (r.kind as ClaimKind) : "other";
+    const rawKind = (CLAIM_KINDS as readonly string[]).includes(r.kind ?? "") ? (r.kind as ClaimKind) : "other";
+    const evidenceRequest = rawKind === "question" && r.question_intent === "evidence";
+    const kind = evidenceRequest ? "hadith" : rawKind;
     const keepIfInPost = (v?: string) => {
       const s = trimPunct(v ?? "");
       return s && findIn(post, s) ? s : null;
@@ -218,6 +225,7 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
     const asked = kind === "question";
     claims.push({
       kind,
+      ...(evidenceRequest ? { evidenceRequest: true as const } : {}),
       ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar) } : {}),
       textAsWritten: text,
       spanCheck,

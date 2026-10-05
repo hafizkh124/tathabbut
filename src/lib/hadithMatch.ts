@@ -92,7 +92,14 @@ const letters = (s: string) => normalizeArabic(s).replace(/[^ء-ي\s]/g, " ").re
 function preservesExplicitContext(query: string, matn: string): boolean {
   const required = query.match(/(?<![ء-ي])(?:الاحد|الاثنين|الثلاثاء|الاربعاء|الخميس|الجمعه|السبت|الفجر|الظهر|العصر|المغرب|العشاء)(?![ء-ي])/g) ?? [];
   const sourceWords = new Set(matn.split(" "));
-  return required.every((word) => sourceWords.has(word));
+  if (!required.every((word) => sourceWords.has(word))) return false;
+  // A stated number of rak'ahs must agree: a claim of two rak'ahs is not matched to a narration of twelve.
+  const prayerCount = (text: string): number | undefined => {
+    const action = text.match(/صلي\s+(?:(?:فيها|فيه)\s+)?(ركعتين|اثنت[اي]\s+عشره?\s+ركعه)/)?.[1];
+    return action === undefined ? undefined : action === "ركعتين" ? 2 : 12;
+  };
+  const requested = prayerCount(query), retrieved = prayerCount(matn);
+  return requested === undefined || retrieved === undefined || requested === retrieved;
 }
 
 /**
