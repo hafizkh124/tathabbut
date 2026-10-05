@@ -64,8 +64,8 @@ export const DICT = {
 
   "label.source": { ar: "المصدر", en: "Source", ur: "ماخذ" },
   "label.via": { ar: "عبر", en: "Via", ur: "بواسطہ" },
-  "label.scholar": { ar: "المحدّث", en: "Scholar", ur: "محدث" },
-  "label.words": { ar: "قوله", en: "His words", ur: "ان کا قول" },
+  "label.scholar": { ar: "المحدّث", en: "Hadith scholar", ur: "محدث" },
+  "label.words": { ar: "قوله", en: "His verdict", ur: "ان کا حکم" },
   "label.dorarGrade": { ar: "حكم أضافته الدرر السنية", en: "Grading added by Dorar al-Saniyya", ur: "الدرر السنیہ کا درج کردہ حکم" },
   "verse.contextWarning": { ar: "اقتُطع سياق الآية؛ اقرأ العبارة في سياقها الكامل أدناه.", en: "The verse's context was omitted. Read the full relevant wording below.", ur: "آیت کا سیاق حذف ہوا ہے؛ ذیل میں مکمل متعلقہ عبارت پڑھیں۔" },
   "label.narrator": { ar: "الراوي", en: "Narrator", ur: "راوی" },
@@ -105,7 +105,7 @@ export const DICT = {
   },
   "translate.label": { ar: "ترجمة آلية", en: "Machine translation — check it against the Arabic", ur: "مشینی ترجمہ — اصل عربی سے ملا کر دیکھیں" },
   "translate.loading": { ar: "جارٍ الترجمة…", en: "Translating…", ur: "ترجمہ ہو رہا ہے…" },
-  "turath.title": { ar: "من كتب التراث", en: "From the books (Turath)", ur: "کتبِ تراث سے" },
+  "turath.title": { ar: "مواضع النص في الكتب", en: "Where this text appears in the books", ur: "کتابوں میں اس متن کے مقامات" },
   "turath.loading": { ar: "جارٍ البحث في الكتب…", en: "Searching the books…", ur: "کتابوں میں تلاش جاری ہے…" },
   "turath.unavailable": {
     ar: "تعذّر البحث في كتب التراث الآن، ونتيجة التحقق أعلاه لم تتغيّر.",
@@ -148,6 +148,14 @@ export const DICT = {
   "via.exact": { ar: "يفتح الدرر السنية على هذا الحديث في كتابه", en: "Opens Dorar at this hadith, in its own book", ur: "الدرر السنیہ میں اسی کتاب میں یہی حدیث کھولتا ہے" },
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
+  "share.grade": { ar: "الحكم", en: "Grading", ur: "حکم" },
+  "share.link": { ar: "الرابط", en: "Link", ur: "لنک" },
+  "share.footer": { ar: "تحقّق من النصوص قبل نشرها", en: "Check texts before you share them", ur: "آگے بھیجنے سے پہلے تحقیق کریں" },
+  "share.pickTitle": { ar: "اختر ما تنسخه أو تشاركه", en: "Choose what to copy or share", ur: "منتخب کریں کیا کاپی یا شیئر کرنا ہے" },
+  "share.copyN": { ar: "نسخ ({n})", en: "Copy ({n})", ur: "کاپی ({n})" },
+  "share.shareN": { ar: "مشاركة ({n})", en: "Share ({n})", ur: "شیئر ({n})" },
+  "share.all": { ar: "تحديد الكل", en: "Select all", ur: "سب منتخب کریں" },
+  "share.none": { ar: "إلغاء التحديد", en: "Clear", ur: "انتخاب ختم کریں" },
   "action.copy": { ar: "نسخ", en: "Copy", ur: "کاپی" },
   "action.copied": { ar: "تم النسخ", en: "Copied", ur: "کاپی ہو گیا" },
   "action.share": { ar: "مشاركة", en: "Share", ur: "شیئر" },
@@ -337,16 +345,16 @@ type Pair = { short: string; long: string };
 const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
   "مقبول": {
     ar: { short: "مقبول", long: "مقبول (صحيح أو حسن)" },
-    en: { short: "Accepted", long: "Accepted (sound or good)" },
+    en: { short: "Accepted", long: "Accepted (Sahih or Hasan)" },
     ur: { short: "مقبول", long: "مقبول (صحیح یا حسن)" },
   },
-  "ضعيف": { ar: p("ضعيف"), en: p("Weak"), ur: p("ضعیف") },
+  "ضعيف": { ar: p("ضعيف"), en: { short: "Weak", long: "Weak (Da'if)" }, ur: p("ضعیف") },
   "شديد الضعف أو لا أصل له": { ar: p("شديد الضعف أو لا أصل له"), en: p("Very weak or baseless"), ur: p("شدید ضعیف یا بے اصل") },
-  "غير حاسم": { ar: p("غير حاسم"), en: p("Inconclusive"), ur: p("غیر حاسم") },
+  "غير حاسم": { ar: p("غير حاسم"), en: p("Inconclusive"), ur: p("غیر حتمی") },
   "آية صحيحة النقل": { ar: p("آية صحيحة النقل"), en: p("Verse quoted correctly"), ur: p("آیت درست نقل ہوئی") },
   "آية منقولة بخطأ": { ar: p("آية منقولة بخطأ"), en: p("Verse misquoted"), ur: p("آیت غلط نقل ہوئی") },
   "آية اقتطع سياقها": { ar: p("اقتُطع سياق الآية"), en: p("Verse context omitted"), ur: p("آیت کا سیاق حذف ہوا ہے") },
-  "آية (نص مترجم)": { ar: p("آية (نص مترجم)"), en: p("Verse (translated text)"), ur: p("آیت (ترجمہ شدہ متن)") },
+  "آية (نص مترجم)": { ar: p("آية (نص مترجم)"), en: p("Verse (translation)"), ur: p("آیت کا ترجمہ") },
   "لم يُعثر عليه — إحالة": {
     ar: p("لم يُعثر عليه — إحالة"),
     en: p("Not found — refer to a scholar"),
@@ -357,14 +365,14 @@ const STATE_LABELS: Record<string, Record<Locale, Pair>> = {
     en: p("A fatwa or personal matter — refer to a scholar"),
     ur: p("فتویٰ یا ذاتی معاملہ — اہلِ علم سے رجوع کریں"),
   },
-  "موجود في كتب التراث": { ar: p("موجود"), en: p("Found"), ur: p("موجود") },
-  "مسألة فقهية": { ar: p("مسألة فقهية"), en: p("Fiqh question"), ur: p("فقہی مسئلہ") },
+  "موجود في كتب التراث": { ar: p("موجود"), en: p("Found in the books"), ur: p("موجود") },
+  "مسألة فقهية": { ar: p("مسألة فقهية"), en: p("Fiqh matter"), ur: p("فقہی مسئلہ") },
   "قول منسوب خطأً إلى النبي ﷺ": {
     ar: p("قول منسوب خطأً إلى النبي ﷺ"),
     en: p("Wrongly attributed to the Prophet ﷺ"),
     ur: p("نبی صلی اللہ علیہ وسلم کی طرف غلط منسوب قول"),
   },
-  "لفظ أو ترجمة غير دقيقة": { ar: p("لفظ أو ترجمة غير دقيقة"), en: p("Inexact wording or translation"), ur: p("لفظ یا ترجمہ غیر درست") },
+  "لفظ أو ترجمة غير دقيقة": { ar: p("لفظ أو ترجمة غير دقيقة"), en: p("Inexact wording or translation"), ur: p("الفاظ یا ترجمہ درست نہیں") },
   "قول منسوب خطأً إلى عالم": { ar: p("قول منسوب خطأً إلى عالم"), en: p("Wrongly attributed to a scholar"), ur: p("عالم کی طرف غلط منسوب قول") },
 };
 
