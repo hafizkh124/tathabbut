@@ -21,15 +21,13 @@ const verse = {
 } as unknown as ClaimResult;
 
 describe("share text", () => {
-  it("shares expanded wording with its own verdict and source without losing the original quote", () => {
+  it("keeps the shared text short: no wording-variant details (specialist, 2026-10-05)", () => {
     const matn = "الجنة تحت أقدام الأمهات من شئن أدخلن ومن شئن أخرجن";
     const r = { ...hadith, claim: { ...claim, arabicSpan: "الجنة تحت أقدام الأمهات" }, dorar: { ...hadith.dorar!, narrations: [hadith.dorar!.narrations[0], { ...hadith.dorar!.narrations[0], matn, textVariant: "additional" as const, source: "السلسلة الضعيفة", reference: "593", verdict: "موضوع", muhaddith: "الألباني" }] } };
     const text = buildShareText([r], "ur");
     expect(text).toContain("«الجنة تحت أقدام الأمهات»");
-    expect(text).toContain(matn);
-    expect(text).toContain("اس روایت میں اضافی الفاظ ہیں");
-    expect(text).toContain("السلسلة الضعيفة — 593");
-    expect(text).toContain("ان کا قول: موضوع");
+    expect(text).not.toContain(matn);
+    expect(text).not.toContain("اس روایت میں اضافی الفاظ ہیں");
   });
   it("uses the approved no-reference message without manufacturing a hadith grade", () => {
     const r = { claim, state: "لم يُعثر عليه — إحالة", basis: "none", notes: [] } as ClaimResult;
@@ -37,14 +35,13 @@ describe("share text", () => {
     expect(text).toContain("اس عبارت کا معتبر حوالہ نہیں ملا — اہلِ علم سے رجوع کریں");
     expect(text).not.toContain("شدید ضعیف");
   });
-  it("preserves narrator criticism with its scholar and limits when sharing", () => {
+  it("leaves the narrator-criticism note to the app and keeps the scholar with the source", () => {
     const verdict = "[فيه] حسين بن عبد الله متروك الحديث";
     const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], verdict, muhaddith: "ابن حبان", scope: "narrator" as const }] } };
     const text = buildShareText([r], "ur");
-    expect(text).toContain(verdict);
+    expect(text).toContain("ماخذ: السلسلة الضعيفة — 416");
     expect(text).toContain("محدث: ابن حبان");
-    expect(text).toContain("یہ اس سند کے راوی کی جرح ہے");
-    expect(buildShareText([hadith], "ur")).not.toContain("راوی کی جرح");
+    expect(text).not.toContain("یہ اس سند کے راوی کی جرح ہے");
   });
   it("shows the retrieved Arabic for a translated claim without verifying its wording", () => {
     const r = { ...hadith, claim: { ...claim, language: "ur" as const, arabicSpan: null, queryIsTranslation: true, textAsWritten: "تم میں سے بہترین وہ ہے جو قرآن سیکھے اور سکھائے", query: "a reconstructed search" }, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], matn: "خيركم من تعلم القرآن وعلمه" }] } };
@@ -86,6 +83,20 @@ describe("share text", () => {
     expect(text).toContain("«اطلبوا العلم ولو بالصين»");
     expect(text).toContain("Weak");
     expect(text).toContain("السلسلة الضعيفة — 416");
+  });
+
+  it("adds a link to check each claim and the app's address at the end", () => {
+    const text = buildShareText([verse], "ar");
+    expect(text).toContain("الرابط: https://quranpedia.net/surah/1/2/153");
+    expect(text.trim().endsWith("تحقّق من النصوص قبل نشرها: https://tathabbut-rho.vercel.app")).toBe(true);
+  });
+
+  it("links a list entry to the article it cites, not to Dorar, and keeps the address out of the source", () => {
+    const r = { claim, state: "قول منسوب خطأً إلى عالم", basis: "specialist-list", notes: [], saying: { reference: "موقع العلماء، 2023، https://alulama.org/x/", externalUrls: { dorar: "https://dorar.net/hadith/search?q=x" } } } as unknown as ClaimResult;
+    const text = buildShareText([r], "ar");
+    expect(text).toContain("المصدر: موقع العلماء، 2023");
+    expect(text).toContain("الرابط: https://alulama.org/x/");
+    expect(text).not.toContain("dorar.net");
   });
 
   it("separates several claims", () => {

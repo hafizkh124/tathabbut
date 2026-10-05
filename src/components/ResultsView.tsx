@@ -163,7 +163,7 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
           >
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
             {claims.length > 1 && <ClaimTabs claims={claims} selected={selected} onSelect={onSelect} />}
-            <ClaimDetail result={current} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
+            <ClaimDetail result={current} all={claims} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
           </div>
         </>
       )}

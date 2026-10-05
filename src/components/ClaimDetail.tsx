@@ -14,6 +14,7 @@ import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
+import { ShareDialog } from "./ShareDialog";
 
 interface Via {
   label: "via.dorar" | "via.quranpedia" | "via.alulama";
@@ -266,12 +267,16 @@ interface Props {
   onEdit: () => void;
   /** the user chose another verse of «هل تقصد؟» */
   onPick: (candidate: number) => void;
+  /** every claim of the post: with more than one, copy and share first ask which to take */
+  all?: ClaimResult[];
 }
 
-export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick }: Props) {
+export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick, all }: Props) {
   const { t, num, locale } = useI18n();
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const several = (all?.length ?? 0) > 1;
   const tone = toneOf(r.state);
   const quote = r.claim.arabicSpan || r.claim.textAsWritten;
   // a question is shown by its topic, never by its own words: the books were asked the topic only
@@ -282,6 +287,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
   const shareText = useCallback(() => buildShareText([r], locale), [r, locale]);
 
   const copy = async () => {
+    if (several) return setPicking(true);
     try {
       await navigator.clipboard.writeText(shareText());
       setCopied(true);
@@ -291,6 +297,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
     }
   };
   const share = async () => {
+    if (several) return setPicking(true);
     try {
       await navigator.share({ text: shareText() });
     } catch {
@@ -389,6 +396,8 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick 
           </>
         )}
       </div>
+
+      {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} canShare={canShare} />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4">
         {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (
