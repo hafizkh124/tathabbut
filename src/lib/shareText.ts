@@ -18,7 +18,7 @@ export function sourceLine(r: ClaimResult, locale: Locale): string | null {
     return locale === "en" ? `Surah ${surah}, verse ${r.verse.ayah}` : locale === "ur" ? `سورہ ${surah}، آیت ${r.verse.ayah}` : `سورة ${surah}، الآية ${r.verse.ayah}`;
   }
   const n = r.dorar?.narrations[0];
-  if (n?.source) return [n.source, n.reference].filter(Boolean).join(" — ");
+  if (n?.source) return [n.source, n.reference].filter(Boolean).join("، ");
   if (r.saying?.reference) return splitReferenceUrl(r.saying.reference).text;
   const book = r.turath && r.turath.status === "success" ? r.turath.references[0]?.book.title : undefined;
   return book ?? null;
@@ -34,29 +34,41 @@ export function sourceUrl(r: ClaimResult): string | null {
   return null;
 }
 
+/** «أخرجه الإمام مسلم في صحيحه.» with the hadith number before the closing stop: «…في صحيحه، 41.» */
+function withNumber(sentence: string, reference: string | undefined): string {
+  if (!reference) return sentence;
+  const stop = sentence.match(/[.۔]$/)?.[0] ?? "";
+  return `${sentence.slice(0, sentence.length - stop.length)}، ${reference}${stop}`;
+}
+
 /**
- * The short text for WhatsApp and the like (specialist, 2026-10-05): per claim its words, the result, the source with its
- * scholar, the correct form of a misquoted verse, and a link to check it; the details stay in the app, so no wording-variant
- * or narrator-criticism notes here. The app's address closes it.
+ * The short text for WhatsApp and the like (specialist, 2026-10-05/06). Per claim: its words, then
+ * - a hadith of the Sahihayn: one line, «أخرجه الإمام مسلم في صحيحه، 41.», which holds book, imam and number;
+ * - any other result: the grading, the source and its scholar;
+ * then, for an Urdu or English claim, the Arabic text it was matched to (never dropped), and for a personal question the
+ * warning. No Dorar link (the app shows it); a verse or a cited article keeps its link. No wording-variant, narrator or
+ * isnad notes. The app's address closes it.
  */
 export function buildShareText(results: ClaimResult[], locale: Locale): string {
   const blocks = results.map((r) => {
     const quote = r.claim.arabicSpan || r.claim.textAsWritten;
-    const lines = [`«${quote}»`, `${translate(locale, "share.grade")}: ${stateLabel(r.state, locale, true)}`];
+    const lines = [`«${quote}»`];
     const n = r.dorar?.narrations[0];
-    const src = sourceLine(r, locale);
-    if (src) lines.push(`${translate(locale, "label.source")}: ${src}`);
-    if (n?.muhaddith) lines.push(`${translate(locale, "label.scholar")}: ${n.muhaddith}`);
+    const sahih = n && sahihAttribution(n, locale);
+    if (sahih) lines.push(withNumber(sahih, n.reference));
+    else {
+      lines.push(`${translate(locale, "share.grade")}: ${stateLabel(r.state, locale, true)}`);
+      const src = sourceLine(r, locale);
+      if (src) lines.push(`${translate(locale, "label.source")}: ${src}`);
+      if (n?.muhaddith) lines.push(`${translate(locale, "label.scholar")}: ${n.muhaddith}`);
+    }
     const arabic = matchedArabic(r);
     if (arabic) lines.push(`${translate(locale, "label.matchedArabic")}: ${arabic}`, translate(locale, "note.translationMatch"));
-    if (n?.scope === "isnad" && /هالك/.test(n.verdict ?? "")) lines.push(translate(locale, "note.halikIsnad"));
-    const attribution = n && sahihAttribution(n, locale);
-    if (attribution) lines.push(attribution);
     if (r.verse?.wording?.contextOmitted) lines.push(translate(locale, "verse.contextWarning"));
     if (r.verse && (r.verse.wording?.contextOmitted || r.verse.wording?.exact === false)) lines.push(`${translate(locale, "label.mushaf")}: ${r.verse.text}`);
     if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
     if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fatwa.warn"));
-    const url = sourceUrl(r);
+    const url = r.dorar ? null : sourceUrl(r);
     if (url) lines.push(`${translate(locale, "share.link")}: ${url}`);
     return lines.join("\n");
   });

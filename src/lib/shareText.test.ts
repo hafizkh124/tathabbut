@@ -39,7 +39,7 @@ describe("share text", () => {
     const verdict = "[فيه] حسين بن عبد الله متروك الحديث";
     const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], verdict, muhaddith: "ابن حبان", scope: "narrator" as const }] } };
     const text = buildShareText([r], "ur");
-    expect(text).toContain("ماخذ: السلسلة الضعيفة — 416");
+    expect(text).toContain("ماخذ: السلسلة الضعيفة، 416");
     expect(text).toContain("محدث: ابن حبان");
     expect(text).not.toContain("یہ اس سند کے راوی کی جرح ہے");
   });
@@ -51,15 +51,25 @@ describe("share text", () => {
     expect(text).not.toContain("a reconstructed search");
     expect(buildShareText([{ ...r, claim: { ...r.claim, queryIsTranslation: false } }], "ur")).not.toContain("اس ترجمہ شدہ عبارت سے ملنے والا عربی متن");
   });
-  it("preserves the approved chain-only caution for halik", () => {
+  it("leaves the halik chain note to the app (specialist, 2026-10-06)", () => {
     const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], verdict: "إسناده هالك", scope: "isnad" as const }] } };
-    expect(buildShareText([r], "ur")).toContain("شدید ضعف کا یہ حکم اسی سند کے بارے میں ہے۔");
+    expect(buildShareText([r], "ur")).not.toContain("شدید ضعف کا یہ حکم اسی سند کے بارے میں ہے۔");
   });
-  it("preserves both Sahihayn attributions in shared replies", () => {
+  it("gives a Sahihayn hadith one line with the imam, the book and the number, and no grading or source lines", () => {
     for (const [source, muhaddith, name] of [["صحيح البخاري", "البخاري", "بخاری"], ["صحيح مسلم", "مسلم", "مسلم"]]) {
-      const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], source, muhaddith, verdict: "[صحيح]" }] } };
-      expect(buildShareText([r], "ur")).toContain(`امام ${name} نے اپنی صحیح میں روایت کیا ہے۔`);
+      const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], source, muhaddith, reference: "41", verdict: "[صحيح]" }] } };
+      const text = buildShareText([r], "ur");
+      expect(text).toContain(`امام ${name} نے اپنی صحیح میں روایت کیا ہے، 41۔`);
+      expect(text).not.toContain("حکم:");
+      expect(text).not.toContain("ماخذ:");
     }
+    const ar = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ source: "صحيح مسلم", muhaddith: "مسلم", reference: "41", verdict: "[صحيح]", matn: "x" }] } } as unknown as ClaimResult;
+    expect(buildShareText([ar], "ar").split("\n").slice(0, 2)).toEqual(["«اطلبوا العلم ولو بالصين»", "أخرجه الإمام مسلم في صحيحه، 41."]);
+  });
+
+  it("never puts a Dorar link in the shared text", () => {
+    const r = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ ...hadith.dorar!.narrations[0], matn: "x" }], externalUrls: { dorar: "https://dorar.net/hadith/search?q=x" } } } as unknown as ClaimResult;
+    expect(buildShareText([r], "ar")).not.toContain("dorar.net");
   });
   it("shares the context warning together with the full verse", () => {
     const r = { ...verse, state: "آية اقتطع سياقها", verse: { ...verse.verse!, text: "لا تقربوا الصلاة وأنتم سكارى", wording: { exact: true, contextOmitted: true as const, correctText: "لا تقربوا الصلاة", distance: 0, diffs: [] } } };
@@ -72,7 +82,7 @@ describe("share text", () => {
     expect(buildShareText([r], "ur")).toContain("کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔");
   });
   it("names the book and page for a hadith, and the surah and verse for the Quran", () => {
-    expect(sourceLine(hadith, "ar")).toBe("السلسلة الضعيفة — 416");
+    expect(sourceLine(hadith, "ar")).toBe("السلسلة الضعيفة، 416");
     expect(sourceLine(verse, "ar")).toBe("سورة البقرة، الآية 153");
     expect(sourceLine(verse, "en")).toBe("Surah البقرة, verse 153");
     expect(sourceLine(verse, "ur")).toBe("سورہ البقرة، آیت 153");
@@ -82,7 +92,7 @@ describe("share text", () => {
     const text = buildShareText([hadith], "en");
     expect(text).toContain("«اطلبوا العلم ولو بالصين»");
     expect(text).toContain("Weak");
-    expect(text).toContain("السلسلة الضعيفة — 416");
+    expect(text).toContain("السلسلة الضعيفة، 416");
   });
 
   it("adds a link to check each claim and the app's address at the end", () => {
