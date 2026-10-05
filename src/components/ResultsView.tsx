@@ -9,6 +9,40 @@ import { ClaimDetail } from "./ClaimDetail";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 
+/** The claim's own words, short enough for a tab. */
+function tabLabel(c: ClaimResult): string {
+  const words = (c.claim.arabicSpan || c.claim.textAsWritten).trim().split(/\s+/);
+  return words.length > 4 ? `${words.slice(0, 4).join(" ")}…` : words.join(" ");
+}
+
+/** One tab per claim of the post, kept at the top of the result sheet so the other claims stay one tap away on a phone,
+ *  where the sheet covers the post. The number and its colour are the same as on the marked text. */
+function ClaimTabs({ claims, selected, onSelect }: { claims: ClaimResult[]; selected: number; onSelect: (i: number) => void }) {
+  const { num } = useI18n();
+  return (
+    <div role="group" className="sticky -top-2.5 z-10 -mx-1 mb-3 flex flex-wrap gap-2 bg-surface px-1 py-1.5">
+      {claims.map((c, i) => {
+        const s = styleOf(c.state);
+        const on = i === selected;
+        return (
+          <button
+            key={i}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onSelect(i)}
+            className={`inline-flex min-h-11 flex-none cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 text-[14px] ${on ? "border-brand bg-brand-soft font-semibold text-brand-ink" : "border-line bg-paper text-ink hover:bg-surface"}`}
+          >
+            <span aria-hidden className="inline-block min-w-5 rounded-full text-center text-[12px] font-semibold leading-5 text-white" style={{ background: s.line, fontFamily: "var(--font-readex), sans-serif" }}>
+              {num(i + 1)}
+            </span>
+            <span className="quran max-w-[11rem] truncate" lang={c.claim.language === "ar" ? "ar" : undefined}>{tabLabel(c)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface Props {
   post: string;
   claims: ClaimResult[];
@@ -17,13 +51,6 @@ interface Props {
   onOrigin: (query: string) => void;
   onEdit: () => void;
   onNew: () => void;
-}
-
-/** Counts per state, in the order they first appear: «مقبول 1 · ضعيف 1». */
-function summarize(claims: ClaimResult[]) {
-  const map = new Map<string, number>();
-  for (const c of claims) map.set(c.state, (map.get(c.state) ?? 0) + 1);
-  return Array.from(map, ([state, n]) => ({ state, n }));
 }
 
 function ClaimMark({ index, state, selected, text, arabic, onClick }: { index: number; state: string; selected: boolean; text: string; arabic: boolean; onClick: () => void }) {
@@ -59,12 +86,11 @@ function ClaimMark({ index, state, selected, text, arabic, onClick }: { index: n
 }
 
 export function ResultsView({ post, claims: found, selected, onSelect, onOrigin, onEdit, onNew }: Props) {
-  const { t, count, num } = useI18n();
+  const { t, count } = useI18n();
   // the verse the user chose for each claim that fits several («هل تقصد؟»); the result follows the choice
   const [picks, setPicks] = useState<Record<number, number>>({});
   const claims = useMemo(() => found.map((c, i) => applyPick(c, picks[i])), [found, picks]);
   const { segments, placed } = useMemo(() => segmentPost(post, claims.map((c) => ({ textAsWritten: c.claim.textAsWritten, arabicSpan: c.claim.arabicSpan, query: c.claim.query }))), [post, claims]);
-  const summary = useMemo(() => summarize(claims), [claims]);
   const current = claims[selected] ?? claims[0];
   const unplaced = claims.map((c, i) => ({ c, i })).filter(({ i }) => !placed[i]);
   const isOnlyUnplaced = placed.every((p) => !p);
@@ -78,14 +104,6 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
         <div className="flex items-baseline gap-2">
           <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
           <span className="text-[13px] text-muted">{count(claims.length)}</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {claims.length > 1 && summary.map(({ state, n }) => (
-            <span key={state} className="inline-flex items-center gap-1">
-              <StateBadge state={state} size="sm" />
-              {n > 1 && <span className="text-[12px] text-muted">×{num(n)}</span>}
-            </span>
-          ))}
         </div>
       </div>
 
@@ -144,6 +162,7 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
             style={{ boxShadow: "var(--shadow-sheet)" }}
           >
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
+            {claims.length > 1 && <ClaimTabs claims={claims} selected={selected} onSelect={onSelect} />}
             <ClaimDetail result={current} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
           </div>
         </>
