@@ -149,7 +149,6 @@ export const DICT = {
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
   "share.grade": { ar: "الحكم", en: "Grading", ur: "حکم" },
-  "share.link": { ar: "الرابط", en: "Link", ur: "لنک" },
   "share.footer": { ar: "تحقّق من النصوص قبل نشرها", en: "Check texts before you share them", ur: "آگے بھیجنے سے پہلے تحقیق کریں" },
   "share.pickTitle": { ar: "اختر ما تنسخه أو تشاركه", en: "Choose what to copy or share", ur: "منتخب کریں کیا کاپی یا شیئر کرنا ہے" },
   "share.copyN": { ar: "نسخ ({n})", en: "Copy ({n})", ur: "کاپی ({n})" },
