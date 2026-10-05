@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorView, type ErrorKind } from "@/components/ErrorView";
+import { AboutDialog } from "@/components/AboutDialog";
 import { Header } from "@/components/Header";
 import { InputPanel, MAX_TEXT } from "@/components/InputPanel";
 import { LoadingView } from "@/components/LoadingView";
@@ -30,6 +31,7 @@ export default function Home() {
   const [phase, setPhase] = useState<Phase>({ name: "input" });
   const [selected, setSelected] = useState(0);
   const [originQuery, setOriginQuery] = useState<string | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const run = useRef(0);
   const preview = useRef<string | null>(null);
 
@@ -191,7 +193,14 @@ export default function Home() {
           ))}
       </main>
 
-      <footer className="px-4 py-5 text-center text-[12px] text-muted">Islamic AI Challenge 2026</footer>
+      <footer className="flex flex-col items-center gap-1 px-4 pb-5 pt-2 text-[12px] text-muted">
+        <button type="button" onClick={() => setAboutOpen(true)} className="nastaliq-pad min-h-11 cursor-pointer px-4 text-[14px] font-medium text-brand-ink underline underline-offset-4">
+          {t("about.link")}
+        </button>
+        <span>Islamic AI Challenge 2026</span>
+      </footer>
+
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
       <OriginTrackerDrawer open={Boolean(originQuery)} onClose={closeOrigin} claimQuery={originQuery ?? ""} />
     </div>

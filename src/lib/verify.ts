@@ -176,6 +176,11 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   // Urdu is written in Arabic script too, so "has Arabic letters" is not enough: search only with the post's
   // Arabic wording, or with the model's Arabic rendering of an Urdu/English claim.
   const canSearch = Boolean(claim.arabicSpan) || (claim.queryIsTranslation && hasArabic(claim.query));
+  // A claimed verse must never receive a hadith grade through a fuzzy saying match.
+  if (claim.kind === "quran") {
+    const verse = await checkAsVerse(claim, deps, VERSE_MIN);
+    return verse ?? { claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] };
+  }
   // 1) the specialist's own list
   if (canSearch) {
     const [s] = (await deps.matchSayings(claim.query)).filter((h) => h.score >= SAYING_MIN);
@@ -185,10 +190,7 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   // sayings of many scholars, and its muhaddith's words are shown as they are (specialist's decision, 2026-10-04).
 
   // 2) the Quran: a claimed verse, or an Arabic text that is in fact a verse
-  if (claim.kind === "quran") {
-    const r = await checkAsVerse(claim, deps, VERSE_MIN);
-    if (r) return r;
-  } else if (claim.arabicSpan && !claim.queryIsTranslation) {
+  if (claim.arabicSpan && !claim.queryIsTranslation) {
     const r = await checkAsVerse(claim, deps, VERSE_AS_HADITH_MIN);
     if (r) return { ...r, notes: [...r.notes, "النص آية من القرآن وليس حديثا"] };
   }
@@ -198,7 +200,7 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   const looked = await deps.lookupDorar(claim.query);
   if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`] };
   const rawNarrations = selectRelevant(claim.query, looked.results);
-  const notes = claim.kind === "quran" ? ["لم يُعثر على آية مطابقة"] : [];
+  const notes: string[] = [];
   if (!rawNarrations.length) return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"] };
   const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
   const summary = summarizeGrades(rawNarrations);

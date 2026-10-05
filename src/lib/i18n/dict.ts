@@ -154,6 +154,86 @@ export const DICT = {
   "action.reported": { ar: "شكرًا، وصل بلاغك", en: "Thank you, your report was received", ur: "شکریہ، آپ کی اطلاع مل گئی" },
   "action.origin": { ar: "من أين انتشر؟", en: "Where did it spread from?", ur: "یہ کہاں سے پھیلا؟" },
   "action.close": { ar: "إغلاق", en: "Close", ur: "بند کریں" },
+  "about.link": {
+    ar: "عن الأداة",
+    en: "About",
+    ur: "اس ٹول کے بارے میں",
+  },
+  "about.title": {
+    ar: "عن تَثَبُّت",
+    en: "About Tathabbut",
+    ur: "تَثَبُّت کے بارے میں",
+  },
+  "about.s1.h": {
+    ar: "ما هو؟",
+    en: "What is it?",
+    ur: "یہ کیا ہے؟",
+  },
+  "about.s1.b": {
+    ar: "أداة تعين على التحقق من الآيات والأحاديث والأقوال المتداولة قبل نشرها: تُلصق النص أو ترفع صورته، فتعرف مصدره وما قاله أهل العلم فيه.",
+    en: "A tool that helps you check verses, hadiths and circulating sayings before you share them: paste the text or upload a picture, and see its source and what the scholars said about it.",
+    ur: "یہ ٹول آیات، احادیث اور مشہور اقوال کو آگے بھیجنے سے پہلے جانچنے میں مدد دیتا ہے: متن ڈالیں یا اس کی تصویر لگائیں، تو اس کا ماخذ اور اس بارے میں اہلِ علم کا قول سامنے آ جاتا ہے۔",
+  },
+  "about.s2.h": {
+    ar: "كيف يعمل؟",
+    en: "How does it work?",
+    ur: "یہ کیسے کام کرتا ہے؟",
+  },
+  "about.s2.1": {
+    ar: "تُلصق النص أو الصورة.",
+    en: "Paste the text or add a picture.",
+    ur: "متن ڈالیں یا تصویر لگائیں۔",
+  },
+  "about.s2.2": {
+    ar: "نستخرج ما نُسب إلى القرآن أو إلى النبي ﷺ أو إلى عالم.",
+    en: "We pick out what is attributed to the Quran, the Prophet ﷺ or a scholar.",
+    ur: "جو بات قرآن، نبی ﷺ یا کسی عالم کی طرف منسوب ہے، اسے ہم الگ کرتے ہیں۔",
+  },
+  "about.s2.3": {
+    ar: "نعرض مصدره وحكمه منسوبًا إلى قائله.",
+    en: "We show its source and ruling, each attributed to the one who gave it.",
+    ur: "اس کا ماخذ اور حکم، قائل کی طرف منسوب کر کے، دکھاتے ہیں۔",
+  },
+  "about.s3.h": {
+    ar: "مصادره",
+    en: "Sources",
+    ur: "ماخذ",
+  },
+  "about.s3.b": {
+    ar: "الجواب مبنيٌّ على القرآن الكريم وكتب السنة وأقوال أهل العلم في كتبهم، لا على اجتهاد الذكاء الاصطناعي. ولتيسير الوصول إلى هذه الكتب نستعين بمكتبات ومنصات رقمية وسيطة (الدرر السنية، تراث، ونص المصحف من quranpedia)، والمرجع هو الكتاب نفسه.",
+    en: "Answers rest on the Quran, the books of the Sunnah and the words of scholars in their own books — not on the AI’s own judgement. To reach those books we use digital libraries and platforms as go-betweens (Dorar al-Saniyya, Turath, and the Mushaf text from quranpedia); the reference is always the book itself.",
+    ur: "جواب قرآنِ کریم، کتبِ سنت اور اہلِ علم کی کتابوں جیسے معتبر مصادر پر مبنی ہے، مصنوعی ذہانت کے اپنے اجتہاد پر نہیں۔ ان کتابوں تک رسائی آسان بنانے کے لیے ہم کچھ ڈیجیٹل لائبریریوں اور پلیٹ فارمز کو بطور واسطہ استعمال کرتے ہیں (الدرر السنیہ، تراث، اور مصحف کا متن quranpedia سے)؛ حوالہ خود کتاب ہی ہے۔",
+  },
+  "about.s4.h": {
+    ar: "المراجعة العلمية",
+    en: "Scholarly review",
+    ur: "علمی نظرِ ثانی",
+  },
+  "about.s4.b": {
+    ar: "النصوص المتداولة وقواعد تصنيف الأحكام أعدّها وراجعها متخصص في الحديث وعلومه والدراسات الإسلامية.",
+    en: "The list of circulating sayings and the rules that sort rulings were prepared and reviewed by a specialist in hadith, its sciences and Islamic studies.",
+    ur: "مشہور اقوال کی فہرست اور احکام کی درجہ بندی کے قواعد حدیث، اس کے علوم اور اسلامی علوم کے ایک ماہر نے تیار کیے اور ان کی نظرِ ثانی کی ہے۔",
+  },
+  "about.s5.h": {
+    ar: "حدود الأداة",
+    en: "What it does not do",
+    ur: "ٹول کی حدود",
+  },
+  "about.s5.b": {
+    ar: "لا تُصدر فتاوى ولا تحكم بنفسها على حديث؛ الذكاء الاصطناعي يستخرج ويطابق فقط. وعند غياب المرجع تُحيل إلى أهل العلم.",
+    en: "It does not issue fatwas and does not rule on a hadith itself; the AI only extracts and matches. When no reliable reference is found, it points you to the people of knowledge.",
+    ur: "یہ ٹول فتویٰ نہیں دیتا اور خود کسی حدیث پر حکم نہیں لگاتا؛ مصنوعی ذہانت صرف متن نکالتی اور ملاتی ہے۔ مستند حوالہ نہ ملے تو اہلِ علم کی طرف رجوع کرنے کا کہتا ہے۔",
+  },
+  "about.s6.h": {
+    ar: "اسم الأداة",
+    en: "The name",
+    ur: "نام",
+  },
+  "about.s6.b": {
+    ar: "من قوله تعالى: ﴿فَتَثَبَّتُوا﴾ (الحجرات: ٦)، بقراءة حمزة والكسائي وخلف، وبقراءة الجمهور: ﴿فَتَبَيَّنُوا﴾.",
+    en: "From the verse ﴿فَتَثَبَّتُوا﴾ (al-Hujurat 49:6), the reading of Hamza, al-Kisa’i and Khalaf; the majority read ﴿فَتَبَيَّنُوا﴾.",
+    ur: "نام اللہ تعالیٰ کے فرمان ﴿فَتَثَبَّتُوا﴾ (الحجرات: ۶) سے لیا گیا ہے، جو حمزہ، کسائی اور خلف کی قراءت ہے؛ جمہور کی قراءت ﴿فَتَبَيَّنُوا﴾ ہے۔",
+  },
   "action.edit": { ar: "تعديل النص", en: "Edit the text", ur: "متن میں تبدیلی" },
   "action.editRetry": { ar: "تعديل النص وإعادة المحاولة", en: "Edit the text and try again", ur: "متن بدل کر دوبارہ کوشش کریں" },
   "action.copyText": { ar: "نسخ النص", en: "Copy the text", ur: "متن کاپی کریں" },

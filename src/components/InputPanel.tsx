@@ -15,10 +15,6 @@ const EXAMPLES: Array<{ key: Key; text: string }> = [
   { key: "example.question", text: "هل يقع الطلاق في حالة الغضب؟" },
 ];
 
-function Soon({ label }: { label: string }) {
-  return <span className="rounded-full bg-line px-2 py-px text-[11px] font-medium leading-5">{label}</span>;
-}
-
 /** A phone or tablet (touch first): the camera button is shown there; on a computer it would only open the file dialog. */
 function useTouchFirst(): boolean {
   return useSyncExternalStore(
@@ -177,14 +173,6 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="flex justify-center pt-2">
-        <span className="inline-flex min-h-11 items-center gap-2 text-[13px] text-muted">
-          <Icon name="history" size={16} />
-          <span>{t("home.history")}</span>
-          <Soon label={t("home.soon")} />
-        </span>
       </div>
     </div>
   );

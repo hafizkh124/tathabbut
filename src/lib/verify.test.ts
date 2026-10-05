@@ -88,6 +88,21 @@ describe("verifyClaim — routing and authority", () => {
 });
 
 describe("verifyClaim — Quran", () => {
+  it("a claimed verse takes precedence over an unrelated fuzzy saying", async () => {
+    const d = deps({ matchSayings: vi.fn(async () => [saying({})]), matchVerses: vi.fn(async () => [v2_153]) });
+    const r = await verifyClaim(arabic("quran", "إن الله مع الصابرون"), d);
+    expect(r.state).toBe(STATES.verseWrong);
+    expect(d.matchSayings).not.toHaveBeenCalled();
+    expect(d.lookupDorar).not.toHaveBeenCalled();
+  });
+
+  it("an unmatched claimed verse receives no hadith grade", async () => {
+    const d = deps({ matchSayings: vi.fn(async () => [saying({})]), lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })) });
+    const r = await verifyClaim(arabic("quran", "عبارة ليست آية"), d);
+    expect(r.state).toBe(STATES.notFound);
+    expect(d.matchSayings).not.toHaveBeenCalled();
+    expect(d.lookupDorar).not.toHaveBeenCalled();
+  });
   it("a misquoted verse is reported with the verse and the changed word (T027)", async () => {
     const r = await verifyClaim(arabic("quran", "إن الله مع الصابرون"), deps({ matchVerses: vi.fn(async () => [v2_153]) }));
     expect(r.state).toBe(STATES.verseWrong);
@@ -117,10 +132,11 @@ describe("verifyClaim — Quran", () => {
     expect(r.notes).toContain("النص آية من القرآن وليس حديثا");
   });
 
-  it("a 'verse' far from any verse falls through to Dorar", async () => {
+  it("a 'verse' far from every candidate is referred without a hadith search", async () => {
     const d = deps({ matchVerses: vi.fn(async () => [v2_153]) });
-    await verifyClaim(arabic("quran", "يا أيها الناس اتقوا ربكم في كل وقت وحين"), d);
-    expect(d.lookupDorar).toHaveBeenCalled();
+    const r = await verifyClaim(arabic("quran", "يا أيها الناس اتقوا ربكم في كل وقت وحين"), d);
+    expect(r.state).toBe(STATES.notFound);
+    expect(d.lookupDorar).not.toHaveBeenCalled();
   });
 });
 
