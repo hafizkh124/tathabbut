@@ -23,8 +23,10 @@ export type WordDiff =
 
 export interface WordingCheck {
   exact: boolean;
-  /** Specialist-approved omitted context for the specific quotation of 4:43. */
+  /** The quotation cuts the verse off from what qualifies it (CONTEXT_CUTS). */
   contextOmitted?: true;
+  /** For a cut verse that is complete in itself: the adjoining verse to read with it, from the mushaf (CONTEXT_CUTS). */
+  contextContinuation?: { text: string; endAyah: number };
   /** The verse's own words (with harakat) for the stretch that was quoted. */
   correctText: string;
   diffs: WordDiff[];
@@ -33,6 +35,16 @@ export interface WordingCheck {
 }
 
 const words = (s: string) => normalizeArabic(foldUrduLetters(s)).replace(/[^ء-ي\s]/g, " ").split(/\s+/).filter(Boolean);
+
+/**
+ * Quotations known to cut a verse off from what qualifies it, approved one by one by the specialist (4:43 on 2026-10-04,
+ * 107:4 on 2026-10-05). A match gets the «context omitted» state; a verse that is complete in itself also shows the verse
+ * that qualifies it, copied from our mushaf table (quranpedia Hafs), never written by the model.
+ */
+export const CONTEXT_CUTS: { surah: number; ayah: number; quote: RegExp; continuation?: { text: string; endAyah: number } }[] = [
+  { surah: 4, ayah: 43, quote: /^و?لا تقربوا الصلاه$/ },
+  { surah: 107, ayah: 4, quote: /^فويل للمصلين$/, continuation: { text: "الَّذِينَ هُمْ عَنْ صَلَاتِهِمْ سَاهُونَ", endAyah: 5 } },
+];
 
 /** The verse's display words, aligned with its normalized words (waqf marks such as ۚ are not words). */
 function verseWords(v: VerseHit): { clean: string[]; shown: string[] } {
@@ -91,8 +103,15 @@ export function compareWithVerse(quoted: string, verse: VerseHit): WordingCheck 
     else if (o.op === "added") diffs.push({ op: "added", typed: typedShown[o.ai] });
     else if (o.op === "missing") diffs.push({ op: "missing", correct: window[o.bj] });
   }
-  const contextOmitted = verse.surah === 4 && verse.ayah === 43 && /^و?لا تقربوا الصلاه$/.test(typed.join(" "));
-  return { exact: best.cost === 0, ...(contextOmitted ? { contextOmitted: true as const } : {}), correctText: window.join(" "), diffs, distance: typed.length ? best.cost / typed.length : 1 };
+  const cut = CONTEXT_CUTS.find((c) => c.surah === verse.surah && c.ayah === verse.ayah && c.quote.test(typed.join(" ")));
+  return {
+    exact: best.cost === 0,
+    ...(cut ? { contextOmitted: true as const } : {}),
+    ...(cut?.continuation ? { contextContinuation: cut.continuation } : {}),
+    correctText: window.join(" "),
+    diffs,
+    distance: typed.length ? best.cost / typed.length : 1,
+  };
 }
 
 /** Normalized form used for the database search (same as quran_verses.text_clean). */

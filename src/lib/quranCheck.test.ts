@@ -73,4 +73,10 @@ describe("searchForm", () => {
     expect(searchForm("إِنَّ اللَّهَ مَعَ الصَّابِرِينَ۔")).toBe("ان الله مع الصابرين");
     expect(searchForm("ان اللہ")).toBe("ان الله");
   });
+
+  it("flags «فويل للمصلين» alone as a cut and gives the next verse from the mushaf (specialist, 2026-10-05)", () => {
+    const w = compareWithVerse("فويل للمصلين", { surah: 107, ayah: 4, surah_name_ar: "سورة الماعون", text_uthmani: "فَوَيْلٌ لِلْمُصَلِّينَ", score: 1 } as never);
+    expect(w.contextOmitted).toBe(true);
+    expect(w.contextContinuation).toEqual({ text: "الَّذِينَ هُمْ عَنْ صَلَاتِهِمْ سَاهُونَ", endAyah: 5 });
+  });
 });

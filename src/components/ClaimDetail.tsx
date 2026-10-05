@@ -134,7 +134,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
     return (
       <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
         <Row label={t("label.source")}>
-          <span className="font-semibold text-brand-ink">{t("verse.ref", { s: plainSurah(v.surahName), a: num(v.ayah) })}</span>
+          <span className="font-semibold text-brand-ink">{t("verse.ref", { s: plainSurah(v.surahName), a: num(v.ayah) + (v.endAyah ? `–${num(v.endAyah)}` : "") })}</span>
         </Row>
         <Row label={t("label.text")}>{t("label.mushaf")}</Row>
         <ViaRow links={viaLinks(r)} />

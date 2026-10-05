@@ -41,6 +41,8 @@ export interface ExternalUrls {
 export interface VerseView {
   surah: number;
   ayah: number;
+  /** the last verse shown when the adjoining verse is shown with it (a context cut) */
+  endAyah?: number;
   surahName: string;
   text: string;
   wording?: WordingCheck;
@@ -74,6 +76,9 @@ export interface VerifyDeps {
 
 /** Thresholds (word_similarity, 0–1) and the largest share of changed words still treated as "this verse, misquoted". */
 const SAYING_MIN = 0.6;
+/** How much of a list entry a translated claim's Arabic rendering must cover to count as that entry. */
+const TRANSLATION_COVERAGE = 0.7;
+const wordCount = (s: string) => searchForm(s).split(" ").filter(Boolean).length;
 const VERSE_MIN = 0.6;
 const VERSE_AS_HADITH_MIN = 0.85;
 const MAX_VERSE_DISTANCE = 0.5;
@@ -85,7 +90,8 @@ function verseView(v: VerseHit, wording: WordingCheck | undefined): VerseView {
     surah: v.surah,
     ayah: v.ayah,
     surahName: v.surah_name_ar,
-    text: v.text_uthmani.replace(/﻿/g, ""),
+    text: v.text_uthmani.replace(/﻿/g, "") + (wording?.contextContinuation ? ` ${wording.contextContinuation.text}` : ""),
+    ...(wording?.contextContinuation ? { endAyah: wording.contextContinuation.endAyah } : {}),
     wording,
     externalUrls: {
       quranCom: `https://quran.com/${v.surah}/${v.ayah}`,
@@ -189,7 +195,11 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   if (canSearch) {
     const hits = await deps.matchSayings(claim.query);
     nearbySayings = hits.filter((h) => h.score >= 0.5 && h.score < SAYING_MIN && h.text_ar.length <= 1500).slice(0, 3).map(similarSaying);
-    const [s] = hits.filter((h) => h.score >= SAYING_MIN);
+    // A translated claim is matched to an entry only when its Arabic rendering covers most of the entry: a model may render
+    // a fragment («الحمية رأس الدواء» for a different Urdu proverb), and a fragment is a suggestion, not the entry itself.
+    const covers = (h: SayingHit) => !claim.queryIsTranslation || wordCount(claim.query) >= TRANSLATION_COVERAGE * wordCount(h.text_ar);
+    for (const h of hits) if (h.score >= SAYING_MIN && !covers(h) && nearbySayings.length < 3) nearbySayings.push(similarSaying(h));
+    const [s] = hits.filter((h) => h.score >= SAYING_MIN && covers(h));
     if (s && (claim.kind !== "scholar_quote" || s.claimed_attribution)) return fromSaying(claim, s);
   }
   // A scholar's saying that is not in the specialist's list is still looked up: Dorar and the hadith books record the

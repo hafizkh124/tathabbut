@@ -97,6 +97,20 @@ describe("verifyClaim — similar expressions", () => {
   });
 });
 
+describe("verifyClaim — translated claims and the specialist's list", () => {
+  it("does not take a translated fragment of an entry as the entry; it is offered as a similar expression", async () => {
+    const s = saying({ text_ar: "المعدة بيت الداء والحمية رأس الدواء", score: 1 });
+    const r = await verifyClaim(claim({ textAsWritten: "پرہیز علاج سے بہتر ہے", language: "ur", queryIsTranslation: true, query: "الحمية رأس الدواء" }), deps({ matchSayings: vi.fn(async () => [s]) }));
+    expect(r.saying).toBeUndefined();
+    expect(r.similarExpressions?.[0].text).toBe(s.text_ar);
+  });
+  it("still matches a translated claim that renders the whole entry", async () => {
+    const s = saying({ text_ar: "المعدة بيت الداء والحمية رأس الدواء", score: 1 });
+    const r = await verifyClaim(claim({ textAsWritten: "معدہ بیماریوں کا گھر ہے اور پرہیز ہر دوا کی اصل ہے", language: "ur", queryIsTranslation: true, query: "المعدة بيت الداء والحمية رأس الدواء" }), deps({ matchSayings: vi.fn(async () => [s]) }));
+    expect(r.basis).toBe("specialist-list");
+  });
+});
+
 describe("verifyClaim — Quran", () => {
   it("a claimed verse takes precedence over an unrelated fuzzy saying", async () => {
     const d = deps({ matchSayings: vi.fn(async () => [saying({})]), matchVerses: vi.fn(async () => [v2_153]) });
