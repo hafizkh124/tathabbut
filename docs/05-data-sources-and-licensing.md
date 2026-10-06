@@ -32,8 +32,3 @@ people's data in our public repository. Only sources actually used are cited; ot
 - **Included:** source code, database migrations, scripts that download and ingest data from the original sources,
   tests and small test fixtures.
 - **Not included:** quranpedia dump files, the Dorar cache, API keys, `.env.local`.
-
-## 5.4 Reuse disclosure
-
-Parts of the participant's own earlier project, **Al-Ulama Easy Editor** (AGPL-3.0, owned by the participant), were
-reused: the Dorar response parser and Arabic text normalization / wording comparison. No data was copied from it.
