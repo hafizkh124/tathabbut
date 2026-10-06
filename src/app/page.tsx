@@ -10,7 +10,7 @@ import { OriginTrackerDrawer } from "@/components/OriginTrackerDrawer";
 import { ResultsView } from "@/components/ResultsView";
 import { TextConfirm } from "@/components/TextConfirm";
 import { Button } from "@/components/ui/Button";
-import { LogoMark } from "@/components/ui/Logo";
+import { LoadingMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
@@ -146,17 +146,20 @@ export default function Home() {
   }, [toInput]);
   const closeOrigin = useCallback(() => setOriginQuery(null), []);
 
+  const wide = phase.name === "input" || (phase.name === "results" && phase.claims.length > 0);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header onHome={toNew} />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+      {/* the home and result screens lay out their own columns across the page; the others sit in one narrow column */}
+      <main className={wide ? "w-full flex-1" : "mx-auto w-full max-w-3xl flex-1 px-4 py-6"}>
         {phase.name === "input" && <InputPanel value={text} onChange={setText} onSubmit={() => verify(text)} onImage={readPicture} />}
 
         {phase.name === "reading" && (
-          <div className="flex flex-col items-center gap-3 py-16" role="status" aria-live="polite">
-            <LogoMark size={112} motion="loading" label={t("ocr.reading")} />
-            <p className="text-lg font-semibold text-brand-ink">{t("ocr.reading")}</p>
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 py-16" role="status" aria-live="polite">
+            <LoadingMark size={104} label={t("ocr.reading")} />
+            <h1 className="text-[17px] font-normal text-muted">{t("ocr.reading")}</h1>
           </div>
         )}
 
@@ -174,14 +177,14 @@ export default function Home() {
           />
         )}
 
-        {phase.name === "loading" && <LoadingView text={post} />}
+        {phase.name === "loading" && <LoadingView />}
 
         {phase.name === "error" && <ErrorView kind={phase.kind} text={post} onRetry={() => verify(post)} onEdit={toInput} />}
 
         {phase.name === "results" &&
           (phase.claims.length === 0 ? (
             <div className="space-y-4">
-              <p className="rounded-2xl border border-line bg-surface p-5 text-base">{t("empty.body")}</p>
+              <h1 className="rounded-2xl border border-line bg-surface p-5 text-base font-normal">{t("empty.body")}</h1>
               <div className="flex flex-col gap-2.5">
                 <Button size="lg" onClick={toInput}>
                   {t("action.edit")}
@@ -193,10 +196,11 @@ export default function Home() {
           ))}
       </main>
 
-      <footer className="flex flex-col items-center gap-1 px-4 pb-5 pt-2 text-[12px] text-muted">
-        <button type="button" onClick={() => setAboutOpen(true)} className="nastaliq-pad min-h-11 cursor-pointer px-4 text-[14px] font-medium text-brand-ink underline underline-offset-4">
+      <footer className="flex flex-wrap items-center justify-center gap-x-2 border-t border-line px-4 py-2 text-[12px] text-muted">
+        <button type="button" onClick={() => setAboutOpen(true)} className="nastaliq-pad min-h-11 cursor-pointer text-[13px] font-medium text-brand-ink underline underline-offset-4">
           {t("about.link")}
         </button>
+        <span aria-hidden>·</span>
         <span>Islamic AI Challenge 2026</span>
       </footer>
 

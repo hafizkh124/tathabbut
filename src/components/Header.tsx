@@ -7,7 +7,7 @@ import { Icon } from "./ui/Icon";
 
 type Theme = "light" | "dark";
 const THEME_KEY = "tathabbut.theme";
-const THEME_COLOR: Record<Theme, string> = { light: "#0b3d3a", dark: "#0e1716" };
+const THEME_COLOR: Record<Theme, string> = { light: "#0c3b38", dark: "#0e1716" };
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
@@ -63,6 +63,13 @@ export function ThemeToggle() {
 
 const NAMES: Record<Locale, string> = { ar: "ع", en: "EN", ur: "اردو" };
 const LONG: Record<Locale, string> = { ar: "العربية", en: "English", ur: "اردو" };
+/** Each name in its own script's font, whatever the page's language, nudged so the letters (not the font's line box) sit in
+ *  the middle: Readex leaves room above for Latin capitals that ع does not use, and Nastaliq sits low on its line. */
+const NAME_STYLE: Record<Locale, React.CSSProperties> = {
+  ar: { fontFamily: "var(--font-readex), sans-serif", transform: "translateY(-4.5px)" },
+  en: { fontFamily: "var(--font-readex), sans-serif" },
+  ur: { fontFamily: "var(--font-nastaliq), serif", transform: "translateY(-2.5px)" },
+};
 
 export function LangSwitch() {
   const { locale, setLocale, t } = useI18n();
@@ -78,35 +85,22 @@ export function LangSwitch() {
           onClick={() => setLocale(l)}
           className={`flex h-10 w-11 items-center justify-center rounded-full text-sm font-semibold cursor-pointer transition-colors ${
             locale === l ? "bg-brand text-on-brand" : "text-ink hover:bg-paper"
-          } ${l === "ur" ? "pt-2 text-xs" : ""}`}
-          style={l === "ur" ? { fontFamily: "var(--font-nastaliq), serif" } : undefined}
+          } ${l === "ur" ? "text-xs" : ""}`}
+          style={{ fontFamily: NAME_STYLE[l].fontFamily }}
         >
-          {NAMES[l]}
+          <span style={{ transform: NAME_STYLE[l].transform }}>{NAMES[l]}</span>
         </button>
       ))}
     </div>
   );
 }
 
-export function AiNotice() {
-  const { t } = useI18n();
-  return (
-    <div className="nastaliq-pad flex items-center justify-center gap-2 bg-brand-soft px-4 py-2 text-center text-xs text-brand-ink" role="note">
-      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style={{ flex: "none" }} fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6">
-        <circle cx="8" cy="8" r="6.5" strokeWidth="1.5" />
-        <path d="M8 7.2 V11.2 M8 4.8 V4.9" />
-      </svg>
-      <span>{t("notice")}</span>
-    </div>
-  );
-}
-
 export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHome?: () => void }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
-      <div className="mx-auto flex h-[60px] max-w-3xl items-center justify-between px-4">
-        <button type="button" onClick={onHome} className="flex items-center gap-2.5 cursor-pointer" aria-label="تَثَبُّت" translate="no">
-          <LogoMark size={36} motion={motion} label="" />
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:h-[70px] lg:px-10">
+        <button type="button" onClick={onHome} className="flex items-center gap-2.5 cursor-pointer lg:gap-3" aria-label="تَثَبُّت" translate="no">
+          <LogoMark size={38} motion={motion} label="" />
           <Wordmark size={24} />
         </button>
         <div className="flex items-center gap-1" translate="no">
@@ -114,7 +108,6 @@ export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHom
           <LangSwitch />
         </div>
       </div>
-      <AiNotice />
     </header>
   );
 }

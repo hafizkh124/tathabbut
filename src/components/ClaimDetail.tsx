@@ -3,7 +3,7 @@ import React, { useCallback, useState } from "react";
 import type { ClaimResult, NarrationView } from "@/lib/clientTypes";
 import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
-import { toneOf } from "@/lib/gradeStyle";
+import { styleOf, toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, plainSurah, readersLine, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
@@ -148,7 +148,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
   if (r.verse) {
     const v = r.verse;
     return (
-      <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
+      <div className="space-y-1 rounded-[14px] bg-surface px-4 py-3 text-[14px]">
         <Row label={t("label.source")}>
           <span className="font-semibold text-brand-ink">{t("verse.ref", { s: plainSurah(v.surahName), a: num(v.ayah) + (v.endAyah ? `–${num(v.endAyah)}` : "") })}</span>
         </Row>
@@ -181,7 +181,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
       <div className="space-y-2">
         {r.dorar.summary.disputed && <p className="text-[13px] text-muted">{t("note.disputed")}</p>}
         {[...r.dorar.narrations, ...(weakList ?? [])].some((n) => n.textVariant) && <p role="note" className="text-[13px] text-muted">{t("note.variantSummary")}</p>}
-        <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
+        <div className="space-y-1 rounded-[14px] bg-surface px-4 py-3 text-[14px]">
           {first?.source && (
             <Row label={t("label.source")}>
               <span className="font-semibold text-brand-ink">{first.source}</span>
@@ -233,7 +233,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
   if (r.saying) {
     const s = r.saying;
     return (
-      <div className="space-y-1 rounded-xl border border-line bg-paper px-3.5 py-2 text-[14px]">
+      <div className="space-y-1 rounded-[14px] bg-surface px-4 py-3 text-[14px]">
         {s.reference && (
           <Row label={t("label.source")}>
             <span className="font-semibold text-brand-ink">{splitReferenceUrl(s.reference).text}</span>
@@ -309,11 +309,13 @@ interface Props {
   onEdit: () => void;
   /** the user chose another verse of «هل تقصد؟» */
   onPick: (candidate: number) => void;
+  /** start again with a new text */
+  onNew: () => void;
   /** every claim of the post: with more than one, copy and share first ask which to take */
   all?: ClaimResult[];
 }
 
-export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick, all }: Props) {
+export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick, onNew, all }: Props) {
   const { t, num, locale } = useI18n();
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState<{ text: string; status: "sending" | "sent" | "failed" } | null>(null);
@@ -369,19 +371,25 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       <p className="text-[14px] text-muted">{t("translated.body")}</p>
     ) : null;
 
+  const style = styleOf(r.state);
+  // the buttons share the row on a phone; on a computer each is as wide as its label
+  const act = "min-w-[30%] flex-1 px-3! text-[13px] sm:text-[14.5px] lg:min-h-[50px] lg:flex-none lg:px-6!";
+
   return (
-    <section aria-label={t("result.title")} className="space-y-3">
+    <section aria-label={t("result.title")} className="space-y-4 lg:space-y-5">
       {r.verse?.candidates && r.verse.candidates.length > 1 && <CandidateList candidates={r.verse.candidates} picked={pickedIndex(r)} onPick={onPick} />}
 
+      {/* the verdict: the state, what it means, and where it was read, on the state's own tint */}
+      <div className="space-y-3 rounded-[18px] p-4 lg:space-y-4 lg:p-6" style={{ background: style.bg }}>
       <div className="flex items-center justify-between gap-3">
-        <StateBadge state={r.state} size="lg" long />
+        <StateBadge state={r.state} size="md" long solid />
         {total > 1 && <span className="text-[13px] text-muted">{t("result.of", { i: num(index + 1), n: num(total) })}</span>}
       </div>
 
       {tone !== "notFound" && tone !== "fatwa" && !isQuestion && <p translate="no" className="quran text-[22px] text-ink">{quote}</p>}
       {message}
       {matchedArabic(r) && (
-        <div role="note" className="space-y-1 rounded-xl border border-line bg-paper p-3">
+        <div role="note" className="space-y-1 rounded-[14px] bg-surface p-3">
           <p className="text-[12px] text-muted">{t("label.matchedArabic")}</p>
           <p translate="no" lang="ar" dir="rtl" className="quran text-[22px]">{matchedArabic(r)}</p>
           <p className="text-[13px] text-muted">{t("note.translationMatch")}</p>
@@ -390,10 +398,10 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
 
       {r.verse && (
         <div className="space-y-2">
-          {r.verse.wording?.contextOmitted && <p role="note" className="rounded-xl border border-line bg-paper p-3 text-[14px]">{t("verse.contextWarning")}</p>}
+          {r.verse.wording?.contextOmitted && <p role="note" className="rounded-[14px] bg-surface p-3 text-[14px]">{t("verse.contextWarning")}</p>}
           <Diffs r={r} />
           {(tone === "misquote" || tone === "translated" || Boolean(r.verse.wording?.qiraat?.length)) && (
-            <div className="rounded-xl border border-line bg-paper p-3">
+            <div className="rounded-[14px] bg-surface p-3">
               <p className="text-[12px] text-muted">{t("label.mushaf")}</p>
               <p translate="no" className="quran text-[24px]">{r.verse.text}</p>
             </div>
@@ -404,6 +412,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       {r.claim.kind === "scholar_quote" && r.dorar && <p className="text-[13px] text-muted">{t("note.scholar")}</p>}
 
       <SourceBox r={r} />
+      </div>
       {r.similarExpressions?.length ? <SimilarExpressions key={r.claim.textAsWritten} candidates={r.similarExpressions} /> : null}
 
       {isQuestion ? (
@@ -423,35 +432,40 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         <TurathBox r={r} />
       )}
 
-      <div className="flex gap-2.5 pt-1">
+      <div className="flex flex-wrap gap-2.5 lg:gap-3">
         {tone === "notFound" ? (
           <>
-            <Button full onClick={onEdit}>
+            <Button className={act} onClick={onEdit}>
               {t("action.editRetry")}
             </Button>
-            <Button full variant="secondary" onClick={copy}>
-              {copied ? t("action.copied") : t("action.copyText")}
+            <Button className={act} variant="secondary" onClick={copy}>
+              <Icon name="copy" size={16} />
+              <span>{copied ? t("action.copied") : t("action.copyText")}</span>
             </Button>
           </>
         ) : (
           <>
-            <Button full variant="secondary" onClick={copy}>
-              <Icon name="copy" size={16} />
-              <span>{copied ? t("action.copied") : t("action.copy")}</span>
-            </Button>
-            <Button full onClick={share}>
+            <Button className={act} onClick={share}>
               <Icon name="share" size={16} />
               <span>{t("action.share")}</span>
             </Button>
+            <Button className={act} variant="secondary" onClick={copy}>
+              <Icon name="copy" size={16} />
+              <span>{copied ? t("action.copied") : t("action.copy")}</span>
+            </Button>
           </>
         )}
+        <Button className={`${act} max-sm:basis-full`} variant="secondary" onClick={onNew}>
+          <Icon name="plus" size={16} />
+          <span>{t("result.new")}</span>
+        </Button>
       </div>
 
       <ShareNote outcome={shareOutcome} text={shareText()} />
 
       {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} />}
 
-      <div className="flex flex-wrap items-center justify-center gap-x-4">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 lg:justify-start">
         {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (
           <Button variant="ghost" size="sm" onClick={() => onOrigin(r.claim.query || r.claim.textAsWritten)}>
             {t("action.origin")}

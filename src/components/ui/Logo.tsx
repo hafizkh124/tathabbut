@@ -1,65 +1,74 @@
-import React from "react";
-
-const PINS = {
-  top: "M22 4 V11 M32 4 V11 M42 4 V11",
-  right: "M53 22 H60 M53 32 H60 M53 42 H60",
-  bottom: "M22 53 V60 M32 53 V60 M42 53 V60",
-  left: "M4 22 H11 M4 32 H11 M4 42 H11",
-} as const;
+import React, { useId } from "react";
 
 export type LogoMotion = "none" | "loading" | "done";
 
+/** The two strokes of the mark: the body of the letter ت, then the tick rising out of it. */
+const LETTER = "M34 62 C42 48 51 48 57 59 C62 49 69 49 76 58";
+const TICK = "M76 58 L100 30";
+
+/** SVG ids from useId, kept to characters every browser accepts inside url(#…). */
+function useSvgId(): string {
+  return `t${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
+
 interface LogoMarkProps {
   size?: number;
-  /** none: still · loading: pins light up in turn, dots hop, the tick draws and fades in a loop · done: the tick draws once */
+  /** none: still · loading: the letter and the tick draw and fade in a loop · done: they draw once */
   motion?: LogoMotion;
-  /** the colour of the chip body; use `soft` on a teal background */
-  body?: "brand" | "soft";
   label?: string;
 }
 
-/** The logo: the letter ت (two dots over a tick) inside an AI chip with pins on all four sides. Under 32px the pins are dropped. */
-export function LogoMark({ size = 36, motion = "none", body = "brand", label }: LogoMarkProps) {
-  const fill = body === "soft" ? "#14524D" : "#0B3D3A";
-  const small = size < 32;
-  const gold = "#C8A24A";
+/** The logo: the letter ت drawn in gold on a deep teal tile, its last stroke rising into a tick, over a faint baseline. */
+export function LogoMark({ size = 36, motion = "none", label }: LogoMarkProps) {
+  const id = useSvgId();
+  const animated = motion !== "none";
+  const stroke = { fill: "none", stroke: `url(#${id}g)`, strokeWidth: 11.5, strokeLinecap: "round", strokeLinejoin: "round", pathLength: 1 } as const;
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} style={{ flex: "none" }}>
-      {small ? (
-        <rect width="64" height="64" rx="16" fill={fill} />
-      ) : (
-        <>
-          <g stroke={gold} strokeWidth="2.8" strokeLinecap="round" fill="none">
-            {(Object.keys(PINS) as Array<keyof typeof PINS>).map((side, i) => (
-              <path key={side} d={PINS[side]} opacity={motion === "loading" ? 0.3 : 1}>
-                {motion === "loading" && <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />}
-                {motion === "done" && <animate attributeName="opacity" values="0.3;1;0.3;1" keyTimes="0;0.3;0.6;1" dur="1.4s" begin="0s" fill="freeze" />}
-              </path>
-            ))}
-          </g>
-          <rect x="9" y="9" width="46" height="46" rx="12" fill={fill} />
-        </>
-      )}
-      <circle cx="26" cy={small ? 19 : 24} r={small ? 4.2 : 3.5} fill={gold}>
-        {motion === "loading" && <animate attributeName="cy" values="24;20.5;24" dur="1s" begin="0s" repeatCount="indefinite" />}
+    <svg width={size} height={size} viewBox="0 0 128 128" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} style={{ flex: "none" }}>
+      <defs>
+        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#EBD08A" />
+          <stop offset=".5" stopColor="#C7A24A" />
+          <stop offset="1" stopColor="#B08A38" />
+        </linearGradient>
+        <linearGradient id={`${id}d`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#114E49" />
+          <stop offset="1" stopColor="#0A3835" />
+        </linearGradient>
+      </defs>
+      <rect x="6" y="6" width="116" height="116" rx="30" fill={`url(#${id}d)`} />
+      <line x1="34" y1="88" x2="94" y2="88" stroke="#EBD08A" strokeWidth="2.5" opacity=".3" strokeLinecap="round" />
+      <circle cx="34" cy="88" r="2.6" fill="#EBD08A" opacity=".5">
+        {motion === "loading" && <animate attributeName="cx" values="34;94;34" dur="2.4s" repeatCount="indefinite" />}
       </circle>
-      <circle cx="38" cy={small ? 19 : 24} r={small ? 4.2 : 3.5} fill={gold}>
-        {motion === "loading" && <animate attributeName="cy" values="24;20.5;24" dur="1s" begin="0.25s" repeatCount="indefinite" />}
-      </circle>
-      <path
-        d={small ? "M15 36 L28 48 L49 27" : "M19 36 L28.5 45 L45 28"}
-        pathLength={1}
-        strokeDasharray={motion === "none" ? undefined : 1}
-        strokeDashoffset={motion === "none" ? undefined : 1}
-        fill="none"
-        stroke={gold}
-        strokeWidth={small ? 6.6 : 5.3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {motion === "loading" && <animate attributeName="stroke-dashoffset" values="1;0;0;1" keyTimes="0;0.45;0.8;1" dur="2s" repeatCount="indefinite" />}
-        {motion === "done" && <animate attributeName="stroke-dashoffset" values="1;0" dur="0.6s" fill="freeze" />}
+      <path d={LETTER} {...stroke} strokeDasharray={animated ? 1 : undefined} strokeDashoffset={animated ? 1 : undefined}>
+        {motion === "loading" && <animate attributeName="stroke-dashoffset" values="1;0;0;1" keyTimes="0;0.35;0.8;1" dur="2.4s" repeatCount="indefinite" />}
+        {motion === "done" && <animate attributeName="stroke-dashoffset" values="1;0" dur="0.45s" fill="freeze" />}
       </path>
+      <path d={TICK} {...stroke} strokeDasharray={animated ? 1 : undefined} strokeDashoffset={animated ? 1 : undefined}>
+        {motion === "loading" && <animate attributeName="stroke-dashoffset" values="1;1;0;0;1" keyTimes="0;0.35;0.5;0.8;1" dur="2.4s" repeatCount="indefinite" />}
+        {motion === "done" && <animate attributeName="stroke-dashoffset" values="1;1;0" keyTimes="0;0.6;1" dur="0.7s" fill="freeze" />}
+      </path>
+    </svg>
+  );
+}
+
+/** Waiting for an answer: a gold arc turning round a tick, on the page's own colours. */
+export function LoadingMark({ size = 120, label }: { size?: number; label?: string }) {
+  const id = useSvgId();
+  return (
+    <svg width={size} height={size} viewBox="0 0 128 128" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} style={{ flex: "none" }}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#EBD08A" />
+          <stop offset="1" stopColor="#C7A24A" />
+        </linearGradient>
+      </defs>
+      <circle cx="64" cy="64" r="52" fill="none" stroke="var(--line)" strokeWidth="6" />
+      <circle cx="64" cy="64" r="52" fill="none" stroke={`url(#${id})`} strokeWidth="6" strokeLinecap="round" strokeDasharray="150 230" transform="rotate(-90 64 64)">
+        <animateTransform attributeName="transform" type="rotate" from="-90 64 64" to="270 64 64" dur="1.4s" repeatCount="indefinite" />
+      </circle>
+      <path d="M44 66 56 78 86 44" fill="none" stroke={`url(#${id})`} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -9,9 +9,9 @@ type Entry = { ar: string; en: string; ur: string };
 
 export const DICT = {
   "notice": {
-    ar: "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة",
-    en: "AI that quotes from reliable Islamic sources",
-    ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے",
+    ar: "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة، ولا يُصدر فتاوى.",
+    en: "AI that quotes from reliable Islamic sources. It does not issue fatwas.",
+    ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے، فتویٰ نہیں دیتی۔",
   },
   "theme.toDark": { ar: "الوضع الداكن", en: "Dark mode", ur: "ڈارک موڈ" },
   "theme.toLight": { ar: "الوضع الفاتح", en: "Light mode", ur: "لائٹ موڈ" },
@@ -27,6 +27,27 @@ export const DICT = {
   "home.step2": { ar: "نطابقه مع المصادر", en: "We match it with the sources", ur: "ہم مصادر سے ملاتے ہیں" },
   "home.step3": { ar: "نعرض الحكم ومصدره", en: "We show the ruling and its source", ur: "حکم اور ماخذ دکھاتے ہیں" },
   "home.stepsLabel": { ar: "كيف يعمل", en: "How it works", ur: "یہ کیسے کام کرتا ہے" },
+  "home.eyebrow": { ar: "تثبّت قبل أن تنشر", en: "Verify before you share", ur: "پھیلانے سے پہلے تصدیق کریں" },
+  "home.step1Desc": {
+    ar: "نصًّا مكتوبًا، أو لقطة شاشة للرسالة التي وصلتك.",
+    en: "Typed text, or a screenshot of the message you received.",
+    ur: "لکھا ہوا متن، یا آپ کو موصول پیغام کا اسکرین شاٹ۔",
+  },
+  "home.step2Desc": {
+    ar: "نبحث في القرآن وكتب السنة وأقوال أهل العلم، لا في اجتهاد الذكاء الاصطناعي.",
+    en: "We search the Quran, the books of the Sunnah and the words of scholars, not the AI’s own judgement.",
+    ur: "ہم قرآن، کتبِ سنت اور اہلِ علم کے اقوال میں تلاش کرتے ہیں، مصنوعی ذہانت کے اجتہاد سے نہیں۔",
+  },
+  "home.step3Desc": {
+    ar: "منسوبًا إلى قائله، مع رابط المصدر لترجع إليه بنفسك.",
+    en: "Attributed to the one who said it, with a link to the source so you can check it yourself.",
+    ur: "قائل کی طرف منسوب، ساتھ ماخذ کا لنک تاکہ آپ خود رجوع کر سکیں۔",
+  },
+  "home.disclaimer": {
+    ar: "لا نُصدر فتاوى ولا نحكم بأنفسنا على حديث؛ نستخرج ونطابق فقط، وعند غياب المرجع نُحيل إلى أهل العلم.",
+    en: "We do not issue fatwas or rule on a hadith ourselves; we only extract and match, and when no reference is found we point you to the scholars.",
+    ur: "ہم فتویٰ نہیں دیتے اور خود کسی حدیث پر حکم نہیں لگاتے؛ صرف نکالتے اور ملاتے ہیں، اور حوالہ نہ ملنے پر اہلِ علم کی طرف رجوع کا کہتے ہیں۔",
+  },
   "home.label": { ar: "النص", en: "Text", ur: "متن" },
   "home.placeholder": {
     ar: "ألصق هنا النص الذي تريد التحقق منه…",
