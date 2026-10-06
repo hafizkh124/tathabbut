@@ -66,7 +66,7 @@ export function LogoMark({ size = 36, motion = "none", body = "brand", label }: 
 
 export function Wordmark({ size = 24 }: { size?: number }) {
   return (
-    <span className="font-bold leading-none text-brand-ink" style={{ fontSize: size, fontFamily: "var(--font-readex), sans-serif" }} lang="ar">
+    <span className="font-bold leading-none text-[color:var(--wordmark)]" style={{ fontSize: size, fontFamily: "var(--font-readex), sans-serif" }} lang="ar">
       تَثَبُّت
     </span>
   );

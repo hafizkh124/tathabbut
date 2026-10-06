@@ -72,7 +72,7 @@ export function toneOf(state: string): Tone {
 
 export const styleOf = (state: string): ToneStyle => TONE_STYLE[toneOf(state)];
 
-export type IconKey = IconName | "ext" | "copy" | "share" | "image" | "camera" | "mic" | "history" | "info" | "close" | "report" | "chevron" | "sun" | "moon";
+export type IconKey = IconName | "ext" | "copy" | "share" | "image" | "camera" | "mic" | "history" | "info" | "close" | "report" | "chevron" | "sun" | "moon" | "plus";
 
 /** Paths for a 16×16 viewBox, drawn with a rounded stroke. */
 export const ICON_PATHS: Record<IconKey, string> = {
@@ -96,4 +96,5 @@ export const ICON_PATHS: Record<IconKey, string> = {
   chevron: "M4 6 L8 10 L12 6",
   sun: "M8 5.2 A2.8 2.8 0 1 0 8 10.8 A2.8 2.8 0 1 0 8 5.2 M8 1.5 V2.8 M8 13.2 V14.5 M1.5 8 H2.8 M13.2 8 H14.5 M3.4 3.4 L4.3 4.3 M11.7 11.7 L12.6 12.6 M3.4 12.6 L4.3 11.7 M11.7 4.3 L12.6 3.4",
   moon: "M13.5 9.6 A5.8 5.8 0 1 1 6.4 2.5 A4.6 4.6 0 0 0 13.5 9.6 Z",
+  plus: "M8 3 V13 M3 8 H13",
 };

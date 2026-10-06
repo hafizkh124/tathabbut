@@ -9,9 +9,9 @@ type Entry = { ar: string; en: string; ur: string };
 
 export const DICT = {
   "notice": {
-    ar: "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة",
-    en: "AI that quotes from reliable Islamic sources",
-    ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے",
+    ar: "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة، ولا يُصدر فتاوى.",
+    en: "AI that quotes from reliable Islamic sources. It does not issue fatwas.",
+    ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے، فتویٰ نہیں دیتی۔",
   },
   "theme.toDark": { ar: "الوضع الداكن", en: "Dark mode", ur: "ڈارک موڈ" },
   "theme.toLight": { ar: "الوضع الفاتح", en: "Light mode", ur: "لائٹ موڈ" },
@@ -24,9 +24,40 @@ export const DICT = {
     ur: "جو آیت، حدیث یا پیغام آپ کو ملا ہے وہ یہاں ڈالیں، ہم اس کی تصدیق کر دیں گے۔",
   },
   "home.step1": { ar: "تلصق النص أو الصورة", en: "Paste the text or a picture", ur: "متن یا تصویر ڈالیں" },
-  "home.step2": { ar: "نطابقه مع المصادر", en: "We match it with the sources", ur: "ہم مصادر سے ملاتے ہیں" },
-  "home.step3": { ar: "نعرض الحكم ومصدره", en: "We show the ruling and its source", ur: "حکم اور ماخذ دکھاتے ہیں" },
+  "home.step2": { ar: "يطابقه تَثَبُّت مع المصادر", en: "Tathabbut matches it with the sources", ur: "تَثَبُّت اسے مصادر سے ملاتا ہے" },
+  "home.step3": { ar: "يعرض تَثَبُّت الحكم ومصدره", en: "Tathabbut shows the ruling and its source", ur: "تَثَبُّت حکم اور ماخذ دکھاتا ہے" },
   "home.stepsLabel": { ar: "كيف يعمل", en: "How it works", ur: "یہ کیسے کام کرتا ہے" },
+  "home.hero": {
+    ar: "قبل أن تشارك منشورا، هل تحققت من مصدره؟",
+    en: "Verify the authenticity of Islamic quotes before sharing them",
+    ur: "پوسٹ نشر کرنے سے پہلے اس کی تحقیق کریں!",
+  },
+  "home.heroSub": {
+    ar: "تحقّق فوري من الأحاديث والآيات المتداولة: مصدرها وحكمها، منسوباً إلى قائله",
+    en: "Instant verification of hadith and Quran verses based on source and Ulama ruling",
+    ur: "سوشل میڈیا پر وائرل آیات، احادیث کی تیز ترین تحقیق، جس میں حوالہ، حکم اور قائل کی معلومات فراہم کی جاتی ہیں۔",
+  },
+  "home.eyebrow": { ar: "تثبّت قبل أن تنشر", en: "Verify before you share", ur: "پہلے تحقیق پھر نشر" },
+  "home.step1Desc": {
+    ar: "نصًّا مكتوبًا، أو لقطة شاشة للرسالة التي وصلتك.",
+    en: "Typed text, or a screenshot of the message you received.",
+    ur: "لکھا ہوا متن، یا آپ کو موصول پیغام کا اسکرین شاٹ۔",
+  },
+  "home.step2Desc": {
+    ar: "يبحث في القرآن وكتب السنة وأقوال أهل العلم، لا في اجتهاد الذكاء الاصطناعي.",
+    en: "It searches the Quran, the books of the Sunnah and the words of scholars, not the AI’s own judgement.",
+    ur: "یہ قرآن، کتبِ سنت اور اہلِ علم کے اقوال میں تلاش کرتا ہے، مصنوعی ذہانت کے اجتہاد سے نہیں۔",
+  },
+  "home.step3Desc": {
+    ar: "منسوبًا إلى قائله، مع رابط المصدر لترجع إليه بنفسك.",
+    en: "Attributed to the one who said it, with a link to the source so you can check it yourself.",
+    ur: "قائل کی طرف منسوب، ساتھ ماخذ کا لنک تاکہ آپ خود رجوع کر سکیں۔",
+  },
+  "home.disclaimer": {
+    ar: "لا يُصدر تَثَبُّت فتاوى ولا يحكم بنفسه على حديث؛ يستخرج ويطابق فقط، وعند غياب المرجع يُحيل إلى أهل العلم.",
+    en: "Tathabbut does not issue fatwas or rule on a hadith itself; it only extracts and matches, and when no reference is found it points you to the scholars.",
+    ur: "تَثَبُّت فتویٰ نہیں دیتا اور خود کسی حدیث پر حکم نہیں لگاتا؛ صرف نکالتا اور ملاتا ہے، اور حوالہ نہ ملنے پر اہلِ علم کی طرف رجوع کا کہتا ہے۔",
+  },
   "home.label": { ar: "النص", en: "Text", ur: "متن" },
   "home.placeholder": {
     ar: "ألصق هنا النص الذي تريد التحقق منه…",

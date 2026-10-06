@@ -16,10 +16,10 @@ export function ErrorView({ kind, text, onRetry, onEdit }: { kind: ErrorKind; te
   return (
     <div className="space-y-4">
       <div role="alert" className="space-y-3 rounded-3xl border-[1.5px] p-5" style={{ background: "var(--t-veryWeak-bg)", color: "var(--t-veryWeak-fg)", borderColor: "var(--t-veryWeak-bd)" }}>
-        <p className="flex items-center gap-2 text-lg font-bold">
+        <h1 className="flex items-center gap-2 text-lg font-bold">
           <span>{t("error.title")}</span>
           <Icon name="bang" size={22} />
-        </p>
+        </h1>
         <p className="text-[15px]">{t(BODY[kind])}</p>
       </div>
 

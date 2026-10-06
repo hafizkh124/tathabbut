@@ -146,11 +146,14 @@ export default function Home() {
   }, [toInput]);
   const closeOrigin = useCallback(() => setOriginQuery(null), []);
 
+  const wide = phase.name === "input" || (phase.name === "results" && phase.claims.length > 0);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header onHome={toNew} />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+      {/* the home and result screens lay out their own columns across the page; the others sit in one narrow column */}
+      <main className={wide ? "w-full flex-1" : "mx-auto w-full max-w-3xl flex-1 px-4 py-6"}>
         {phase.name === "input" && <InputPanel value={text} onChange={setText} onSubmit={() => verify(text)} onImage={readPicture} />}
 
         {phase.name === "reading" && (
@@ -181,7 +184,7 @@ export default function Home() {
         {phase.name === "results" &&
           (phase.claims.length === 0 ? (
             <div className="space-y-4">
-              <p className="rounded-2xl border border-line bg-surface p-5 text-base">{t("empty.body")}</p>
+              <h1 className="rounded-2xl border border-line bg-surface p-5 text-base font-normal">{t("empty.body")}</h1>
               <div className="flex flex-col gap-2.5">
                 <Button size="lg" onClick={toInput}>
                   {t("action.edit")}
@@ -193,10 +196,11 @@ export default function Home() {
           ))}
       </main>
 
-      <footer className="flex flex-col items-center gap-1 px-4 pb-5 pt-2 text-[12px] text-muted">
-        <button type="button" onClick={() => setAboutOpen(true)} className="nastaliq-pad min-h-11 cursor-pointer px-4 text-[14px] font-medium text-brand-ink underline underline-offset-4">
+      <footer className="flex flex-wrap items-center justify-center gap-x-2 border-t border-line px-4 py-2 text-[12px] text-muted">
+        <button type="button" onClick={() => setAboutOpen(true)} className="nastaliq-pad min-h-11 cursor-pointer text-[13px] font-medium text-brand-ink underline underline-offset-4">
           {t("about.link")}
         </button>
+        <span aria-hidden>·</span>
         <span>Islamic AI Challenge 2026</span>
       </footer>
 

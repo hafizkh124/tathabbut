@@ -1,5 +1,4 @@
 // Arabic normalization and matn token overlap.
-// Ported from the participant's earlier project Al-Ulama Easy Editor (shared/text/takhrij.ts, AGPL-3.0).
 
 /** Narration boilerplate that says nothing about which hadith it is. */
 export const COMMON_WORDS: ReadonlySet<string> = new Set([

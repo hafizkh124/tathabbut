@@ -2,19 +2,30 @@
 
 /* Tathabbut design tokens. Brand = deep teal + gold. The grade colours (--t-*) belong to the verdicts only, never to the brand. */
 :root {
-  --paper: #faf8f3;
+  --paper: #faf6ec;
   --surface: #ffffff;
-  --line: #e4dfd2;
-  --line-strong: #d3ccba;
-  --ink: #1a2321;
+  --line: #e7e0cf;
+  --line-strong: #d6ccb2;
+  --ink: #1c2a27;
   --muted: #55615e;
-  --brand: #0b3d3a;
-  --brand-hover: #14524d;
-  --brand-ink: #0b3d3a;
-  --brand-soft: #e3edea;
-  --on-brand: #ffffff;
-  --gold: #c8a24a;
-  --focus: #c8a24a;
+  --brand: #0c3b38;
+  --brand-hover: #0f4c47;
+  --brand-ink: #0c3b38;
+  /* the wordmark beside the logo keeps the colours it was submitted with */
+  --wordmark: #0b3d3a;
+  --brand-soft: #eaf1ee;
+  --on-brand: #faf6ec;
+  --gold: #c7a24a;
+  --gold-soft: #e7d4a0;
+  /* gold for text on the light page: the brand gold reads at only 2.2:1 there */
+  --gold-ink: #876820;
+  /* the teal side panel (home: how it works) and the text on it */
+  --panel: #0c3b38;
+  --panel-line: rgba(255, 255, 255, 0.14);
+  --on-panel: #ffffff;
+  --on-panel-muted: rgba(255, 255, 255, 0.68);
+  /* the focus ring: the darker gold, as the brand gold is under 3:1 on the light page */
+  --focus: #876820;
   --shadow-sheet: 0 -8px 24px rgba(11, 61, 58, 0.1);
 
   --t-accepted-bg: #e6f2e4;
@@ -64,16 +75,25 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --paper: #0e1716;
-  --surface: #172420;
-  --line: #263633;
-  --line-strong: #3a524d;
-  --ink: #e8efed;
-  --muted: #9db0ab;
+  --surface: #16211e;
+  --line: #243330;
+  --line-strong: #32433f;
+  --ink: #ece6d6;
+  --muted: #93a39d;
   --brand: #e3bc63;
   --brand-hover: #edc978;
-  --brand-ink: #cfe0dc;
-  --brand-soft: #14231f;
-  --on-brand: #0a1413;
+  --brand-ink: #ece6d6;
+  --wordmark: #cfe0dc;
+  --brand-soft: #13211e;
+  --on-brand: #12201d;
+  --gold: #e3bc63;
+  --gold-soft: #e3bc63;
+  --gold-ink: #e3bc63;
+  --focus: #c8a24a;
+  --panel: #13211e;
+  --panel-line: #243330;
+  --on-panel: #ece6d6;
+  --on-panel-muted: #93a39d;
   --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
 
   --t-accepted-bg: #16301a;
@@ -127,6 +147,12 @@
   --color-brand-soft: var(--brand-soft);
   --color-on-brand: var(--on-brand);
   --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
+  --color-panel: var(--panel);
+  --color-panel-line: var(--panel-line);
+  --color-on-panel: var(--on-panel);
+  --color-on-panel-muted: var(--on-panel-muted);
   --font-sans: var(--font-readex), system-ui, sans-serif;
   --font-quran: var(--font-amiri), "Traditional Arabic", serif;
   --animate-fade-in: fade-in 0.18s ease-out;
@@ -167,6 +193,11 @@ html[lang="ur"] body {
   font-family: var(--font-nastaliq), var(--font-readex), serif;
   line-height: 2.2;
 }
+/* Outside any layer, so it wins over a component's tighter leading-* (set for Arabic and English): two wrapped lines of
+   Nastaliq overlap at those, so they get the body's own Urdu line height. The Quran and hadith in Amiri keep theirs. */
+html[lang="ur"] :is(h1, h2, h3, p, li):not(.quran, .font-quran) {
+  line-height: 2.2;
+}
 html[lang="ur"] .nastaliq-pad {
   padding-top: 0.5em;
   line-height: 2.1;
@@ -185,10 +216,13 @@ html[lang="ur"] textarea {
   line-height: 2.1;
 }
 
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* In the base layer so a utility can override it: the text boxes show focus on their card's border instead. */
+@layer base {
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

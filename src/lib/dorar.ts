@@ -1,7 +1,6 @@
 // الدرر السنية (dorar.net) client. Every field is reported exactly as Dorar states it —
 // the narrator, the muhaddith, the source and the muhaddith's verdict. Tathabbut never
 // writes a verdict of its own; classification of these verdicts is src/lib/gradeMap.ts.
-// Parsing is ported from Al-Ulama Easy Editor (electron/agent/adapters/dorar.ts, AGPL-3.0).
 
 const ENDPOINT = "https://dorar.net/dorar_api.json";
 const TIMEOUT_MS = 8_000;

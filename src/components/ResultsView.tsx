@@ -6,7 +6,6 @@ import { segmentPost } from "@/lib/highlight";
 import { styleOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { ClaimDetail } from "./ClaimDetail";
-import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 
 /** The claim's own words, short enough for a tab. */
@@ -15,12 +14,12 @@ function tabLabel(c: ClaimResult): string {
   return words.length > 4 ? `${words.slice(0, 4).join(" ")}…` : words.join(" ");
 }
 
-/** One tab per claim of the post, kept at the top of the result sheet so the other claims stay one tap away on a phone,
- *  where the sheet covers the post. The number and its colour are the same as on the marked text. */
+/** One tab per claim of the post, above its result, so the other claims stay one tap away.
+ *  The number and its colour are the same as on the marked text. */
 function ClaimTabs({ claims, selected, onSelect }: { claims: ClaimResult[]; selected: number; onSelect: (i: number) => void }) {
   const { num } = useI18n();
   return (
-    <div role="group" className="sticky -top-2.5 z-10 -mx-1 mb-3 flex flex-wrap gap-2 bg-surface px-1 py-1.5">
+    <div role="group" className="flex flex-wrap gap-2">
       {claims.map((c, i) => {
         const s = styleOf(c.state);
         const on = i === selected;
@@ -30,9 +29,9 @@ function ClaimTabs({ claims, selected, onSelect }: { claims: ClaimResult[]; sele
             type="button"
             aria-pressed={on}
             onClick={() => onSelect(i)}
-            className={`inline-flex min-h-11 flex-none cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 text-[14px] ${on ? "border-brand bg-brand-soft font-semibold text-brand-ink" : "border-line bg-paper text-ink hover:bg-surface"}`}
+            className={`inline-flex min-h-11 flex-none cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 text-[14px] ${on ? "border-brand bg-brand-soft font-semibold text-brand-ink" : "border-line bg-surface text-ink hover:bg-paper"}`}
           >
-            <span aria-hidden className="inline-block min-w-5 rounded-full text-center text-[12px] font-semibold leading-5 text-white" style={{ background: s.line, fontFamily: "var(--font-readex), sans-serif" }}>
+            <span aria-hidden className="inline-block min-w-5 rounded-full text-center text-[12px] font-semibold leading-5" style={{ background: s.fg, color: "var(--surface)", fontFamily: "var(--font-readex), sans-serif" }}>
               {num(i + 1)}
             </span>
             <span translate="no" className="quran max-w-[11rem] truncate" lang={c.claim.language === "ar" ? "ar" : undefined}>{tabLabel(c)}</span>
@@ -69,19 +68,40 @@ function ClaimMark({ index, state, selected, text, arabic, onClick }: { index: n
         textDecorationColor: s.line,
         textDecorationStyle: s.dashed ? "dashed" : "solid",
         background: selected ? s.bg : "transparent",
-        color: "inherit",
+        color: s.fg,
         font: "inherit",
+        fontWeight: 700,
       }}
     >
       {text}
       <span
         aria-hidden
-        className="mx-1 inline-block min-w-5 rounded-full text-center align-middle text-[12px] font-semibold leading-5 text-white"
-        style={{ background: s.line, fontFamily: "var(--font-readex), sans-serif" }}
+        className="mx-1 inline-block min-w-5 rounded-full text-center align-middle text-[12px] font-semibold leading-5"
+        style={{ background: s.fg, color: "var(--surface)", fontFamily: "var(--font-readex), sans-serif" }}
       >
         {num(index + 1)}
       </span>
     </button>
+  );
+}
+
+/** What the colours under the text mean: one line for each state found in this post, in the order they first appear. */
+function Legend({ claims }: { claims: ClaimResult[] }) {
+  const { state: label } = useI18n();
+  const seen = new Map<string, string>();
+  for (const c of claims) {
+    const name = label(c.state);
+    if (!seen.has(name)) seen.set(name, styleOf(c.state).line);
+  }
+  return (
+    <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-muted lg:flex-col lg:gap-2.5">
+      {[...seen].map(([name, colour]) => (
+        <li key={name} className="flex items-center gap-2">
+          <span aria-hidden className="h-3.5 w-3.5 flex-none rounded" style={{ background: colour }} />
+          {name}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -98,82 +118,82 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
   const urdu = /[ٹڈڑںھے]/.test(post);
   const mostlyArabic = !urdu && claims.filter((c) => c.claim.language === "ar").length * 2 >= claims.length;
 
+  const text = (
+    <div
+      className={`rounded-xl border border-line bg-paper px-3.5 py-3 text-[19px] lg:rounded-[14px] lg:bg-surface lg:p-[22px] lg:text-[24px] ${urdu ? "leading-[2.7]" : "leading-[2.2]"} ${mostlyArabic ? "font-quran" : ""}`}
+      style={urdu ? { fontFamily: "var(--font-nastaliq), serif" } : undefined}
+      dir="auto"
+    >
+      {segments.map((seg, i) =>
+        seg.claim === null ? (
+          <span key={i}>{seg.text}</span>
+        ) : (
+          <ClaimMark
+            key={i}
+            index={seg.claim}
+            state={claims[seg.claim].state}
+            selected={seg.claim === selected}
+            text={seg.text}
+            arabic={claims[seg.claim].claim.language === "ar"}
+            onClick={() => onSelect(seg.claim as number)}
+          />
+        ),
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
+    <div className="lg:grid lg:min-h-[calc(100vh-70px)] lg:grid-cols-[1fr_1.25fr]">
+      {/* the post as it was pasted, its claims marked in their colours */}
+      <div className="mx-auto w-full max-w-3xl space-y-3.5 px-5 pt-5 sm:px-6 lg:max-w-none lg:space-y-5 lg:bg-brand-soft lg:px-12 lg:py-12">
+        <div className="flex items-baseline gap-2 lg:hidden">
           <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
           <span className="text-[13px] text-muted">{count(claims.length)}</span>
         </div>
+        {!isOnlyUnplaced && (
+          <>
+            <h2 className="hidden text-[15px] font-semibold text-muted lg:block">{t("result.yourText")}</h2>
+            {text}
+            {claims.length > 1 && <p className="text-[13px] text-muted">{t("result.tap")}</p>}
+            <div className="hidden lg:block">
+              <Legend claims={claims} />
+            </div>
+          </>
+        )}
+
+        {unplaced.length > 0 && (
+          <div className="space-y-2">
+            {!isOnlyUnplaced && <p className="text-[13px] font-semibold text-muted">{t("result.unplaced")}</p>}
+            <ul className="space-y-2">
+              {unplaced.map(({ c, i }) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(i)}
+                    aria-pressed={i === selected}
+                    className={`flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-start cursor-pointer ${i === selected ? "border-brand" : "border-line"}`}
+                  >
+                    <span translate="no" className="quran text-[18px]">{c.claim.arabicSpan || c.claim.textAsWritten}</span>
+                    <StateBadge state={c.state} size="sm" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
-      {!isOnlyUnplaced && (
-        <>
-          <div className={`rounded-2xl border border-line bg-surface px-4 py-3 text-[20px] ${urdu ? "leading-[2.7]" : "leading-[2.3]"} ${mostlyArabic ? "font-quran" : ""}`}
-            style={urdu ? { fontFamily: "var(--font-nastaliq), serif" } : undefined}
-            dir="auto"
-          >
-            {segments.map((seg, i) =>
-              seg.claim === null ? (
-                <span key={i}>{seg.text}</span>
-              ) : (
-                <ClaimMark
-                  key={i}
-                  index={seg.claim}
-                  state={claims[seg.claim].state}
-                  selected={seg.claim === selected}
-                  text={seg.text}
-                  arabic={claims[seg.claim].claim.language === "ar"}
-                  onClick={() => onSelect(seg.claim as number)}
-                />
-              ),
-            )}
+      {/* the result of the chosen claim */}
+      {current && (
+        <div className="mx-auto w-full max-w-3xl space-y-4 px-5 pb-6 pt-3.5 sm:px-6 lg:max-w-[52rem] lg:space-y-5 lg:px-12 lg:py-12">
+          <div className="hidden items-baseline gap-2 lg:flex">
+            <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
+            <span className="text-[13px] text-muted">{count(claims.length)}</span>
           </div>
-          {claims.length > 1 && <p className="text-[13px] text-muted">{t("result.tap")}</p>}
-        </>
-      )}
-
-      {unplaced.length > 0 && (
-        <div className="space-y-2">
-          {!isOnlyUnplaced && <p className="text-[13px] font-semibold text-muted">{t("result.unplaced")}</p>}
-          <ul className="space-y-2">
-            {unplaced.map(({ c, i }) => (
-              <li key={i}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(i)}
-                  aria-pressed={i === selected}
-                  className={`flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-start cursor-pointer ${i === selected ? "border-brand" : "border-line"}`}
-                >
-                  <span translate="no" className="quran text-[18px]">{c.claim.arabicSpan || c.claim.textAsWritten}</span>
-                  <StateBadge state={c.state} size="sm" />
-                </button>
-              </li>
-            ))}
-          </ul>
+          {claims.length > 1 && <ClaimTabs claims={claims} selected={selected} onSelect={onSelect} />}
+          <ClaimDetail result={current} all={claims} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onNew={onNew} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
         </div>
       )}
-
-      {/* Detail: a sheet at the bottom on phones, a card under the text on larger screens */}
-      {current && (
-        <>
-          <div
-            className="sticky bottom-0 z-20 -mx-4 max-h-[62vh] overflow-y-auto rounded-t-3xl border-t border-line bg-surface px-5 pb-4 pt-2.5 sm:static sm:mx-0 sm:max-h-none sm:rounded-2xl sm:border sm:px-5 sm:py-4"
-            style={{ boxShadow: "var(--shadow-sheet)" }}
-          >
-            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
-            {claims.length > 1 && <ClaimTabs claims={claims} selected={selected} onSelect={onSelect} />}
-            <ClaimDetail result={current} all={claims} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />
-          </div>
-        </>
-      )}
-
-      <div className="flex justify-center">
-        <Button variant="ghost" size="sm" onClick={onNew}>
-          {t("result.new")}
-        </Button>
-      </div>
     </div>
   );
 }
-
