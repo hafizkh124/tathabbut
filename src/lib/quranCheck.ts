@@ -179,3 +179,151 @@ export async function matchVerses(quoted: string, cfg: RestConfig | null = publi
   if (q.split(" ").length < 2) return [];
   return rpc<VerseHit[]>(cfg, "match_verses", { q, min_score: minScore, max_results: 5 });
 }
+
+/** The verses that sit inside a pasted text of several verses (migration 008: how much of each verse is in the text). */
+export async function matchVersesInText(quoted: string, cfg: RestConfig | null = publicConfig(), minScore = 0.75): Promise<VerseHit[]> {
+  const q = searchForm(quoted);
+  if (q.split(" ").length < 2) return [];
+  return rpc<VerseHit[]>(cfg, "match_verses_in_text", { q, min_score: minScore, max_results: 100 });
+}
+
+// ---------- a paste of several verses ----------
+
+/** Consecutive verses of one surah found one after the other in a quote, and where they sit in it (character offsets). */
+export interface VerseRun {
+  verses: VerseHit[];
+  start: number;
+  end: number;
+}
+/** The quote cut into the verse runs found in it and the stretches between them, in the quote's order. */
+export type QuoteSegment = ({ kind: "run" } & VerseRun) | { kind: "gap"; start: number; end: number };
+
+/**
+ * Only for finding where a verse sits in a quote, never for judging its wording: the letters every spelling of the
+ * mushaf writes the same way (no alif, hamza, waw or ya), so «ٱلصَّلَوٰةَ» and «الصلاة», «يَٰٓأَيُّهَا» and «يا أيها»
+ * are found in the same place. Words with nothing left («يا») are skipped on both sides.
+ */
+const placeKey = (w: string) => words(w).join("").replace(/[اويء]/g, "");
+
+/** The quote's words with their character offsets. */
+function quoteTokens(quote: string) {
+  const out: { key: string; start: number; end: number }[] = [];
+  for (const m of quote.matchAll(/\S+/g)) {
+    const key = placeKey(m[0]);
+    if (key) out.push({ key, start: m.index!, end: m.index! + m[0].length });
+  }
+  return out;
+}
+
+/** A verse may be at most this share of its words off from the stretch of the quote it is placed on. */
+const PLACE_MAX_COST = 0.3;
+/**
+ * A verse found on its own (no neighbour beside it) must have at least this many words («الرحمن», «طه» are everywhere)
+ * and sit in the quote word for word: verses that share most of their words (2:255 and 20:110) must not stand in for
+ * each other. A verse misquoted on its own is left to the one-verse check, which reports the change.
+ */
+const LONE_VERSE_MIN_WORDS = 3;
+
+/** Every place in the quote (token positions) where the verse's words sit, allowing a few changed words. */
+function placements(verseKeys: string[], q: string[]): { from: number; to: number; cost: number }[] {
+  const n = verseKeys.length;
+  if (!n) return [];
+  // Edit distance with free ends in the quote: d[i][j] = best cost of the verse's first i words ending at quote word j.
+  let prev = Array.from({ length: q.length + 1 }, () => 0);
+  let prevStart = Array.from({ length: q.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= n; i++) {
+    const cur = [i];
+    const curStart = [0];
+    for (let j = 1; j <= q.length; j++) {
+      const diag = prev[j - 1] + (verseKeys[i - 1] === q[j - 1] ? 0 : 1);
+      const up = prev[j] + 1;
+      const left = cur[j - 1] + 1;
+      if (diag <= up && diag <= left) { cur[j] = diag; curStart[j] = prevStart[j - 1]; }
+      else if (up <= left) { cur[j] = up; curStart[j] = prevStart[j]; }
+      else { cur[j] = left; curStart[j] = curStart[j - 1]; }
+    }
+    prev = cur;
+    prevStart = curStart;
+  }
+  const max = Math.floor(PLACE_MAX_COST * n);
+  const out: { from: number; to: number; cost: number }[] = [];
+  for (let j = 1; j <= q.length; j++) {
+    const c = prev[j];
+    if (c > max || c > (prev[j - 1] ?? Infinity) || (j < q.length && c > prev[j + 1])) continue;
+    const p = { from: prevStart[j], to: j, cost: c };
+    const last = out[out.length - 1];
+    if (last && p.from < last.to) { if (p.cost <= last.cost) out[out.length - 1] = p; } // one place per occurrence, the longer on a tie
+    else out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Cuts a quote of several verses into runs of consecutive verses. Each hit is placed wherever it sits in the quote
+ * (a verse repeated in a surah, like «فبأي آلاء ربكما تكذبان», may sit in several places); runs chain a verse to the
+ * next one of the same surah placed right after it; the runs covering the most words are kept, without overlap.
+ * Words in no run are returned as gaps, for the caller to check on their own.
+ */
+export function findVerseRuns(quote: string, hits: VerseHit[]): QuoteSegment[] {
+  const tokens = quoteTokens(quote);
+  const q = tokens.map((t) => t.key);
+  type Placed = { hit: VerseHit; from: number; to: number; cost: number; words: number; prev?: Placed; total: number; count: number };
+  const placed: Placed[] = [];
+  for (const hit of hits) {
+    const keys = words(hit.text_uthmani).map(placeKey).filter(Boolean);
+    for (const p of placements(keys, q)) placed.push({ hit, from: p.from, to: p.to, cost: p.cost, words: keys.length, total: p.to - p.from, count: 1 });
+  }
+  placed.sort((a, b) => a.from - b.from || a.to - b.to);
+  // Longest chain ending at each placement: the previous verse of the same surah, ending where this one starts (±1 word).
+  for (const p of placed) {
+    for (const o of placed) {
+      if (o === p || o.hit.surah !== p.hit.surah || o.hit.ayah !== p.hit.ayah - 1) continue;
+      if (Math.abs(p.from - o.to) > 1) continue;
+      if (o.total + (p.to - p.from) > p.total) { p.prev = o; p.total = o.total + (p.to - p.from); p.count = o.count + 1; }
+    }
+  }
+  const chains = placed
+    .filter((p) => p.count > 1 || (p.words >= LONE_VERSE_MIN_WORDS && p.cost === 0))
+    .sort((a, b) => b.total - a.total || b.count - a.count);
+  const taken: VerseRun[] = [];
+  const used: [number, number][] = [];
+  for (const end of chains) {
+    const verses: Placed[] = [];
+    for (let p: Placed | undefined = end; p; p = p.prev) verses.unshift(p);
+    const from = verses[0].from;
+    const to = end.to;
+    if (used.some(([a, b]) => from < b && a < to)) continue;
+    used.push([from, to]);
+    taken.push({ verses: verses.map((v) => v.hit), start: tokens[from].start, end: tokens[to - 1].end });
+  }
+  taken.sort((a, b) => a.start - b.start);
+  // The words between runs, as gaps.
+  const segments: QuoteSegment[] = [];
+  let at = 0;
+  const gapAt = (from: number, to: number) => {
+    const inside = tokens.filter((t) => t.start >= from && t.end <= to);
+    if (inside.length) segments.push({ kind: "gap", start: inside[0].start, end: inside[inside.length - 1].end });
+  };
+  for (const r of taken) {
+    gapAt(at, r.start);
+    segments.push({ kind: "run", ...r });
+    at = r.end;
+  }
+  gapAt(at, quote.length);
+  return segments;
+}
+
+/** Copied from a mushaf: it carries verse numbers («﴿١﴾», «۝») or the Uthmani script's signs. */
+export const looksCopiedFromMushaf = (s: string) => /[﴾﴿۝]/.test(s) || UTHMANI.test(s);
+
+const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const arabicNumber = (n: number) => String(n).replace(/\d/g, (d) => ARABIC_DIGITS[Number(d)]);
+
+/**
+ * A run of verses as one text to compare a quote with: the verses' own wording one after the other, each followed by
+ * its number «﴿٢﴾» (the number is not a word, so the comparison skips it). Keeps the first verse's place.
+ */
+export function joinVerses(verses: VerseHit[]): VerseHit {
+  const text = verses.map((v) => `${v.text_uthmani.replace(/﻿/g, "").trim()} ﴿${arabicNumber(v.ayah)}﴾`).join(" ");
+  return { ...verses[0], text_uthmani: text, text_clean: verses.map((v) => v.text_clean).join(" "), score: Math.min(...verses.map((v) => v.score)) };
+}
