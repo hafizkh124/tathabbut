@@ -1,5 +1,5 @@
-// Downloads the three quranpedia dumps into .cache/quran/ (ignored by git: the dumps are not republished here)
-// and records the SHA-256 of what we got. The page lists a SHA-256 for the mushaf only, so that one is checked;
+// Downloads the quranpedia dumps (three mushafs, two translations) into .cache/quran/ (ignored by git: the dumps are not republished here)
+// and records the SHA-256 of what we got. The page lists a SHA-256 for the mushafs only, so those are checked;
 // for the translations the hash is our own record of the file we loaded.
 //
 //   npx tsx scripts/fetch-quran-data.ts
@@ -12,7 +12,11 @@ const OUT = ".cache/quran";
 
 /** quranpedia's own dump page links the translations as http://localhost/..., so these are the working URLs. */
 const FILES = [
-  { name: "mushafs-1.json.gz", url: "https://quranpedia.net/dumps/mushafs-1.json.gz", publishedSha256: "4bd77b139076b487136e7deffda10edb1f4478b553511ddb14e0c9311c5802d3" },
+  // Dump version 2026-10-06 (rebuilt by quranpedia; the ayah text is unchanged from the version loaded before).
+  { name: "mushafs-1.json.gz", url: "https://quranpedia.net/dumps/mushafs-1.json.gz", publishedSha256: "18ecddb19fbab73f38b9f869cf4ca1f33796edcfdf055fa53985992c12c02c4d" },
+  // The same Hafs text in the Uthmani script (KFGQPC encoding) and in IndoPak Nastaleeq, for matching copied quotes.
+  { name: "mushafs-2.json.gz", url: "https://quranpedia.net/dumps/mushafs-2.json.gz", publishedSha256: "dbe17e974462784f74cb7df9ea82d215b500cc146295fde6dbc9a76509fa5b4f" },
+  { name: "mushafs-3.json.gz", url: "https://quranpedia.net/dumps/mushafs-3.json.gz", publishedSha256: "71441f2e39cda48e487a1049cc037083afcd525b228e962d937b7aac51081ce0" },
   { name: "1966.json", url: "https://quranpedia.net/translation-books/1966.json" },
   { name: "1948.json", url: "https://quranpedia.net/translation-books/1948.json" },
 ];

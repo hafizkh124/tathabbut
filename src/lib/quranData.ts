@@ -1,5 +1,6 @@
-// Turns the three quranpedia dumps into rows for quran_verses and quran_translations, and refuses
-// to produce anything if the dumps do not line up (wrong count, a missing or duplicate ayah).
+// Turns the quranpedia dumps into rows for quran_verses, quran_translations and (not loaded yet) the Uthmani and
+// IndoPak script texts, and refuses to produce anything if the dumps do not line up (wrong count, a missing or
+// duplicate ayah).
 import { normalizeArabic } from "./arabic";
 import { cleanTranslation, type TranslationLang } from "./quranTranslation";
 
@@ -50,6 +51,57 @@ export function buildVerseRows(mushaf: MushafDump, sourceId: string): VerseRow[]
     }
   }
   return rows;
+}
+
+/** The same Hafs text written in another script: mushaf 2 (Uthmani, KFGQPC encoding) and mushaf 3 (IndoPak Nastaleeq). */
+export type QuranScript = "uthmani" | "indopak";
+export interface VerseScriptRow {
+  surah: number;
+  ayah: number;
+  script: QuranScript;
+  /** As published, less the invisible marks. */
+  text: string;
+  /** normalizeArabic(text), the same search form as quran_verses.text_clean. */
+  text_clean: string;
+  source_id: string;
+}
+
+export function buildScriptRows(mushaf: MushafDump, script: QuranScript, sourceId: string): VerseScriptRow[] {
+  return mushaf.data.surahs.flatMap((s) =>
+    s.ayahs.map((a) => {
+      const text = stripInvisible(a.text);
+      return { surah: s.id, ayah: a.number, script, text, text_clean: normalizeArabic(text), source_id: sourceId };
+    }),
+  );
+}
+
+/**
+ * A script text must have exactly the ayahs of the standard text, and each ayah must be the same ayah: the scripts
+ * spell differently, and Uthmani joins the vocative «يا» to the next word while IndoPak sometimes splits one, so the word
+ * counts may differ a little, but a gap of more than `maxWordGap` words means the numbering has slipped.
+ */
+export function validateScriptRows(rows: VerseScriptRow[], verses: VerseRow[], maxWordGap = 3): void {
+  const problems: string[] = [];
+  const key = (r: { surah: number; ayah: number }) => `${r.surah}:${r.ayah}`;
+  const standard = new Map(verses.map((v) => [key(v), v]));
+  for (const script of new Set(rows.map((r) => r.script))) {
+    const mine = rows.filter((r) => r.script === script);
+    const keys = new Set(mine.map(key));
+    if (mine.length !== verses.length) problems.push(`${script}: expected ${verses.length} ayahs, got ${mine.length}`);
+    if (keys.size !== mine.length) problems.push(`${script}: ${mine.length - keys.size} duplicate (surah, ayah)`);
+    const missing = [...standard.keys()].filter((k) => !keys.has(k));
+    if (missing.length) problems.push(`${script}: no text for ${missing.length} ayahs, e.g. ${missing.slice(0, 3).join(", ")}`);
+    for (const r of mine) {
+      const v = standard.get(key(r));
+      if (!r.text || !r.text_clean) problems.push(`${script} ${key(r)}: empty text`);
+      else if (!v) problems.push(`${script} ${key(r)}: not in the standard text`);
+      else {
+        const gap = Math.abs(r.text_clean.split(" ").length - v.text_clean.split(" ").length);
+        if (gap > maxWordGap) problems.push(`${script} ${key(r)}: ${gap} words more or fewer than the standard text`);
+      }
+    }
+  }
+  if (problems.length) throw new Error("Quran script text does not line up:\n- " + problems.slice(0, 20).join("\n- "));
 }
 
 export function buildTranslationRows(dump: TranslationDump, lang: TranslationLang, sourceId: string): TranslationRow[] {

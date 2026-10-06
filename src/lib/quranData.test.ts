@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildTranslationRows, buildVerseRows, validateQuranRows, type MushafDump, type TranslationDump } from "./quranData";
+import {
+  buildScriptRows,
+  buildTranslationRows,
+  buildVerseRows,
+  validateQuranRows,
+  validateScriptRows,
+  type MushafDump,
+  type TranslationDump,
+} from "./quranData";
 
 const mushaf: MushafDump = {
   data: {
@@ -53,5 +61,44 @@ describe("quran data", () => {
   it("rejects a translation that is empty once the footnotes are cut", () => {
     const empty = buildTranslationRows(dump([[1, 1, "<br />\n____________________<br />\nonly a note"], [1, 2, "a"], [112, 1, "b"]]), "ur", "t-ur");
     expect(() => validateQuranRows(verses, [...empty, ...buildTranslationRows(en, "en", "t-en")], opts)).toThrow(/ur 1:1: empty after cleaning/);
+  });
+});
+
+// The same three ayahs as quranpedia's mushaf 2 (Uthmani, KFGQPC encoding) writes them.
+const uthmani: MushafDump = {
+  data: {
+    surahs: [
+      { id: 1, name: "الفاتحة", ayahs: [{ number: 1, text: "﻿بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ" }, { number: 2, text: "ٱلۡحَمۡدُ لِلَّهِ" }] },
+      { id: 112, name: "الإخلاص", ayahs: [{ number: 1, text: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ" }] },
+    ],
+  },
+};
+
+describe("quran script texts", () => {
+  const verses = buildVerseRows(mushaf, "m1");
+  const rows = buildScriptRows(uthmani, "uthmani", "m2");
+
+  it("keeps the text as published, less the invisible mark, with the same search form as quran_verses", () => {
+    expect(rows[0]).toEqual({
+      surah: 1,
+      ayah: 1,
+      script: "uthmani",
+      text: "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ",
+      text_clean: "بسم الله الرحمن الرحيم",
+      source_id: "m2",
+    });
+  });
+
+  it("accepts a script text with the same ayahs", () => {
+    expect(() => validateScriptRows(rows, verses)).not.toThrow();
+  });
+
+  it("rejects a missing ayah and names it", () => {
+    expect(() => validateScriptRows(rows.slice(0, 2), verses)).toThrow(/uthmani: expected 3 ayahs, got 2[\s\S]*112:1/);
+  });
+
+  it("rejects ayahs whose numbering has slipped", () => {
+    const long = { ...mushaf, data: { surahs: [{ ...mushaf.data.surahs[0], ayahs: [{ number: 1, text: "ا ب ت ث ج ح خ د" }, mushaf.data.surahs[0].ayahs[1]] }, mushaf.data.surahs[1]] } };
+    expect(() => validateScriptRows(rows, buildVerseRows(long, "m1"))).toThrow(/uthmani 1:1: 4 words more or fewer/);
   });
 });
