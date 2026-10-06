@@ -4,7 +4,7 @@
 // change of word is reported: «الصابرون» for «الصابرين», a missing word, an added word.
 import { normalizeArabic } from "./arabic";
 import { foldUrduLetters } from "./claims";
-import { publicConfig, rpc, type RestConfig } from "./supabaseRest";
+import { publicConfig, restHeaders, rpc, type RestConfig } from "./supabaseRest";
 
 export interface VerseHit {
   surah: number;
@@ -14,6 +14,14 @@ export interface VerseHit {
   text_uthmani: string;
   text_clean: string;
   score: number;
+  /** The same verse as other mushafs write it (quran_verse_scripts: Uthmani, IndoPak), when fetched. */
+  scripts?: VerseScriptText[];
+}
+
+/** One verse in another script, as stored in quran_verse_scripts (migration 007). */
+export interface VerseScriptText {
+  script: "uthmani" | "indopak";
+  text: string;
 }
 
 export type WordDiff =
@@ -32,9 +40,14 @@ export interface WordingCheck {
   diffs: WordDiff[];
   /** edits ÷ quoted words: 0 = exact. */
   distance: number;
+  /** The quote was compared with this script's text (it fitted it better than the standard text). */
+  script?: VerseScriptText["script"];
 }
 
-const words = (s: string) => normalizeArabic(foldUrduLetters(s)).replace(/[^ء-ي\s]/g, " ").split(/\s+/).filter(Boolean);
+/** Characters that are not words (zero-width spaces, annotation signs such as «ؕ»), and the dotless «ٮ» some IndoPak texts
+ *  write for «ى»: encodings, not spellings. */
+const encodingFold = (s: string) => s.replace(/[​-‏﻿ؐ-ؚ]/g, "").replace(/ٮ/g, "ى");
+const words = (s: string) => normalizeArabic(foldUrduLetters(encodingFold(s))).replace(/[^ء-ي\s]/g, " ").split(/\s+/).filter(Boolean);
 
 /**
  * Quotations known to cut a verse off from what qualifies it, approved one by one by the specialist (4:43 on 2026-10-04,
@@ -100,8 +113,8 @@ function uthmaniEquals(key: string, standard: string): boolean {
 const splitVocative = (s: string) => s.replace(/(^|\s)([وف]َ?)?يَ?ـ?ٰٓ?(?=[ء-ي])/g, "$1$2يَا ");
 
 /** The verse's display words, aligned with its normalized words (waqf marks such as ۚ are not words). */
-function verseWords(v: VerseHit): { clean: string[]; shown: string[] } {
-  const shown = v.text_uthmani.replace(/﻿/g, "").split(/\s+/).filter((w) => words(w).length > 0);
+function verseWords(text: string): { clean: string[]; shown: string[] } {
+  const shown = text.replace(/﻿/g, "").split(/\s+/).filter((w) => words(w).length > 0);
   const clean = shown.map((w) => words(w).join(""));
   return { clean, shown };
 }
@@ -130,12 +143,42 @@ function align(a: string[], b: string[], eq: (x: string, y: string) => boolean =
   return { cost: d[a.length][b.length], ops };
 }
 
-/** Compares the quote with the best-fitting stretch of the verse (a quote is usually part of a verse). */
+/**
+ * Compares the quote with the best-fitting stretch of the verse (a quote is usually part of a verse): with the standard
+ * text (an Uthmani quote through its documented standard reading), and with each stored script of the verse word for
+ * word (its own spelling, so no rule is needed). The closest wins; a script's text only when it fits strictly better,
+ * so the standard text and its reviewed cases decide every quote the standard text already fits.
+ */
 export function compareWithVerse(quoted: string, verse: VerseHit): WordingCheck {
-  const uthmani = UTHMANI.test(quoted);
-  const typedShown = (uthmani ? splitVocative(quoted) : quoted).split(/\s+/).filter((w) => words(w).length > 0);
+  let best = compareWithText(quoted, verse, verse.text_uthmani, UTHMANI.test(quoted));
+  for (const s of verse.scripts ?? []) {
+    if (best.exact) break;
+    const w = compareWithText(quoted, verse, s.text, false);
+    if (w.distance < best.distance) best = { ...w, script: s.script };
+  }
+  return best;
+}
+
+/**
+ * Some mushaf texts break a word in two at a ligature («دَآ بَّةٍ», «ذٰ لِكُمۡ», quran.com's IndoPak): two typed pieces
+ * are read as one word when only the joined word is in the text.
+ */
+function joinBrokenWords(typedShown: string[], clean: string[]): string[] {
+  const inText = new Set(clean);
+  const key = (w: string) => words(w).join("");
+  const out = [...typedShown];
+  for (let i = 0; i + 1 < out.length; i++) {
+    const [a, b] = [key(out[i]), key(out[i + 1])];
+    if (inText.has(a + b) && !(inText.has(a) && inText.has(b))) out.splice(i, 2, out[i] + out[i + 1]);
+  }
+  return out;
+}
+
+function compareWithText(quoted: string, verse: VerseHit, text: string, uthmani: boolean): WordingCheck {
+  const { clean, shown } = verseWords(text);
+  const pieces = (uthmani ? splitVocative(quoted) : quoted).split(/\s+/).filter((w) => words(w).length > 0);
+  const typedShown = uthmani ? pieces : joinBrokenWords(pieces, clean);
   const typed = typedShown.map((w) => words(w).join(""));
-  const { clean, shown } = verseWords(verse);
   // A copied Uthmani quote is compared word by word through its documented standard reading; a typed one strictly.
   const typedCmp = uthmani ? typedShown.map(uthmaniKey) : typed;
   const eq = uthmani ? uthmaniEquals : undefined;
@@ -324,6 +367,36 @@ const arabicNumber = (n: number) => String(n).replace(/\d/g, (d) => ARABIC_DIGIT
  * its number «﴿٢﴾» (the number is not a word, so the comparison skips it). Keeps the first verse's place.
  */
 export function joinVerses(verses: VerseHit[]): VerseHit {
-  const text = verses.map((v) => `${v.text_uthmani.replace(/﻿/g, "").trim()} ﴿${arabicNumber(v.ayah)}﴾`).join(" ");
-  return { ...verses[0], text_uthmani: text, text_clean: verses.map((v) => v.text_clean).join(" "), score: Math.min(...verses.map((v) => v.score)) };
+  const join = (texts: string[]) => texts.map((t, i) => `${t.replace(/﻿/g, "").trim()} ﴿${arabicNumber(verses[i].ayah)}﴾`).join(" ");
+  const scripts = (["uthmani", "indopak"] as const).flatMap((script) => {
+    const texts = verses.map((v) => v.scripts?.find((s) => s.script === script)?.text);
+    return texts.every((t): t is string => Boolean(t)) ? [{ script, text: join(texts) }] : [];
+  });
+  return {
+    ...verses[0],
+    text_uthmani: join(verses.map((v) => v.text_uthmani)),
+    text_clean: verses.map((v) => v.text_clean).join(" "),
+    score: Math.min(...verses.map((v) => v.score)),
+    ...(scripts.length ? { scripts } : {}),
+  };
+}
+
+/** The stored scripts (quran_verse_scripts) of the given verses, by "surah:ayah". */
+export async function fetchVerseScripts(keys: { surah: number; ayah: number }[], cfg: RestConfig | null = publicConfig()): Promise<Map<string, VerseScriptText[]>> {
+  const out = new Map<string, VerseScriptText[]>();
+  const unique = [...new Map(keys.map((k) => [`${k.surah}:${k.ayah}`, k])).values()];
+  if (!unique.length) return out;
+  if (!cfg) throw new Error("Supabase is not configured");
+  const or = unique.map((k) => `and(surah.eq.${k.surah},ayah.eq.${k.ayah})`).join(",");
+  const res = await fetch(`${cfg.url.replace(/\/+$/, "")}/rest/v1/quran_verse_scripts?select=surah,ayah,script,text&or=(${or})`, {
+    headers: restHeaders(cfg.key),
+    signal: AbortSignal.timeout(5_000),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`quran_verse_scripts: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+  for (const r of (await res.json()) as { surah: number; ayah: number; script: VerseScriptText["script"]; text: string }[]) {
+    const k = `${r.surah}:${r.ayah}`;
+    out.set(k, [...(out.get(k) ?? []), { script: r.script, text: r.text }]);
+  }
+  return out;
 }

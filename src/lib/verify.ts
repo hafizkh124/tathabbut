@@ -8,7 +8,7 @@ import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
-import { compareWithVerse, findVerseRuns, joinVerses, looksCopiedFromMushaf, searchForm, type VerseHit, type WordingCheck } from "./quranCheck";
+import { compareWithVerse, findVerseRuns, joinVerses, looksCopiedFromMushaf, searchForm, type VerseHit, type VerseScriptText, type WordingCheck } from "./quranCheck";
 
 import { STATES, stateOfVerse, type State } from "./states";
 import { similarSaying, similarNarrations, type SimilarExpression } from "./similarExpressions";
@@ -72,6 +72,9 @@ export interface VerifyDeps {
   matchVerses: (quoted: string) => Promise<VerseHit[]>;
   /** The verses inside a paste of several verses (match_verses_in_text). Without it such a paste is not split. */
   matchVersesInText?: (quoted: string) => Promise<VerseHit[]>;
+  /** The stored Uthmani and IndoPak texts of verses (quran_verse_scripts). Without it quotes are compared with the
+   *  standard text only. */
+  verseScripts?: (keys: { surah: number; ayah: number }[]) => Promise<Map<string, VerseScriptText[]>>;
   matchSayings: (query: string) => Promise<SayingHit[]>;
   lookupDorar: (query: string) => Promise<LookupOutcome>;
 }
@@ -87,13 +90,23 @@ const MAX_VERSE_DISTANCE = 0.5;
 
 const hasArabic = (s: string) => /[ء-ي]/.test(s);
 
+/** The mushaf text shown with a result: in the script the quote was compared with, so its corrections read in place. */
+const shownText = (v: VerseHit, wording: WordingCheck | undefined) => v.scripts?.find((s) => s.script === wording?.script)?.text ?? v.text_uthmani;
+
+/** The verses with their stored scripts, when they can be fetched; as they are otherwise (the standard text decides). */
+async function withScripts(hits: VerseHit[], deps: VerifyDeps): Promise<VerseHit[]> {
+  if (!deps.verseScripts || !hits.length) return hits;
+  const byKey = await deps.verseScripts(hits.map((h) => ({ surah: h.surah, ayah: h.ayah }))).catch(() => null);
+  return byKey ? hits.map((h) => ({ ...h, scripts: byKey.get(`${h.surah}:${h.ayah}`) ?? [] })) : hits;
+}
+
 function verseView(v: VerseHit, wording: WordingCheck | undefined, lastAyah?: number): VerseView {
   const endAyah = lastAyah ?? wording?.contextContinuation?.endAyah;
   return {
     surah: v.surah,
     ayah: v.ayah,
     surahName: v.surah_name_ar,
-    text: v.text_uthmani.replace(/﻿/g, "") + (wording?.contextContinuation ? ` ${wording.contextContinuation.text}` : ""),
+    text: shownText(v, wording).replace(/﻿/g, "") + (wording?.contextContinuation ? ` ${wording.contextContinuation.text}` : ""),
     ...(endAyah ? { endAyah } : {}),
     wording,
     externalUrls: {
@@ -146,7 +159,7 @@ function characterDistance(quoted: string, correctText: string): number {
 async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): Promise<VerifiedClaim | null> {
   const quoted = claim.arabicSpan;
   if (quoted && !claim.queryIsTranslation) {
-    const hits = (await deps.matchVerses(quoted)).filter((h) => h.score >= minScore);
+    const hits = await withScripts((await deps.matchVerses(quoted)).filter((h) => h.score >= minScore), deps);
     const ranked = hits
       .map((v) => ({ v, w: compareWithVerse(quoted, v) }))
       .filter((r) => r.w.distance <= MAX_VERSE_DISTANCE)
@@ -191,7 +204,7 @@ async function checkAsVerseRuns(claim: Claim, deps: VerifyDeps, minScore: number
   // The search failing (migration 008 not applied, the database unreachable) leaves the one-verse result as it was.
   const inText = await deps.matchVersesInText(quoted).catch(() => null);
   if (!inText) return null;
-  const segments = findVerseRuns(quoted, inText);
+  const segments = findVerseRuns(quoted, await withScripts(inText, deps));
   if (!segments.some((s) => s.kind === "run")) return null;
 
   type Part = { start: number; end: number; verses?: VerseHit[]; result?: VerifiedClaim };
