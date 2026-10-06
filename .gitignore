@@ -52,3 +52,7 @@ next-env.d.ts
 /TESTING_AND_EVALUATION_MASTER_REPORT.md
 /evaluate_testset.py
 /generate_final_report.py
+
+# AI coding-tool instructions (kept local)
+/AGENTS.md
+/CLAUDE.md

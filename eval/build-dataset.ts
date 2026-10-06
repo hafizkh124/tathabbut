@@ -452,7 +452,7 @@ export function build(snapshot: V1Prompt[], hfRows?: SourceRow[]): { prompts: Ev
         idBase: `fiqh_general_${i + 1}_${j + 1}`, category: "fiqh_general", language: "ar", group: `fiqh_general:${i + 1}`,
         prompt: `${pre}${q}`,
         expectedClaims: [{ kind: "question", quotedText: q, expectedState: STATES.fiqh, shouldAbstain: false, expectTurathLookup: true }],
-        label: label("documented rule", "a general question with a topic → «مسألة فقهية» with the books' passages (docs/11 decision 16)"),
+        label: label("documented rule", "a general question with a topic → «مسألة فقهية» with the books' passages (the fiqh-question rule)"),
       });
     });
   });

@@ -5,7 +5,7 @@
 // Plain JavaScript on purpose: it is deployed on its own with wrangler and is not part of the Next build.
 
 const DORAR_ENDPOINT = "https://dorar.net/dorar_api.json";
-const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; hafizkh124@gmail.com)";
+const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; +https://github.com/hafizkh124/tathabbut)";
 const MAX_QUERY_LENGTH = 300;
 const CACHE_SECONDS = 3600;
 

@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 
-const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; hafizkh124@gmail.com)";
+const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; +https://github.com/hafizkh124/tathabbut)";
 const OUT = ".cache/quran";
 
 /** quranpedia's own dump page links the translations as http://localhost/..., so these are the working URLs. */

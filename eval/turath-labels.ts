@@ -1,4 +1,4 @@
-// Relevance and citation labels for the Turath step (docs/10 decision 7: precision@10 and citation correctness on a
+// Relevance and citation labels for the Turath step (precision@10 and citation correctness on a
 // labelled set). A run records every passage the screen would show; a person marks each one.
 //
 //   npx tsx eval/turath-labels.ts export eval/runs/<run>     # → <run>/turath-labels.xlsx

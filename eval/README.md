@@ -46,7 +46,7 @@ provenance and review status.
 | `hadith_disputed` | external — graders disagree; any grade one of them gave, or «غير حاسم», is accepted |
 | `circulating_saying` | **drafted** (AI-drafted list, not the specialist's); items whose own note contradicts their state under the grade map are flagged `conflict` and left out of runs |
 | `no_source` | by construction — invented texts tied to modern things; a referral is expected |
-| `fiqh_personal`, `fiqh_general` | documented rule (docs/04 level د, docs/11 decision 16), incl. third-person scenarios and Urdu/English questions |
+| `fiqh_personal`, `fiqh_general` | documented rule (docs/04 level د, and the fiqh-question rule), incl. third-person scenarios and Urdu/English questions |
 | `multilingual` | HadeethEnc Urdu/English grade |
 | `multi_claim` | inherited from the items each post quotes |
 | `ocr_screenshot` | the quoted prompt rendered as an image |

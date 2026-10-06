@@ -5,7 +5,7 @@
 //   npx tsx scripts/fetch-dorar-books.ts
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; hafizkh124@gmail.com)";
+const UA = "Tathabbut/0.1 (Islamic AI Challenge 2026; +https://github.com/hafizkh124/tathabbut)";
 const PAGE = "https://dorar.net/hadith/search?q=%D8%A7%D9%84%D8%B5%D8%A8%D8%B1";
 const OUT = "src/data/dorarBooks.json";
 

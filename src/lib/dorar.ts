@@ -8,7 +8,7 @@ const TIMEOUT_MS = 8_000;
 
 /** We identify ourselves honestly. Checked 2026-10-03: the endpoint answers this UA without any browser disguise. */
 const HEADERS: Record<string, string> = {
-  "User-Agent": "Tathabbut/0.1 (Islamic AI Challenge 2026; hafizkh124@gmail.com)",
+  "User-Agent": "Tathabbut/0.1 (Islamic AI Challenge 2026; +https://github.com/hafizkh124/tathabbut)",
   "Accept-Language": "ar,en;q=0.9",
 };
 

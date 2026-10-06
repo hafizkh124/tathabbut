@@ -11,7 +11,7 @@
 | Gemini quota exhausted or service down | High | Fallback model, retry on 429, cached results for the demo |
 | Weak OCR on screenshots | Medium | User can correct the OCR text before checking |
 | Live demo fails during judging | Critical — loses the full 10% | Deployed early; pre-warmed cache; full check of the link before submitting |
-| Time runs out (solo builder) | High | Cut order: hadith translations → admin page → English UI → image input. **Testing and evaluation are never cut.** |
+| Time runs out | High | Cut order: hadith translations → admin page → English UI → image input. **Testing and evaluation are never cut.** |
 | Unclear rights on a data source | Medium — legal and reputational | Use only sources with clear terms; exclude others; document all terms; keep dumps out of the public repo |
 | Overclaiming in slides or README | Medium — credibility with judges | Only measured numbers; partnerships described as planned; unused sources listed as planned |
 | Mentors unavailable | Low | Mentor review is optional; scholarly review is done by the project's specialist |

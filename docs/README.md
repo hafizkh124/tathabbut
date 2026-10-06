@@ -15,23 +15,18 @@ who introduce Islam).
 | 5 | [Data sources and licensing](05-data-sources-and-licensing.md) | Every source we use, how we use it, its terms, and what we deliberately do not use |
 | 6 | [Architecture](06-architecture.md) | Pipeline, components, database, infrastructure |
 | 7 | [Evaluation plan](07-evaluation-plan.md) | Test set, metrics, targets, baseline comparison |
-| 8 | [Challenge compliance](08-challenge-compliance.md) | Judging criteria, required deliverables, timeline, disclosures |
-| 9 | [Risks and mitigations](09-risks.md) | What could go wrong and how we respond |
-| 10 | [Turath integration decisions](10-turath-integration-decisions.md) | SDK choice, lookup scope and limits, citation/locator behavior, failure handling, retention, attribution, and evaluation status |
-| 11 | [Turath extension decisions](11-turath-extension-decisions.md) | Category-scoped search, strict matching, «غير حاسم» fallback, fiqh and personal-case handling, translation, caching; drafts for the specialist (ruling books, test questions) |
-| 12 | [۵ اکتوبر کی مشترکہ عملی جانچ](12-practical-review-2026-10-05.md) | منظور شدہ علمی اصلاحات، عملی تجربات، ناکامی کے راستے اور واضح طور پر باقی جانچ |
+| 8 | [Risks and mitigations](09-risks.md) | What could go wrong and how we respond |
+| 9 | [Evaluation results](results.md) | Both evaluations on the published code, what changed after the run, known limits |
 
 ## Status
 
 - **Live demo:** https://tathabbut-rho.vercel.app
 - **Build window:** 4–6 October 2026 (submission closes Tuesday 6 October, 23:59 Riyadh time)
-- **Team:** solo participant — a hadith specialist (MA in Hadith and Hadith Sciences, Islamic University of Madinah),
-  who also performs all scholarly review.
 
 ## Conventions used in these documents
 
 - **MUST / SHOULD / MAY** follow their usual meaning in requirements writing.
-- Numbers marked **target** are goals to be measured on the test set. They are not results. Results will be
-  published in `docs/results.md` after evaluation; no number is reported before it is measured.
+- Numbers marked **target** are goals. Measured results are in [`results.md`](results.md), each with the data it was
+  measured on.
 - Partnerships are described as **planned** unless one actually exists.
 - Arabic terms are kept in Arabic script where a translation would lose precision (for example grade wordings).

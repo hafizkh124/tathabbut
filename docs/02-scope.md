@@ -1,6 +1,6 @@
 # 2. Scope
 
-The MVP is sized for a solo builder over the challenge window (4–6 October 2026). Anything not listed under
+The MVP is sized for the challenge window (4–6 October 2026). Anything not listed under
 "In scope" is out of scope for the submission.
 
 ## 2.1 In scope (MVP)

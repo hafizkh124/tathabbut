@@ -5,7 +5,7 @@
 -- successful and complete answers, and a row older than 30 days is ignored by the code (and may be deleted).
 -- turath_translations: the machine translation of a Turath passage, keyed by the hash of the Arabic text and the language,
 -- so a passage is translated once.
--- Both hold third-party book text in short passages; the rights are not settled (docs/10, decision 6), hence the TTL.
+-- Both hold third-party book text in short passages; the rights are not settled, hence the TTL.
 
 create table if not exists turath_cache (
   query_key   text        not null,              -- normalizeArabic(query), single spaces
