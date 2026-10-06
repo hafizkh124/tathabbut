@@ -14,6 +14,7 @@ Next.js web app ──► POST /api/verify
   4. Retrieve candidates
        verse          → quran_verses (normalized text, trigram + full-text search)
        hadith/saying  → circulating_sayings, then Dorar API (cache first, via relay)
+       no verdict / general fiqh question → Turath book passages (no verdict drawn from them)
   5. Match                                   model picks only from candidate IDs:
                                              EXACT / SEMANTIC / DISTORTED / NO_MATCH
   6. Decide state                            fixed rules + gradeMap.ts (no model)

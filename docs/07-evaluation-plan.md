@@ -43,12 +43,12 @@ time per text, fabricated attributions, abstention when no reference exists, and
 
 1. Specialist finalises labels (at least 100 before the first run; no changes after the tool has run on them).
 2. First run on all labelled texts → error analysis → tune thresholds on measured data → fix.
-3. Final run and baseline comparison.
-4. Publish `docs/results.md` (results, limitations, error cases) and a results page in the app.
+3. Final run (the baseline comparison is planned, not run for this submission).
+4. Publish `docs/results.md` (results, limitations, error cases).
 5. Replace targets with measured results in the slides and README. If a result is not available, the claim is
    removed rather than estimated.
 
 ## 7.5 Expert feedback
 
-Mentor feedback on the grade map, state rules and demo (if obtained) is recorded with dates in
-`docs/mentor_feedback.md` as evidence for the reliability criterion.
+Mentor feedback on the grade map, state rules and demo, if obtained, is to be recorded with dates as evidence for the
+reliability criterion. None was recorded for this submission; the scholarly review was done by the team's hadith specialist.

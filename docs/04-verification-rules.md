@@ -17,7 +17,7 @@
 - For «واحمرارها في العصر» in the passage about the sun, the approved Urdu translation is «اور عصر میں سورج کے سرخ ہونے سے»; no added «زرد». The prompt includes the example; a targeted Urdu check rejects the observed wrong colour addition, including in an older cached answer. This narrow check does not certify every machine translation's meaning.
 - The personal-case warning now says «کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔», with the same meaning in Arabic and English. It is preserved in shared personal-case replies.
 
-Implemented locally and covered by automated checks. Production rollout and real-interface rechecking are tracked separately in the joint work plan.
+Implemented, covered by automated checks, and live in the published version.
 
 ## Quran candidate refinement — 5 October 2026
 
@@ -42,6 +42,7 @@ If none applies, the claim is **not found** and is referred.
 |---|---|---|
 | آية صحيحة النقل | Verse quoted correctly | Mushaf text |
 | آية منقولة بخطأ | Verse quoted with wrong wording; correct text shown with surah and verse | Mushaf text |
+| آية اقتطع سياقها | A verse quoted without the context that its meaning needs; the full verse is shown | Mushaf text |
 | آية (نص مترجم) | A translated verse; the approved translation is shown for comparison | Mushaf + approved translation |
 | مقبول (صحيح أو حسن) | Accepted (sahih or hasan) | Dorar verdicts via grade map (directly, or as copied into the circulating-texts list) |
 | ضعيف | Weak | Same |
@@ -49,9 +50,11 @@ If none applies, the claim is **not found** and is referred.
 | غير حاسم | Not decisive — the evidence does not settle it; all verdicts are shown with their authors | Same |
 | لم يُعثر عليه — إحالة | Not found — referred to a specialist | No matching evidence |
 | فتوى أو حالة شخصية — إحالة | Fatwa or personal case — referred | Governance level د |
+| مسألة فقهية | A general fiqh question: passages from the books of the madhhabs, with no ruling or preference | Turath (not a grade) |
+| موجود في كتب التراث | The text is found in the classical books, but no verdict was found; passages shown with their references | Turath (not a grade) |
 
-Sayings wrongly attributed to scholars are not in it: they are looked
-up in Dorar and Turath like any other text.
+Sayings wrongly attributed to scholars are not in the circulating-texts list: they are looked up in Dorar and Turath
+like any other text.
 
 ## 4.3 Quran rules
 

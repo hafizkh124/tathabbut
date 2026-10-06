@@ -18,7 +18,7 @@ The MVP is sized for the challenge window (4–6 October 2026). Anything not lis
 | **Governance** | The four content levels أ / ب / ج / د from the challenge package; fiqh and personal questions are referred, never answered |
 | **Output** | One card per claim with state, source, verdict and its author, and links to the original source; shareable text in Arabic, Urdu, English |
 | **Terminology** | A small approved glossary (Arabic / English / Urdu) built from the package's Jamhara sample |
-| **Review queue** | Texts that could not be resolved are stored (without user identity) for specialist review, behind a secret admin key |
+| **Review queue** | Texts that could not be resolved are stored (without user identity) for specialist review (the admin page to read them is not built yet) |
 | **API** | `POST /api/verify` (the full pipeline) and `GET /api/lookup` (Dorar lookup via cache) |
 | **Evaluation** | A script that runs the test set and logs accuracy, time and cost per check (the comparison with general chatbots is planned) |
 

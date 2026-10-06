@@ -42,8 +42,8 @@ or uploads a screenshot. Tathabbut:
 
 > **The AI extracts and matches. It never grades and never attributes.**
 
-Every grading and every attribution is read from an approved source (Dorar's muhaddithun, the mushaf text, or the
-specialist's reviewed list). The language model is not allowed to produce a verdict. This follows the challenge's
+Every grading and every attribution is read from an approved source: the muhaddithun's verdicts, reached through
+Dorar, and the mushaf text. (The circulating-texts list only holds verdicts copied verbatim from Dorar's results.) The language model is not allowed to produce a verdict. This follows the challenge's
 scientific package rule: «لا يُنسب حديث دون مصدر وحكم معتمد» — no hadith is attributed without an approved source
 and grading.
 
@@ -70,7 +70,7 @@ When the evidence is missing or confidence is low, Tathabbut **abstains and refe
 These are targets, not results. Measured results replace them in `docs/results.md`.
 
 ### Challenge goals
-- Submit a complete, working entry by **Tuesday 6 October 2026, 23:59 Riyadh time**.
+- Submit a complete, working entry by **Tuesday 6 October 2026, 23:59 Riyadh time** (submitted on 6 October).
 - Reach the **top 20 finalists** (announced 18 October) and present live in the finals (19–22 October).
 
 ## 1.7 What Tathabbut is not
