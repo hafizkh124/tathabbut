@@ -32,7 +32,7 @@ Each requirement has an ID for tracking. Priority: **P0** = must ship in the sub
 ### Hadith and sayings
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-30 | The specialist's circulating-texts list MUST be checked first; a match returns the verdict copied from Dorar, its author and the book reference (never a verdict of the team's own). | P0 |
+| FR-30 | The specialist's circulating-texts list MUST be checked first; a match returns the verdict copied from Dorar, its author and the book reference. | P0 |
 | FR-31 | Otherwise the system MUST query Dorar's public API (cache first) using 2–4 distinctive words, retrying with fewer words on failure. | P0 |
 | FR-32 | The model MAY only choose among the candidate IDs returned by the search (EXACT / SEMANTIC / DISTORTED / NO_MATCH). Any ID outside the candidate list MUST be rejected. | P0 |
 | FR-33 | Each matched narration's verdict MUST be classified by the fixed grade map, never by the model. | P0 |

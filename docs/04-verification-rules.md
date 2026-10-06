@@ -50,7 +50,7 @@ If none applies, the claim is **not found** and is referred.
 | لم يُعثر عليه — إحالة | Not found — referred to a specialist | No matching evidence |
 | فتوى أو حالة شخصية — إحالة | Fatwa or personal case — referred | Governance level د |
 
-The list carries no verdict of the team's own. Sayings wrongly attributed to scholars are not in it: they are looked
+Sayings wrongly attributed to scholars are not in it: they are looked
 up in Dorar and Turath like any other text.
 
 ## 4.3 Quran rules

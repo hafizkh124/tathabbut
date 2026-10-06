@@ -13,7 +13,7 @@ The MVP is sized for the challenge window (4–6 October 2026). Anything not lis
 | **Quran** | All 6,236 verses (Hafs mushaf text from quranpedia); find the verse; flag wrongly quoted wording and show the correct text with surah and verse number |
 | **Quran translations** | Urdu (Muhammad Junagarhi) and English (Hilali–Khan), both King Fahd Complex editions via quranpedia; flag when a quoted translation differs from the approved one |
 | **Hadith** | Live search of Dorar's public API, with a cache; Arabic text and the muhaddith's verdict as written (no hadith translation in the MVP) |
-| **Circulating texts** | A list of widely circulated texts («النصوص المتداولة») with their Urdu wordings; each verdict, its author and its book/volume/page reference are copied verbatim from Dorar's results (checked by the specialist). The team gives no verdict of its own |
+| **Circulating texts** | A list of widely circulated texts («النصوص المتداولة») with their Urdu wordings; each verdict, its author and its book/volume/page reference are copied verbatim from Dorar's results (checked by the specialist) |
 | **Grading** | Fixed, rule-based mapping from Dorar's verdict wording to four grades, decided by the specialist ([rules](04-verification-rules.md)) |
 | **Governance** | The four content levels أ / ب / ج / د from the challenge package; fiqh and personal questions are referred, never answered |
 | **Output** | One card per claim with state, source, verdict and its author, and links to the original source; shareable text in Arabic, Urdu, English |
