@@ -44,15 +44,67 @@ Next.js 16 على Vercel (سنغافورة) ← Supabase (نص المصحف وا
 النموذج اللغوي يستخرج النصوص ويطابقها فقط؛ أما **العزو والحكم فيُقرآن من المصادر المعتمدة** ولا يولّدهما النموذج — وفق قاعدة الحزمة العلمية للتحدي: «لا يُنسب حديث دون مصدر وحكم معتمد».
 
 ## التشغيل محلياً
-المحكّم لا يحتاج إلى ذلك: التجربة المباشرة أعلاه. للتشغيل المحلي تحتاج مفاتيحك الخاصة (لا ننشر مفاتيحنا):
+المحكّم لا يحتاج إلى ذلك: التجربة المباشرة أعلاه. للتشغيل المحلي تحتاج مفاتيحك الخاصة (لا ننشر مفاتيحنا)، و Node.js حديثاً (الإصدار 22 مستحسن). الخطوات بالترتيب:
+
+### ١. التثبيت والمفاتيح
 ```bash
 npm install
-cp .env.example .env.local   # ثم املأ المفاتيح (مفتاح Gemini من Google AI Studio، ومشروع Supabase مجاني)
+cp .env.example .env.local
+```
+ثم املأ `.env.local`:
+
+| المتغير | القيمة |
+|---|---|
+| `GEMINI_API_KEY` | مفتاح من [Google AI Studio](https://aistudio.google.com) (يلزم رصيد أو فوترة مفعّلة؛ عند نفاد الرصيد يفشل كل تحقق) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` |
+| `GEMINI_FALLBACK_MODEL` | `gemini-2.5-flash` |
+| `NEXT_PUBLIC_SUPABASE_URL` و`NEXT_PUBLIC_SUPABASE_ANON_KEY` و`SUPABASE_SERVICE_ROLE_KEY` | من مشروع Supabase (مجاني يكفي): Settings ← API |
+| `TRANSLATE_SIGNING_KEY` | أي نص عشوائي طويل؛ يوقّع مقتطفات تراث قبل ترجمتها (إن تُرك فارغاً استُعمل مفتاح آخر من مفاتيح الخادم) |
+| `DORAR_RELAY_URL` و`DORAR_RELAY_KEY` | اختياريان، انظر الخطوة ٤ |
+
+> **تنبيه:** لا تترك `GEMINI_MODEL` و`GEMINI_FALLBACK_MODEL` فارغين بعد النسخ؛ القيمة الفارغة لا تُستبدل بالافتراضية فيفشل الاتصال بالنموذج. أما `GEMINI_EMBEDDING_MODEL` فلا تستعمله هذه النسخة.
+
+### ٢. قاعدة البيانات (Supabase)
+نفّذ ملفات `supabase/migrations/` في محرر SQL في Supabase واحداً واحداً **بالترتيب** من `001` إلى `010` (الملف `001` يفعّل الإضافة `pg_trgm` التي تحتاجها دوال المطابقة).
+
+### ٣. تحميل البيانات
+سكربتات `ingest-quran` و`load-qiraat` و`load-sayings` تكتب في Supabase بمفتاح الخدمة من `.env.local`، ويقبل كلٌّ منها `--dry-run` للبناء والتحقق دون كتابة. ملفات المصادر تُنزَّل إلى `.cache/` ولا تُرفع إلى المستودع.
+```bash
+# نص المصحف (حفص) والرسمان العثماني وIndoPak، والترجمتان الأردية والإنجليزية من quranpedia
+npx tsx scripts/fetch-quran-data.ts                               # ينزّل الملفات ويتحقق من بصمتها (SHA-256)
+npx tsx --env-file=.env.local scripts/ingest-quran.ts             # الآيات والترجمتان؛ يتطلب الملفين 001 و002
+npx tsx --env-file=.env.local scripts/ingest-quran.ts --scripts   # الرسمان العثماني وIndoPak؛ يتطلب الملف 007
+
+# كلمات القراءات المتواترة الأخرى، كي لا تُعدّ آية منقولة بقراءة أخرى خطأً
+npx tsx --env-file=.env.local scripts/load-qiraat.ts              # يتطلب الملف 010
+
+# النصوص المتداولة غير الثابتة، من جدول المختص
+npx tsx --env-file=.env.local scripts/load-sayings.ts "<مسار Tathabbut_Circulating_Sayings.xlsx>"   # يتطلب الملف 004
+```
+- **جدول النصوص المتداولة** لا يُنشر في المستودع؛ يُطلب من صاحب المشروع. دونه تعمل الأداة، لكن لا تتعرف على الأقوال المشهورة غير الثابتة.
+- **اختياري — ذاكرة الدرر:** لملء الذاكرة مسبقاً بأجوبة الدرر لقائمة من النصوص (سطر لكل نص)، من جهاز يقبل الدرر طلباته:
+  ```bash
+  npx tsx scripts/warm-dorar-cache.ts <queries.txt>
+  npx tsx --env-file=.env.local scripts/upload-dorar-cache.ts
+  ```
+- قائمة كتب الدرر (`src/data/dorarBooks.json`) موجودة في المستودع؛ لا حاجة إلى `scripts/fetch-dorar-books.ts` إلا لتحديثها.
+
+### ٤. الدرر السنية (عند الحاجة فقط)
+الطلبات المباشرة من بعض الشبكات (ومنها Vercel) يحجبها جدار الحماية عند الدرر. إن حدث ذلك انشر الوسيط `worker/` على حساب Cloudflare:
+```bash
+cd worker
+npx wrangler deploy
+npx wrangler secret put DORAR_RELAY_KEY      # نص سري تختاره
+```
+ثم ضع في `.env.local` رابط الوسيط في `DORAR_RELAY_URL` والنص السري نفسه في `DORAR_RELAY_KEY`.
+
+### ٥. التشغيل والاختبار
+```bash
 npm run dev                  # http://localhost:3000
 npm test                     # الاختبارات الآلية (Vitest)
+npm run lint
 ```
-- **قاعدة البيانات:** نفّذ ملفات `supabase/migrations/` بالترتيب في Supabase، ثم حمّل المصحف بـ`scripts/ingest-quran.ts` والقائمة المتداولة بـ`scripts/load-sayings.ts`.
-- **الدرر السنية:** الطلبات المباشرة من بعض الشبكات يحجبها جدار الحماية عندهم؛ إن حدث ذلك انشر `worker/` على حساب Cloudflare وضع `DORAR_RELAY_URL` و`DORAR_RELAY_KEY`.
+للنشر على Vercel ضع المتغيرات نفسها في إعدادات المشروع (Settings ← Environment Variables).
 
 ## المصادر
 | المجال | المصدر | الاستخدام |
