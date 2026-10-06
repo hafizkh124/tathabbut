@@ -170,6 +170,17 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
         {t("home.verify")}
       </Button>
 
+      <ol aria-label={t("home.stepsLabel")} className="grid grid-cols-3 gap-2">
+        {(["home.step1", "home.step2", "home.step3"] as const).map((k, i) => (
+          <li key={k} className="flex flex-col items-center gap-1.5 rounded-xl border border-line bg-surface px-2 py-2.5 text-center">
+            <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-gold text-[12px] font-bold text-[#0a1413]">
+              {num(i + 1)}
+            </span>
+            <span className="nastaliq-pad text-[12px] leading-snug text-ink">{t(k)}</span>
+          </li>
+        ))}
+      </ol>
+
       <div className="space-y-2">
         <p className="text-[13px] text-muted">{t("home.examples")}</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

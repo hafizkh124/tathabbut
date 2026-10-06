@@ -23,6 +23,10 @@ export const DICT = {
     en: "Paste the verse, hadith or message you received and we will check it for you.",
     ur: "جو آیت، حدیث یا پیغام آپ کو ملا ہے وہ یہاں ڈالیں، ہم اس کی تصدیق کر دیں گے۔",
   },
+  "home.step1": { ar: "تلصق النص أو الصورة", en: "Paste the text or a picture", ur: "متن یا تصویر ڈالیں" },
+  "home.step2": { ar: "نطابقه مع المصادر", en: "We match it with the sources", ur: "ہم مصادر سے ملاتے ہیں" },
+  "home.step3": { ar: "نعرض الحكم ومصدره", en: "We show the ruling and its source", ur: "حکم اور ماخذ دکھاتے ہیں" },
+  "home.stepsLabel": { ar: "كيف يعمل", en: "How it works", ur: "یہ کیسے کام کرتا ہے" },
   "home.label": { ar: "النص", en: "Text", ur: "متن" },
   "home.placeholder": {
     ar: "ألصق هنا النص الذي تريد التحقق منه…",
