@@ -27,6 +27,16 @@ export const DICT = {
   "home.step2": { ar: "نطابقه مع المصادر", en: "We match it with the sources", ur: "ہم مصادر سے ملاتے ہیں" },
   "home.step3": { ar: "نعرض الحكم ومصدره", en: "We show the ruling and its source", ur: "حکم اور ماخذ دکھاتے ہیں" },
   "home.stepsLabel": { ar: "كيف يعمل", en: "How it works", ur: "یہ کیسے کام کرتا ہے" },
+  "home.hero": {
+    ar: "تحقّق من أي آية أو حديث أو قول قبل أن تنقله.",
+    en: "Check any verse, hadith or saying before you pass it on.",
+    ur: "کوئی بھی آیت، حدیث یا قول آگے بھیجنے سے پہلے جانچ لیں۔",
+  },
+  "home.heroSub": {
+    ar: "يبحث تَثَبُّت عنه في القرآن وكتب الحديث، ويعرض ما قاله أهل العلم مع المصدر، ولا يحكم من عنده.",
+    en: "Tathabbut finds it in the Quran and the books of hadith and shows what the scholars said, with the source. It never judges on its own.",
+    ur: "تَثَبُّت اسے قرآن اور کتبِ حدیث میں تلاش کرتا ہے اور اہلِ علم کی بات ماخذ کے ساتھ دکھاتا ہے؛ اپنی طرف سے کوئی حکم نہیں لگاتا۔",
+  },
   "home.eyebrow": { ar: "تثبّت قبل أن تنشر", en: "Verify before you share", ur: "پھیلانے سے پہلے تصدیق کریں" },
   "home.step1Desc": {
     ar: "نصًّا مكتوبًا، أو لقطة شاشة للرسالة التي وصلتك.",

@@ -18,7 +18,7 @@ const EXAMPLES: Array<{ key: Key; text: string }> = [
   { key: "example.question", text: "أنا مقيم في ألمانيا، هل يجوز لي الجمع بين الظهر والعصر بسبب العمل؟" }, // T037: referred to scholars
 ];
 
-/** How it works: a short line each on a phone, a line and its explanation in the side panel on a computer. */
+/** How it works, in the side panel on a computer: each step and its explanation. */
 const STEPS: Array<{ title: Key; desc: Key }> = [
   { title: "home.step1", desc: "home.step1Desc" },
   { title: "home.step2", desc: "home.step2Desc" },
@@ -88,7 +88,7 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
     </>
   );
   // the image, camera and voice buttons share their row equally, with Check under them
-  const side = "min-w-0 flex-1 rounded-[14px] px-2! lg:min-h-[52px]";
+  const side = "min-w-0 flex-1 rounded-[14px] px-2!";
 
   return (
     <div
@@ -124,26 +124,22 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
       )}
 
       {/* the form: the whole page on a phone, the wider side on a computer */}
-      <div className="mx-auto w-full max-w-3xl space-y-4 px-5 py-5 sm:px-6 lg:flex lg:max-w-[46rem] lg:flex-col lg:justify-center lg:gap-6 lg:space-y-0 lg:px-14 lg:py-14">
-        {/* how it works: three tinted steps at the top on a phone; on a computer they are in the side panel */}
-        <ol aria-label={t("home.stepsLabel")} className="grid grid-cols-3 gap-2.5 lg:hidden">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="flex flex-col items-center gap-1.5 rounded-xl bg-brand-soft px-2 py-2.5 text-center">
-              <span aria-hidden className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-gold text-[11px] font-bold text-[#3a2e0b]">
-                {num(i + 1)}
-              </span>
-              <span className="nastaliq-pad text-[12px] leading-snug text-muted">{t(s.title)}</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="space-y-1.5 lg:space-y-4">
-          <p className="nastaliq-pad hidden text-[13px] font-semibold uppercase tracking-wide text-gold-ink lg:block">{t("home.eyebrow")}</p>
-          <h1 className="text-[25px] font-bold leading-snug text-brand-ink lg:text-[46px] lg:leading-tight">{t("home.title")}</h1>
-          <p className="text-[14px] text-muted lg:max-w-[46ch] lg:text-[17px]">{t("home.sub")}</p>
+      <div className="mx-auto w-full max-w-3xl space-y-4 px-5 py-5 sm:px-6 lg:flex lg:max-w-[46rem] lg:flex-col lg:justify-center lg:gap-4 lg:space-y-0 lg:px-14 lg:py-8">
+        {/* what Tathabbut is for: the first thing a newcomer reads */}
+        <div className="space-y-2 lg:space-y-3">
+          <p className="nastaliq-pad text-[12px] font-semibold uppercase tracking-wide text-gold-ink lg:text-[13px]">{t("home.eyebrow")}</p>
+          <h1 className="text-[24px] font-bold leading-snug text-brand-ink lg:text-[34px] lg:leading-tight">{t("home.hero")}</h1>
+          <p className="text-[14px] text-muted lg:max-w-[52ch] lg:text-[17px]">{t("home.heroSub")}</p>
         </div>
 
-        <div className="space-y-2 rounded-[18px] border-2 border-line-strong bg-surface px-4 pb-3.5 pt-4 transition-colors focus-within:border-brand lg:border-brand lg:p-[22px]">
+        {/* the form's own heading, above the text box: set off from the hero by a rule, and in the brand colour (teal, or gold
+            in dark mode, where the hero's heading and the body text are both cream) */}
+        <div className="space-y-1 border-t border-line pt-4 lg:pt-5">
+          <h2 className="text-[18px] font-bold text-brand lg:text-[22px]">{t("home.title")}</h2>
+          <p className="text-[13px] text-muted lg:text-[14px]">{t("home.sub")}</p>
+        </div>
+
+        <div className="space-y-2 rounded-[18px] border-2 border-line-strong bg-surface px-4 pb-3.5 pt-4 transition-colors focus-within:border-brand lg:border-brand lg:px-[22px] lg:pb-3.5 lg:pt-[18px]">
           <label htmlFor={id} className="block pb-1 text-[12px] font-semibold text-brand-ink lg:text-brand">
             {t("home.label")}
           </label>
@@ -157,7 +153,7 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
             placeholder={t("home.placeholder")}
             rows={4}
             dir={value ? "auto" : dir}
-            className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink placeholder:text-muted focus:outline-none focus-visible:outline-none lg:text-[22px]"
+            className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink placeholder:text-muted focus:outline-none focus-visible:outline-none h-[127px]"
           />
           <div className="flex items-center justify-between border-t border-line pt-3 text-[12px] text-muted">
             <span>{t("home.hint")}</span>
@@ -202,7 +198,7 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
           {checkLabel}
         </Button>
         {/* FR-44: an AI tool that does not issue fatwas, said where the person presses Check */}
-        <p className="nastaliq-pad -mt-2 text-center text-[12px] text-muted lg:-mt-3.5" role="note">{t("notice")}</p>
+        <p className="nastaliq-pad -mt-2 text-center text-[12px] text-muted lg:-mt-3" role="note">{t("notice")}</p>
 
         <div className="space-y-2 lg:flex lg:flex-wrap lg:items-center lg:gap-2.5 lg:space-y-0">
           <p className="text-[13px] text-muted lg:me-1.5">{t("home.examples")}</p>
