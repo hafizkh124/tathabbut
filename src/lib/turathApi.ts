@@ -8,7 +8,7 @@
 import { cleanTurathText, findPhrase } from "./turathText";
 
 export const TURATH_API = "https://api.turath.io/";
-const USER_AGENT = "Tathabbut/0.1 (Islamic AI Challenge 2026)";
+const USER_AGENT = "Tathabbut/0.1 (+https://github.com/hafizkh124/tathabbut)";
 
 export interface TurathPassage {
   book: { id: string; title: string };
