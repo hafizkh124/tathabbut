@@ -14,7 +14,7 @@ people's data in our public repository. Only sources actually used are cited; ot
 | Quran translations | **quranpedia**: Urdu — Muhammad Junagarhi (id 1966); English — Hilali & Khan (id 1948); both King Fahd Complex editions | Show the approved translation; flag differing translations | Same quranpedia terms. No published hash for translation files, so we store our own. Footnotes are not displayed in the MVP (they contain commentary and hadith we have not reviewed). |
 | Circulating texts | **Specialist's own list**, each entry attributed to al-Maqasid al-Hasana, Kashf al-Khafa', al-Silsila al-Da'ifa (book, volume, page) | Recognise widely circulated unauthentic texts | Our own work. Entries are checked against the books themselves (via Shamela / Turath as reading libraries; the reference is the book). No bulk dumps of these books are stored. |
 | Terminology | **Jamhara** sample terms from the challenge's scientific package ([islamic-content.com](https://islamic-content.com/dictionary)) | Approved Arabic/English/Urdu equivalents in the interface and replies | Small table (≈10–20 terms) taken from the package; Urdu equivalents decided by the specialist. |
-| Language model | **Google Gemini** (generation, vision/OCR, embeddings) | Claim extraction, OCR, candidate matching; never grading | Post text is sent to Google for processing; disclosed in the README. Keys are server-side only. |
+| Language model | **Google Gemini** (generation, vision/OCR; no embeddings in this version) | Claim extraction, OCR, candidate matching; never grading | Post text is sent to Google for processing; disclosed in the README. Keys are server-side only. |
 
 ## 5.2 Sources considered and not used
 

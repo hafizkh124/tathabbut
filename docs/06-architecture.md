@@ -18,7 +18,7 @@ Next.js web app ──► POST /api/verify
                                              EXACT / SEMANTIC / DISTORTED / NO_MATCH
   6. Decide state                            fixed rules + gradeMap.ts (no model)
   7. Governance level                        أ / ب / ج / د
-  8. Attach translations and glossary terms  quran_translations, glossary_terms
+  8. Attach translations                     quran_translations
   9. Return cards + shareable text
 ```
 
@@ -48,7 +48,7 @@ Schema in `supabase/migrations/`.
 | `quran_verses` | Hafs mushaf text + normalized search text | 6,236 |
 | `quran_translations` | Urdu (Junagarhi) and English (Hilali–Khan); cleaned text plus raw text kept unshown | 12,472 |
 | `circulating_sayings` | Specialist's list: text, status, verdict, verdict author, reference, correct text, notes | ≈100–150 (55 loaded so far) |
-| `glossary_terms` | Approved Arabic / English / Urdu terms (table not created yet) | ≈10–20 |
+| (no table) glossary | The 10 sample terms of the package's Jamhara glossary are a fixed list in `src/lib/translate.ts`, used as approved equivalents when book excerpts are machine-translated | 10 |
 | `dorar_cache` | Raw Dorar responses per normalized query, with fetch time; private (service key only) | As queried |
 | `turath_cache` | The answer to a Turath lookup per normalized query and kind (hadith, scholar_quote, fiqh), 30-day TTL; private (service key only) | As queried |
 | `turath_translations` | The machine translation of a Turath passage per SHA-256 of the Arabic text and language (ur, en); private (service key only) | As translated |
@@ -64,7 +64,7 @@ There is deliberately **no local hadith collection** in the MVP.
 | App hosting | Vercel (Next.js 16, region Singapore) |
 | Database | Supabase (Singapore, free tier); row-level security on private tables |
 | Dorar access | Cloudflare Worker relay with placement near dorar.net (direct calls from Vercel were blocked by Dorar's own firewall) |
-| Language model | Gemini flash model with a fallback flash model; Gemini embedding model; low thinking level for speed (≈2.5 s per call measured) |
+| Language model | Gemini flash model with a fallback flash model (no embedding model in this version); low thinking level for speed (≈2.5 s per call measured) |
 | Caching | Supabase Dorar cache (30-day freshness, stale fallback) plus edge cache on `/api/lookup` |
 
 ## 6.5 Design decisions
