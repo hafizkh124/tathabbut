@@ -35,7 +35,7 @@ function ClaimTabs({ claims, selected, onSelect }: { claims: ClaimResult[]; sele
             <span aria-hidden className="inline-block min-w-5 rounded-full text-center text-[12px] font-semibold leading-5 text-white" style={{ background: s.line, fontFamily: "var(--font-readex), sans-serif" }}>
               {num(i + 1)}
             </span>
-            <span className="quran max-w-[11rem] truncate" lang={c.claim.language === "ar" ? "ar" : undefined}>{tabLabel(c)}</span>
+            <span translate="no" className="quran max-w-[11rem] truncate" lang={c.claim.language === "ar" ? "ar" : undefined}>{tabLabel(c)}</span>
           </button>
         );
       })}
@@ -145,7 +145,7 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
                   aria-pressed={i === selected}
                   className={`flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-start cursor-pointer ${i === selected ? "border-brand" : "border-line"}`}
                 >
-                  <span className="quran text-[18px]">{c.claim.arabicSpan || c.claim.textAsWritten}</span>
+                  <span translate="no" className="quran text-[18px]">{c.claim.arabicSpan || c.claim.textAsWritten}</span>
                   <StateBadge state={c.state} size="sm" />
                 </button>
               </li>

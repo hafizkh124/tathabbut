@@ -29,7 +29,7 @@ export function CandidateList({ candidates, picked, onPick }: { candidates: Vers
                 {on && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
               </span>
               <span className="min-w-0">
-                <span className="quran block text-[20px] text-ink">… {c.wording?.correctText ?? c.text}</span>
+                <span translate="no" className="quran block text-[20px] text-ink">… {c.wording?.correctText ?? c.text}</span>
                 <span className="block text-[13px] text-muted">{t("verse.ref", { s: plainSurah(c.surahName), a: num(c.ayah) })}</span>
               </span>
             </button>

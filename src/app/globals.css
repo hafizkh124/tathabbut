@@ -55,57 +55,63 @@
   --t-found-line: #8c7d52;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #0e1716;
-    --surface: #15221f;
-    --line: #263633;
-    --line-strong: #35504b;
-    --ink: #e8efed;
-    --muted: #9db0ab;
-    --brand: #14524d;
-    --brand-hover: #1b665f;
-    --brand-ink: #cfe0dc;
-    --brand-soft: #14231f;
-    --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
+/* Dark: set on <html data-theme="dark"> before the first paint (layout.tsx) from the person's choice or, failing that, the
+   device's setting. Gold is the accent here (buttons, the chosen language, the text box), as in the design handoff: teal on
+   near-black made the whole screen one colour. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0e1716;
+  --surface: #172420;
+  --line: #263633;
+  --line-strong: #3a524d;
+  --ink: #e8efed;
+  --muted: #9db0ab;
+  --brand: #e3bc63;
+  --brand-hover: #edc978;
+  --brand-ink: #cfe0dc;
+  --brand-soft: #14231f;
+  --on-brand: #0a1413;
+  --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
 
-    --t-accepted-bg: #16301a;
-    --t-accepted-fg: #9bd79f;
-    --t-accepted-bd: #2c5a31;
-    --t-accepted-line: #6fbf73;
-    --t-weak-bg: #3a2a0b;
-    --t-weak-fg: #f0c36b;
-    --t-weak-bd: #6b4e16;
-    --t-weak-line: #e0a63a;
-    --t-veryWeak-bg: #3e1613;
-    --t-veryWeak-fg: #f4a29c;
-    --t-veryWeak-bd: #7a2a25;
-    --t-veryWeak-line: #e5635b;
-    --t-unsure-bg: #232c31;
-    --t-unsure-fg: #b8c4cb;
-    --t-unsure-bd: #40505a;
-    --t-unsure-line: #8fa0aa;
-    --t-misquote-bg: #3d1e0f;
-    --t-misquote-fg: #f5b28a;
-    --t-misquote-bd: #7a3c1b;
-    --t-misquote-line: #ec8a54;
-    --t-translated-bg: #14293a;
-    --t-translated-fg: #9cc3e0;
-    --t-translated-bd: #2e5878;
-    --t-translated-line: #6aa3cf;
-    --t-fatwa-bg: #1e2347;
-    --t-fatwa-fg: #aeb8f0;
-    --t-fatwa-bd: #3d468c;
-    --t-fatwa-line: #8c99e6;
-    --t-notFound-bg: #0e1716;
-    --t-notFound-fg: #b8c4cb;
-    --t-notFound-bd: #5a6a72;
-    --t-notFound-line: #8fa0aa;
-    --t-found-bg: #2a261b;
-    --t-found-fg: #d9ceb0;
-    --t-found-bd: #4f4630;
-    --t-found-line: #b3a272;
-  }
+  --t-accepted-bg: #16301a;
+  --t-accepted-fg: #9bd79f;
+  --t-accepted-bd: #2c5a31;
+  --t-accepted-line: #6fbf73;
+  --t-weak-bg: #3a2a0b;
+  --t-weak-fg: #f0c36b;
+  --t-weak-bd: #6b4e16;
+  --t-weak-line: #e0a63a;
+  --t-veryWeak-bg: #3e1613;
+  --t-veryWeak-fg: #f4a29c;
+  --t-veryWeak-bd: #7a2a25;
+  --t-veryWeak-line: #e5635b;
+  --t-unsure-bg: #232c31;
+  --t-unsure-fg: #b8c4cb;
+  --t-unsure-bd: #40505a;
+  --t-unsure-line: #8fa0aa;
+  --t-misquote-bg: #3d1e0f;
+  --t-misquote-fg: #f5b28a;
+  --t-misquote-bd: #7a3c1b;
+  --t-misquote-line: #ec8a54;
+  --t-translated-bg: #14293a;
+  --t-translated-fg: #9cc3e0;
+  --t-translated-bd: #2e5878;
+  --t-translated-line: #6aa3cf;
+  --t-fatwa-bg: #1e2347;
+  --t-fatwa-fg: #aeb8f0;
+  --t-fatwa-bd: #3d468c;
+  --t-fatwa-line: #8c99e6;
+  --t-notFound-bg: #0e1716;
+  --t-notFound-fg: #b8c4cb;
+  --t-notFound-bd: #5a6a72;
+  --t-notFound-line: #8fa0aa;
+  --t-found-bg: #2a261b;
+  --t-found-fg: #d9ceb0;
+  --t-found-bd: #4f4630;
+  --t-found-line: #b3a272;
 }
 
 @theme inline {
@@ -198,4 +204,21 @@ html[lang="ur"] textarea {
 /* Amiri for Arabic text, without forcing the direction (a pasted post may be Urdu or English with Arabic inside). */
 .font-quran {
   font-family: var(--font-amiri), "Traditional Arabic", serif;
+}
+
+/* Thin scrollbars in the theme's own colours (the browser's default looked out of place in the text boxes). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
 }

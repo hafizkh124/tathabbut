@@ -36,8 +36,8 @@ export function TextConfirm({ text, uncertain, previewUrl, onConfirm, onBack }: 
         <img src={previewUrl} alt={t("ocr.picture")} className="mx-auto h-auto max-h-44 w-auto max-w-full object-contain" />
       </a>
 
-      <div className="space-y-2 rounded-2xl border-2 border-brand bg-surface px-4 pb-3 pt-3">
-        <label htmlFor={id} className="text-[12px] font-semibold text-brand-ink">
+      <div className="space-y-2 rounded-2xl border-[1.5px] border-line-strong bg-surface px-5 pb-3.5 pt-4 transition-colors focus-within:border-brand">
+        <label htmlFor={id} className="block pb-1 text-[12px] font-semibold text-brand-ink">
           {t("ocr.label")}
         </label>
         {editing ? (
@@ -48,7 +48,7 @@ export function TextConfirm({ text, uncertain, previewUrl, onConfirm, onBack }: 
             rows={5}
             dir="auto"
             autoFocus
-            className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink focus:outline-none"
+            className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink focus:outline-none focus-visible:outline-none"
           />
         ) : (
           <p id={id} className="font-quran whitespace-pre-line text-[20px] leading-[2.2] text-ink" dir="auto">

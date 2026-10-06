@@ -13,6 +13,8 @@ export const DICT = {
     en: "AI that quotes from reliable Islamic sources",
     ur: "ذکاء اصطناعی جو معتبر اسلامی مصادر سے نقل کرتی ہے",
   },
+  "theme.toDark": { ar: "الوضع الداكن", en: "Dark mode", ur: "ڈارک موڈ" },
+  "theme.toLight": { ar: "الوضع الفاتح", en: "Light mode", ur: "لائٹ موڈ" },
   "lang.label": { ar: "اللغة", en: "Language", ur: "زبان" },
 
   "home.title": { ar: "ما الذي وصلك؟", en: "What did you receive?", ur: "آپ کو کیا موصول ہوا؟" },
@@ -42,8 +44,10 @@ export const DICT = {
   "home.examples": { ar: "جرّب مثالًا", en: "Try an example", ur: "ایک مثال آزمائیں" },
   "home.history": { ar: "السجل", en: "History", ur: "تاریخ" },
   "example.verse": { ar: "آية فيها خطأ", en: "A verse with a mistake", ur: "آیت میں غلطی" },
-  "example.hadith": { ar: "حديث مشهور", en: "A famous hadith", ur: "مشہور حدیث" },
-  "example.saying": { ar: "قول متداول", en: "A saying in circulation", ur: "مشہور مقولہ" },
+  "example.sahih": { ar: "حديث صحيح", en: "An authentic hadith", ur: "صحیح حدیث" },
+  "example.weak": { ar: "حديث ضعيف", en: "A weak hadith", ur: "ضعیف حدیث" },
+  "example.hadith": { ar: "مشهور لا يصح", en: "Famous but unsound", ur: "مشہور مگر بے اصل" },
+  "example.fabricated": { ar: "نص مختلق", en: "A made-up text", ur: "من گھڑت متن" },
   "example.question": { ar: "سؤال فقهي", en: "A fiqh question", ur: "فقہی سوال" },
 
   "loading.title": { ar: "جارٍ التحقق من المصادر…", en: "Checking the sources…", ur: "ماخذ کی جانچ ہو رہی ہے…" },
@@ -153,6 +157,11 @@ export const DICT = {
   "via.quranCom": { ar: "القرآن الكريم", en: "Quran.com", ur: "Quran.com" },
   "via.quranpedia": { ar: "موسوعة القرآن", en: "Quranpedia", ur: "Quranpedia" },
   "via.exact": { ar: "يفتح الدرر السنية على هذا الحديث في كتابه", en: "Opens Dorar at this hadith, in its own book", ur: "الدرر السنیہ میں اسی کتاب میں یہی حدیث کھولتا ہے" },
+  "via.dorarTab": {
+    ar: "إن لم يظهر الحديث فافتح تبويب {tab}",
+    en: "If the hadith does not show, open Dorar's specialist tab {tab}",
+    ur: "اگر حدیث نظر نہ آئے تو {tab} والا ٹیب کھولیں",
+  },
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
   "share.grade": { ar: "الحكم", en: "Grading", ur: "حکم" },
@@ -165,8 +174,12 @@ export const DICT = {
   "action.copy": { ar: "نسخ", en: "Copy", ur: "کاپی" },
   "action.copied": { ar: "تم النسخ", en: "Copied", ur: "کاپی ہو گیا" },
   "action.share": { ar: "مشاركة", en: "Share", ur: "شیئر" },
+  "share.copiedPaste": { ar: "نُسخ النص، الصقه حيث تريد أو أرسله عبر", en: "The text is copied: paste it anywhere, or send it via", ur: "متن کاپی ہو گیا؛ جہاں چاہیں چسپاں کریں، یا بھیجیں:" },
+  "share.sendVia": { ar: "أرسله عبر", en: "Send it via", ur: "بھیجیں:" },
+  "share.whatsapp": { ar: "واتساب", en: "WhatsApp", ur: "واٹس ایپ" },
   "action.report": { ar: "هل في هذه النتيجة خطأ؟ أبلغ عنه", en: "Is this result wrong? Report it", ur: "کیا یہ نتیجہ غلط ہے؟ اطلاع دیں" },
   "action.reported": { ar: "شكرًا، وصل بلاغك", en: "Thank you, your report was received", ur: "شکریہ، آپ کی اطلاع مل گئی" },
+  "action.reportFailed": { ar: "تعذّر إرسال البلاغ الآن، حاول لاحقًا", en: "The report could not be sent now; please try later", ur: "اطلاع ابھی نہیں بھیجی جا سکی، بعد میں کوشش کریں" },
   "action.origin": { ar: "من أين انتشر؟", en: "Where did it spread from?", ur: "یہ کہاں سے پھیلا؟" },
   "action.close": { ar: "إغلاق", en: "Close", ur: "بند کریں" },
   "about.link": {
@@ -235,9 +248,9 @@ export const DICT = {
     ur: "ٹول کی حدود",
   },
   "about.s5.b": {
-    ar: "لا تُصدر فتاوى ولا تحكم بنفسها على حديث؛ الذكاء الاصطناعي يستخرج ويطابق فقط. وعند غياب المرجع تُحيل إلى أهل العلم.",
-    en: "It does not issue fatwas and does not rule on a hadith itself; the AI only extracts and matches. When no reliable reference is found, it points you to the people of knowledge.",
-    ur: "یہ ٹول فتویٰ نہیں دیتا اور خود کسی حدیث پر حکم نہیں لگاتا؛ مصنوعی ذہانت صرف متن نکالتی اور ملاتی ہے۔ مستند حوالہ نہ ملے تو اہلِ علم کی طرف رجوع کرنے کا کہتا ہے۔",
+    ar: "لا تُصدر فتاوى ولا تحكم بنفسها على حديث؛ الذكاء الاصطناعي يستخرج ويطابق فقط. وعند غياب المرجع تُحيل إلى أهل العلم. وإذا أبلغتَ عن خطأ في نتيجة وصل إلى فريقنا النصُّ والنتيجة فقط، دون أي معلومات عنك.",
+    en: "It does not issue fatwas and does not rule on a hadith itself; the AI only extracts and matches. When no reliable reference is found, it points you to the people of knowledge. If you report a wrong result, only the text and the result reach our team, nothing about you.",
+    ur: "یہ ٹول فتویٰ نہیں دیتا اور خود کسی حدیث پر حکم نہیں لگاتا؛ مصنوعی ذہانت صرف متن نکالتی اور ملاتی ہے۔ مستند حوالہ نہ ملے تو اہلِ علم کی طرف رجوع کرنے کا کہتا ہے۔ اگر آپ کسی نتیجے کی غلطی کی اطلاع دیں تو ہماری ٹیم تک صرف متن اور نتیجہ پہنچتا ہے، آپ کے بارے میں کوئی معلومات نہیں۔",
   },
   "about.s6.h": {
     ar: "اسم الأداة",

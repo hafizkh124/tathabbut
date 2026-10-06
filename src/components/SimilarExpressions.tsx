@@ -23,7 +23,7 @@ function SimilarCard({ candidate }: { candidate: SimilarExpression }) {
   const loading = Boolean(to && candidate.sig && translation?.key !== key);
   return <li className="space-y-2 rounded-xl border border-line bg-paper p-3">
     <p role="note" className="text-[14px]">{t("similar.warning")}</p>
-    <p lang="ar" dir="rtl" className="quran text-[22px]">{candidate.text}</p>
+    <p translate="no" lang="ar" dir="rtl" className="quran text-[22px]">{candidate.text}</p>
     {to && <div className="space-y-1">
       <p className="text-[12px] text-muted">{t("similar.translation")}</p>
       <p aria-live="polite" className="text-[14px] leading-loose">{loading ? t("similar.loading") : translation?.key === key && translation.text ? translation.text : t("similar.unavailable")}</p>
@@ -31,7 +31,7 @@ function SimilarCard({ candidate }: { candidate: SimilarExpression }) {
     <StateBadge state={candidate.state} size="sm" caution={candidate.caution} />
     <p className="text-[14px]">{t("label.source")}: {candidate.source}{candidate.reference ? `، ${candidate.reference}` : ""}</p>
     {candidate.scholar && <p className="text-[14px]">{t("label.scholar")}: {candidate.scholar}</p>}
-    <p lang="ar" dir="rtl" className="text-[14px]">{t("label.words")}: {candidate.verdict}</p>
+    <p translate="no" lang="ar" dir="rtl" className="text-[14px]">{t("label.words")}: {candidate.verdict}</p>
     {candidate.scope === "isnad" && <p role="note" className="text-[13px]">{t("similar.isnad")}</p>}
     {candidate.scope === "narrator" && <p role="note" className="text-[13px]">{t("note.narratorCriticism")}</p>}
     <a href={dorarSearchUrl(candidate.text)} target="_blank" rel="noopener noreferrer" className="inline-block py-2 text-[14px] text-brand-ink underline">{t("via.dorar")}</a>

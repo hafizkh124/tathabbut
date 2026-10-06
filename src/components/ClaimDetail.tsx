@@ -5,7 +5,7 @@ import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
 import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
-import { buildShareText, plainSurah } from "@/lib/shareText";
+import { buildShareText, plainSurah, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
 import { matchedArabic } from "@/lib/matchedArabic";
 import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
@@ -14,7 +14,7 @@ import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
-import { ShareDialog } from "./ShareDialog";
+import { ShareDialog, ShareNote } from "./ShareDialog";
 import { SimilarExpressions } from "./SimilarExpressions";
 
 interface Via {
@@ -63,7 +63,22 @@ function ViaRow({ links }: { links: Via[] }) {
           <Icon name="ext" size={11} />
         </a>
       ))}
+      {links.some((l) => l.exact) && <DorarTabHint />}
     </div>
+  );
+}
+
+/** Dorar opens on its «لغير المتخصص» tab, and a narration from a book for specialists (العلل، الضعفاء…) is only under
+ *  the other one; no link can choose the tab, so the reader is told where to look. */
+function DorarTabHint() {
+  const { t } = useI18n();
+  const [before, after = ""] = t("via.dorarTab").split("{tab}");
+  return (
+    <p className="w-full text-[12px] text-muted">
+      {before}
+      <bdi lang="ar" dir="rtl" translate="no" className="font-semibold">للمتخصص في علم الحديث</bdi>
+      {after}
+    </p>
   );
 }
 
@@ -83,11 +98,11 @@ function NarrationRow({ n }: { n: NarrationView }) {
     <li className="space-y-1 rounded-xl border border-line bg-paper p-3 text-[14px]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <StateBadge state={grade} size="sm" caution={n.display?.caution} />
-        {n.muhaddith && <span className="text-muted">{n.muhaddith}</span>}
+        {n.muhaddith && <span className="text-muted" translate="no">{n.muhaddith}</span>}
       </div>
       {n.source && (
         <Row label={t("label.source")}>
-          <span className="font-semibold text-brand-ink">{n.source}</span>
+          <span className="font-semibold text-brand-ink" translate="no">{n.source}</span>
           {n.reference ? `، ${n.reference}` : ""}
         </Row>
       )}
@@ -102,6 +117,7 @@ function NarrationRow({ n }: { n: NarrationView }) {
         <span>{t("via.dorar")}</span>
         <Icon name="ext" size={11} />
       </a>
+      <DorarTabHint />
     </li>
   );
 }
@@ -113,11 +129,11 @@ function NarrationVerdict({ n }: { n: NarrationView }) {
     {n.textVariant && <div className="space-y-1">
       <p role="note" className="text-[13px] text-muted">{t(n.textVariant === "additional" ? "note.additionalWording" : "note.differentWording")}</p>
       <p className="text-[12px] text-muted">{t("label.narrationText")}</p>
-      <p lang="ar" dir="rtl" className="quran text-[18px]">{n.matn}</p>
+      <p translate="no" lang="ar" dir="rtl" className="quran text-[18px]">{n.matn}</p>
     </div>}
     {attribution && <p>{attribution}</p>}
     {n.verdict && <Row label={t(isDorarAddition(n.verdict) ? "label.dorarGrade" : "label.words")}>
-      <span lang="ar" dir="rtl">{n.verdict}</span>
+      <span translate="no" lang="ar" dir="rtl">{n.verdict}</span>
     </Row>}
     {n.scope === "isnad" && /هالك/.test(n.verdict ?? "") && <p className="text-[13px] text-muted">{t("note.halikIsnad")}</p>}
     {n.scope === "narrator" && <p role="note" className="text-[13px] text-muted">{t("note.narratorCriticism")}</p>}
@@ -210,7 +226,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
         {s.verdict_by && <Row label={t("label.scholar")}>{s.verdict_by}</Row>}
         {s.verdict && (
           <Row label={t("label.words")}>
-            <span lang="ar" dir="rtl">
+            <span translate="no" lang="ar" dir="rtl">
               {s.verdict}
             </span>
           </Row>
@@ -218,7 +234,7 @@ function SourceBox({ r }: { r: ClaimResult }) {
         {s.claimed_attribution && <Row label={t("label.attributed")}>{s.claimed_attribution}</Row>}
         {s.correct_text && (
           <Row label={t("label.correct")}>
-            <span className="quran text-[17px]">{s.correct_text}</span>
+            <span translate="no" className="quran text-[17px]">{s.correct_text}</span>
           </Row>
         )}
         {s.note && <Row label={t("label.note")}>{s.note}</Row>}
@@ -249,15 +265,24 @@ function Diffs({ r }: { r: ClaimResult }) {
 
 const REPORTS_KEY = "tathabbut.reports";
 
-/** The report is kept on this device for now (a list the team can read); it is not sent anywhere. */
-function saveReport(r: ClaimResult, locale: string) {
+/** Sends the report to the team (/api/report). If it cannot be sent it is kept on this device, and the page says it was
+ *  not sent: thanking the reader for a report nobody received would not be true. */
+async function sendReport(r: ClaimResult, locale: string): Promise<boolean> {
+  const report = { text: r.claim.textAsWritten, query: r.claim.query, state: r.state, locale };
+  try {
+    const res = await fetch("/api/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(report) });
+    if (res.ok) return true;
+  } catch {
+    /* offline or blocked: kept below */
+  }
   try {
     const list = JSON.parse(localStorage.getItem(REPORTS_KEY) ?? "[]") as unknown[];
-    list.push({ at: new Date().toISOString(), locale, text: r.claim.textAsWritten, state: r.state });
+    list.push({ at: new Date().toISOString(), ...report });
     localStorage.setItem(REPORTS_KEY, JSON.stringify(list.slice(-200)));
   } catch {
-    /* storage unavailable: the thanks message is still shown */
+    /* storage unavailable */
   }
+  return false;
 }
 
 interface Props {
@@ -275,15 +300,15 @@ interface Props {
 export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick, all }: Props) {
   const { t, num, locale } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [reported, setReported] = useState<string | null>(null);
+  const [reported, setReported] = useState<{ text: string; status: "sending" | "sent" | "failed" } | null>(null);
   const [picking, setPicking] = useState(false);
   const several = (all?.length ?? 0) > 1;
   const tone = toneOf(r.state);
   const quote = r.claim.arabicSpan || r.claim.textAsWritten;
   // a question is shown by its topic, never by its own words: the books were asked the topic only
   const isQuestion = r.claim.kind === "question";
-  const canShare = typeof navigator !== "undefined" && "share" in navigator;
-  const reportedHere = reported === r.claim.textAsWritten;
+  const [shareOutcome, setShareOutcome] = useState<ShareOutcome | null>(null);
+  const reportedHere = reported?.text === r.claim.textAsWritten ? reported.status : null;
 
   const shareText = useCallback(() => buildShareText([r], locale), [r, locale]);
 
@@ -299,11 +324,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   };
   const share = async () => {
     if (several) return setPicking(true);
-    try {
-      await navigator.share({ text: shareText() });
-    } catch {
-      /* the person closed the share sheet */
-    }
+    setShareOutcome(await shareOrCopy(shareText()));
   };
 
   const message =
@@ -313,7 +334,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         {r.claim.citedSource && (
           <p className="text-[14px]">
             <span className="text-muted">{t("label.cited")}: </span>
-            <span lang="ar" dir="rtl">
+            <span translate="no" lang="ar" dir="rtl">
               {r.claim.citedSource}
             </span>
           </p>
@@ -342,12 +363,12 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         {total > 1 && <span className="text-[13px] text-muted">{t("result.of", { i: num(index + 1), n: num(total) })}</span>}
       </div>
 
-      {tone !== "notFound" && tone !== "fatwa" && !isQuestion && <p className="quran text-[22px] text-ink">{quote}</p>}
+      {tone !== "notFound" && tone !== "fatwa" && !isQuestion && <p translate="no" className="quran text-[22px] text-ink">{quote}</p>}
       {message}
       {matchedArabic(r) && (
         <div role="note" className="space-y-1 rounded-xl border border-line bg-paper p-3">
           <p className="text-[12px] text-muted">{t("label.matchedArabic")}</p>
-          <p lang="ar" dir="rtl" className="quran text-[22px]">{matchedArabic(r)}</p>
+          <p translate="no" lang="ar" dir="rtl" className="quran text-[22px]">{matchedArabic(r)}</p>
           <p className="text-[13px] text-muted">{t("note.translationMatch")}</p>
         </div>
       )}
@@ -359,7 +380,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
           {(tone === "misquote" || tone === "translated") && (
             <div className="rounded-xl border border-line bg-paper p-3">
               <p className="text-[12px] text-muted">{t("label.mushaf")}</p>
-              <p className="quran text-[24px]">{r.verse.text}</p>
+              <p translate="no" className="quran text-[24px]">{r.verse.text}</p>
             </div>
           )}
         </div>
@@ -389,17 +410,17 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
               <Icon name="copy" size={16} />
               <span>{copied ? t("action.copied") : t("action.copy")}</span>
             </Button>
-            {canShare && (
-              <Button full onClick={share}>
-                <Icon name="share" size={16} />
-                <span>{t("action.share")}</span>
-              </Button>
-            )}
+            <Button full onClick={share}>
+              <Icon name="share" size={16} />
+              <span>{t("action.share")}</span>
+            </Button>
           </>
         )}
       </div>
 
-      {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} canShare={canShare} />}
+      <ShareNote outcome={shareOutcome} text={shareText()} />
+
+      {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4">
         {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (
@@ -407,17 +428,19 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
             {t("action.origin")}
           </Button>
         )}
-        {reportedHere ? (
+        {reportedHere === "sent" || reportedHere === "failed" ? (
           <span className="py-3 text-[13px] text-muted" role="status">
-            {t("action.reported")}
+            {t(reportedHere === "sent" ? "action.reported" : "action.reportFailed")}
           </span>
         ) : (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              saveReport(r, locale);
-              setReported(r.claim.textAsWritten);
+            disabled={reportedHere === "sending"}
+            onClick={async () => {
+              const text = r.claim.textAsWritten;
+              setReported({ text, status: "sending" });
+              setReported({ text, status: (await sendReport(r, locale)) ? "sent" : "failed" });
             }}
           >
             {t("action.report")}

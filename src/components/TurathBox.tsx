@@ -81,14 +81,14 @@ function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathRefe
   return (
     <li className="space-y-1 rounded-xl border border-line bg-paper p-3 text-[14px]">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <span className="font-semibold text-brand-ink" lang="ar" dir="rtl">
+        <span translate="no" className="font-semibold text-brand-ink" lang="ar" dir="rtl">
           {ref_.book.title}
           {ref_.author?.name ? ` — ${ref_.author.name}` : ""}
         </span>
         {showCategory && category && <span className="rounded-full border border-line px-2 py-0.5 text-[12px] text-muted">{category}</span>}
       </div>
       <PageLine ref_={ref_} />
-      <p
+      <p translate="no"
         className="quran text-[18px] leading-[2.1] text-ink"
         lang="ar"
         dir="rtl"

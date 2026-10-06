@@ -34,15 +34,25 @@ export function dorarBookId(source: string | undefined): number | null {
   return near.length === 1 ? near[0].id : null;
 }
 
+/** Hamza seats are spelt differently from book to book (امرئ، امرىء، امريء) and Dorar's search matches them letter for
+ *  letter, so one such word can empty the results; its search wants every word but not in a row, so they are left out. */
+const HAMZA = /[ءئؤ]/;
+/** Fewer words than this and the search would be too loose: the hamza words are kept after all. */
+const MIN_WORDS = 3;
+
 /** The first words of a text as Dorar's search wants them: no diacritics, no punctuation, and without Dorar's own
- *  additions in [brackets] (they are not part of the hadith). */
+ *  additions in [brackets] (they are not part of the hadith). Only the alif with hamza is made plain (Dorar does the
+ *  same); ى and ة stay as written, since the text comes from Dorar and «على» is not «علي». */
 export function searchWords(text: string): string {
-  return normalizeArabic(text.replace(/\[[^\]]*\]/g, " "))
+  const words = text
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/[ً-ٰٟۖ-ۭـ]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
     .replace(/[^ء-ي\s]/g, " ")
     .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, MAX_WORDS)
-    .join(" ");
+    .filter(Boolean);
+  const plain = words.filter((w) => !HAMZA.test(w));
+  return (plain.length >= MIN_WORDS ? plain : words).slice(0, MAX_WORDS).join(" ");
 }
 
 export function dorarSearchUrl(text: string, source?: string): string {

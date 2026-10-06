@@ -22,6 +22,20 @@ describe("searchWords", () => {
     expect(searchWords("مَنْ غَشَّنَا فَلَيْسَ مِنَّا [يعني حديث: من حمل علينا السلاح]، .")).toBe("من غشنا فليس منا");
   });
 
+  it("leaves out words with a hamza seat, whose spelling differs between books (Dorar found nothing for «امريء»)", () => {
+    expect(searchWords("إنما الأعمال بالنيات، وإنما لكل امرىء ما نوى")).toBe("انما الاعمال بالنيات وانما لكل ما نوى");
+    expect(searchWords("إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى")).toBe("انما الاعمال بالنيات وانما لكل ما نوى");
+  });
+
+  it("keeps ى and ة as Dorar writes them («على» is not «علي»)", () => {
+    expect(searchWords("بُنِيَ الإسلامُ على خمسٍ")).toBe("بني الاسلام على خمس");
+    expect(searchWords("طلب العلم فريضة على كل مسلم")).toBe("طلب العلم فريضة على كل مسلم");
+  });
+
+  it("keeps the hamza words when too few words would be left without them", () => {
+    expect(searchWords("السماء والأرض")).toBe("السماء والارض");
+  });
+
   it("keeps only the opening words of a long text", () => {
     const long = Array.from({ length: 30 }, (_, i) => `كلمه${"ا".repeat(i % 3)}`).join(" ");
     expect(searchWords(long).split(" ").length).toBe(10);

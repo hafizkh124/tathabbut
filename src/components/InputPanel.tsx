@@ -8,11 +8,14 @@ import { Icon } from "./ui/Icon";
 
 export const MAX_TEXT = 5_000;
 
+/** One example for each case the tool handles, all from the final test set (eval 2026-10-06) with the expected result. */
 const EXAMPLES: Array<{ key: Key; text: string }> = [
-  { key: "example.verse", text: "قال الله تعالى: إن الله مع الصابرون" },
-  { key: "example.hadith", text: "قال النبي ﷺ: اطلبوا العلم ولو بالصين" },
-  { key: "example.saying", text: "روي أن النبي ﷺ قال: لولاك لما خلقت الأفلاك" },
-  { key: "example.question", text: "هل يقع الطلاق في حالة الغضب؟" },
+  { key: "example.verse", text: "إن الله مع الصابرون" }, // T027: a misquoted verse
+  { key: "example.sahih", text: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى" }, // T001: accepted, al-Bukhari 1
+  { key: "example.weak", text: "صوموا تصحوا" }, // T011: weak
+  { key: "example.hadith", text: "اطلبوا العلم ولو بالصين" }, // T013: very weak or baseless
+  { key: "example.fabricated", text: "من صلى ركعتين يوم الخميس بعد العصر غفر الله له ذنوب أربعين سنة" }, // T034: not found
+  { key: "example.question", text: "أنا مقيم في ألمانيا، هل يجوز لي الجمع بين الظهر والعصر بسبب العمل؟" }, // T037: referred to scholars
 ];
 
 /** A phone or tablet (touch first): the camera button is shown there; on a computer it would only open the file dialog. */
@@ -109,8 +112,8 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
         <p className="text-[14px] text-muted">{t("home.sub")}</p>
       </div>
 
-      <div className="space-y-2 rounded-2xl border-2 border-brand bg-surface px-4 pb-3 pt-3">
-        <label htmlFor={id} className="text-[12px] font-semibold text-brand-ink">
+      <div className="space-y-2 rounded-2xl border-[1.5px] border-line-strong bg-surface px-5 pb-3.5 pt-4 transition-colors focus-within:border-brand">
+        <label htmlFor={id} className="block pb-1 text-[12px] font-semibold text-brand-ink">
           {t("home.label")}
         </label>
         <textarea
@@ -123,7 +126,7 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
           placeholder={t("home.placeholder")}
           rows={4}
           dir={value ? "auto" : dir}
-          className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink placeholder:text-muted focus:outline-none"
+          className="font-quran block w-full resize-none bg-transparent text-[20px] leading-[2.1] text-ink placeholder:text-muted focus:outline-none focus-visible:outline-none"
         />
         <div className="flex items-center justify-between text-[12px] text-muted">
           <span>{t("home.hint")}</span>
@@ -148,9 +151,17 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
             <Icon name="camera" size={18} />
           </Button>
         )}
-        <Button variant="secondary" className="min-w-0 flex-1" style={{ paddingInline: 8 }} disabled title={`${t("home.voice")} · ${t("home.soon")}`}>
+        {/* not ready yet: said on the button itself, since a phone shows no tooltip and a faded button looks broken */}
+        <Button
+          variant="secondary"
+          className="relative min-w-0 flex-1 border-dashed text-muted disabled:cursor-default disabled:opacity-100"
+          style={{ paddingInline: 8 }}
+          disabled
+          aria-label={`${t("home.voice")} · ${t("home.soon")}`}
+        >
           <span className="truncate">{t("home.voice")}</span>
           <Icon name="mic" size={18} />
+          <span className="absolute -top-2.5 end-2 rounded-full border border-line-strong bg-surface px-2 py-1 text-[11px] font-semibold leading-none text-brand-ink">{t("home.soon")}</span>
         </Button>
       </div>
       {!touch && <p className="-mt-2 text-center text-[12px] text-muted">{t("home.imageHint")}</p>}
@@ -161,13 +172,13 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
 
       <div className="space-y-2">
         <p className="text-[13px] text-muted">{t("home.examples")}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {EXAMPLES.map((e) => (
             <button
               key={e.key}
               type="button"
               onClick={() => onChange(e.text)}
-              className="nastaliq-pad min-h-10 cursor-pointer rounded-full border-[1.5px] border-line-strong bg-surface px-3.5 text-[13px] font-medium text-ink hover:bg-paper"
+              className="nastaliq-pad min-h-10 w-full cursor-pointer rounded-full border-[1.5px] border-line-strong bg-surface px-3 text-center text-[13px] font-medium text-ink hover:bg-paper"
             >
               {t(e.key)}
             </button>

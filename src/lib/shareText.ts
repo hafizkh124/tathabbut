@@ -61,3 +61,27 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
   });
   return `${blocks.join("\n\n")}\n\n${translate(locale, "share.footer")}: ${APP_URL}`;
 }
+
+/** What became of a share: the system sheet took it, it was copied instead, the person closed the sheet, or nothing worked. */
+export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
+
+/** The system share sheet where there is one; where there is none, or it fails (Windows often has no target), the text is
+ *  copied so the person can paste it themselves, and the page says so. */
+export async function shareOrCopy(text: string): Promise<ShareOutcome> {
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      await navigator.share({ text });
+      return "shared";
+    } catch (e) {
+      if ((e as { name?: string })?.name === "AbortError") return "cancelled";
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return "copied";
+  } catch {
+    return "failed";
+  }
+}
+
+export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;
