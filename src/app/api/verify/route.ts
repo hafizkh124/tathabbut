@@ -5,7 +5,7 @@ import { extractClaims } from "@/lib/claims";
 import { supabaseDorarCache } from "@/lib/dorarCache";
 import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
-import { fetchVerseScripts, matchVerses, matchVersesInText } from "@/lib/quranCheck";
+import { fetchVerseQiraat, fetchVerseScripts, matchVerses, matchVersesInText } from "@/lib/quranCheck";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { verifyClaims } from "@/lib/verify";
 import { signExcerpt } from "@/lib/turathSign";
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     matchVerses: (q) => matchVerses(q),
     matchVersesInText: (q) => matchVersesInText(q),
     verseScripts: (keys) => fetchVerseScripts(keys),
+    verseQiraat: (keys) => fetchVerseQiraat(keys),
     matchSayings: (q) => matchSayings(q),
     lookupDorar: (q) => lookupDorar(q, { cache }),
   });

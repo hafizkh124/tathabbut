@@ -8,6 +8,7 @@ import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
+import type { QiraaVariant } from "./qiraat";
 import { compareWithVerse, findVerseRuns, joinVerses, looksCopiedFromMushaf, searchForm, type VerseHit, type VerseScriptText, type WordingCheck } from "./quranCheck";
 
 import { STATES, stateOfVerse, type State } from "./states";
@@ -75,6 +76,8 @@ export interface VerifyDeps {
   /** The stored Uthmani and IndoPak texts of verses (quran_verse_scripts). Without it quotes are compared with the
    *  standard text only. */
   verseScripts?: (keys: { surah: number; ayah: number }[]) => Promise<Map<string, VerseScriptText[]>>;
+  /** The words of the other canonical readings (quran_qiraat). Without it a word of another reading is a misquote. */
+  verseQiraat?: (keys: { surah: number; ayah: number }[]) => Promise<Map<string, QiraaVariant[]>>;
   matchSayings: (query: string) => Promise<SayingHit[]>;
   lookupDorar: (query: string) => Promise<LookupOutcome>;
 }
@@ -93,11 +96,19 @@ const hasArabic = (s: string) => /[ء-ي]/.test(s);
 /** The mushaf text shown with a result: in the script the quote was compared with, so its corrections read in place. */
 const shownText = (v: VerseHit, wording: WordingCheck | undefined) => v.scripts?.find((s) => s.script === wording?.script)?.text ?? v.text_uthmani;
 
-/** The verses with their stored scripts, when they can be fetched; as they are otherwise (the standard text decides). */
+/** The verses with their stored scripts and the other readings' words, when they can be fetched; as they are otherwise
+ *  (the standard Hafs text decides). */
 async function withScripts(hits: VerseHit[], deps: VerifyDeps): Promise<VerseHit[]> {
-  if (!deps.verseScripts || !hits.length) return hits;
-  const byKey = await deps.verseScripts(hits.map((h) => ({ surah: h.surah, ayah: h.ayah }))).catch(() => null);
-  return byKey ? hits.map((h) => ({ ...h, scripts: byKey.get(`${h.surah}:${h.ayah}`) ?? [] })) : hits;
+  if (!hits.length) return hits;
+  const keys = hits.map((h) => ({ surah: h.surah, ayah: h.ayah }));
+  const [scripts, qiraat] = await Promise.all([
+    deps.verseScripts ? deps.verseScripts(keys).catch(() => null) : null,
+    deps.verseQiraat ? deps.verseQiraat(keys).catch(() => null) : null,
+  ]);
+  return hits.map((h) => {
+    const k = `${h.surah}:${h.ayah}`;
+    return { ...h, ...(scripts ? { scripts: scripts.get(k) ?? [] } : {}), ...(qiraat?.get(k)?.length ? { qiraat: qiraat.get(k) } : {}) };
+  });
 }
 
 function verseView(v: VerseHit, wording: WordingCheck | undefined, lastAyah?: number): VerseView {

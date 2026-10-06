@@ -5,7 +5,7 @@ import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
 import { toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
-import { buildShareText, plainSurah, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
+import { buildShareText, plainSurah, readersLine, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
 import { matchedArabic } from "@/lib/matchedArabic";
 import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
@@ -152,7 +152,23 @@ function SourceBox({ r }: { r: ClaimResult }) {
         <Row label={t("label.source")}>
           <span className="font-semibold text-brand-ink">{t("verse.ref", { s: plainSurah(v.surahName), a: num(v.ayah) + (v.endAyah ? `–${num(v.endAyah)}` : "") })}</span>
         </Row>
-        <Row label={t("label.text")}>{t("label.mushaf")}</Row>
+        {v.wording?.qiraat?.map((q) => (
+          <Row key={q.typed} label={t("label.qiraa")}>
+            <span translate="no" lang="ar" className="quran text-[17px] text-ink">«{q.typed}»</span>{" "}
+            {t("qiraa.of", { readers: "{readers}" }).split("{readers}").map((part, i) =>
+              i ? (
+                <React.Fragment key={i}>
+                  <bdi translate="no" lang="ar" dir="rtl" className="font-semibold">{readersLine(q.readers)}</bdi>
+                  {part}
+                </React.Fragment>
+              ) : (
+                part
+              ),
+            )}
+          </Row>
+        ))}
+        <Row label={t("label.text")}>{t("label.mushafSource")}</Row>
+        {v.wording?.qiraat?.length ? <p className="text-[12px] text-muted">{t("qiraa.note")}</p> : null}
         <ViaRow links={viaLinks(r)} />
       </div>
     );
@@ -376,7 +392,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         <div className="space-y-2">
           {r.verse.wording?.contextOmitted && <p role="note" className="rounded-xl border border-line bg-paper p-3 text-[14px]">{t("verse.contextWarning")}</p>}
           <Diffs r={r} />
-          {(tone === "misquote" || tone === "translated") && (
+          {(tone === "misquote" || tone === "translated" || Boolean(r.verse.wording?.qiraat?.length)) && (
             <div className="rounded-xl border border-line bg-paper p-3">
               <p className="text-[12px] text-muted">{t("label.mushaf")}</p>
               <p translate="no" className="quran text-[24px]">{r.verse.text}</p>

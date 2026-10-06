@@ -53,6 +53,8 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
     }
     const arabic = matchedArabic(r);
     if (arabic) lines.push(`${translate(locale, "label.matchedArabic")}: ${arabic}`, translate(locale, "note.translationMatch"));
+    for (const q of r.verse?.wording?.qiraat ?? [])
+      lines.push(`${translate(locale, "label.qiraa")}: «${q.typed}» ${translate(locale, "qiraa.of", { readers: readersLine(q.readers) })}`);
     if (r.verse?.wording?.contextOmitted) lines.push(translate(locale, "verse.contextWarning"));
     if (r.verse && (r.verse.wording?.contextOmitted || r.verse.wording?.exact === false)) lines.push(`${translate(locale, "label.mushaf")}: ${r.verse.text}`);
     if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
@@ -85,3 +87,11 @@ export async function shareOrCopy(text: string): Promise<ShareOutcome> {
 }
 
 export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+/** The readers of a reading in Arabic, as scholars name them: «حمزة (خلف، خلاد)، والكسائي (أبو الحارث، الدوري)». The
+ *  tenth imam Khalaf is «خلف العاشر», so he is not taken for Hamza's rawi of the same name. */
+export function readersLine(readers: { id: number; imam: string; ruwat: string[] }[]): string {
+  return readers
+    .map((r, i) => `${i ? "و" : ""}${r.id === 10 ? "خلف العاشر" : r.imam}${r.ruwat.length ? ` (${r.ruwat.join("، ")})` : ""}`)
+    .join("، ");
+}

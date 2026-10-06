@@ -88,6 +88,18 @@ export const DICT = {
   "label.attributed": { ar: "نُسب إلى", en: "Attributed to", ur: "منسوب کیا گیا" },
   "label.correct": { ar: "الصواب", en: "The correct form", ur: "درست صورت" },
   "label.note": { ar: "ملاحظة", en: "Note", ur: "نوٹ" },
+  "label.mushafSource": {
+    ar: "مصحف برواية حفص عن عاصم، وفق طبعة مجمع الملك فهد",
+    en: "Mushaf in the riwaya of Hafs from ʿAsim, as printed by the King Fahd Complex",
+    ur: "مصحف بروایتِ حفص عن عاصم، مطابق طبع مجمع ملک فہد",
+  },
+  "label.qiraa": { ar: "القراءة", en: "Reading", ur: "قراءت" },
+  "qiraa.of": { ar: "قراءة {readers}", en: "the reading of {readers}", ur: "{readers} کی قراءت" },
+  "qiraa.note": {
+    ar: "قراءة متواترة من القراءات العشر، والنص المعروض برواية حفص.",
+    en: "A canonical reading of the ten; the text shown is the riwaya of Hafs.",
+    ur: "یہ دس متواتر قراءات میں سے ہے؛ دکھایا گیا متن روایتِ حفص کا ہے۔",
+  },
   "label.mushaf": { ar: "نص مصحف حفص", en: "Hafs mushaf text", ur: "مصحفِ حفص کا متن" },
   "label.matchedArabic": { ar: "النص العربي الموافق لهذه العبارة المترجمة", en: "Arabic text matched to this translated wording", ur: "اس ترجمہ شدہ عبارت سے ملنے والا عربی متن" },
   "note.translationMatch": { ar: "المطابقة مع النص العربي؛ لا يُحكم بها على دقة ألفاظ الترجمة.", en: "The match is to the Arabic text; it does not verify the translation word for word.", ur: "یہ مطابقت عربی متن سے ہے؛ اس سے ترجمے کے ہر لفظ کی تصدیق مراد نہیں۔" },

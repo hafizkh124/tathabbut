@@ -4,6 +4,7 @@
 // change of word is reported: «الصابرون» for «الصابرين», a missing word, an added word.
 import { normalizeArabic } from "./arabic";
 import { foldUrduLetters } from "./claims";
+import { explainByQiraat, type QiraaMatch, type QiraaVariant } from "./qiraat";
 import { publicConfig, restHeaders, rpc, type RestConfig } from "./supabaseRest";
 
 export interface VerseHit {
@@ -16,6 +17,8 @@ export interface VerseHit {
   score: number;
   /** The same verse as other mushafs write it (quran_verse_scripts: Uthmani, IndoPak), when fetched. */
   scripts?: VerseScriptText[];
+  /** The words other canonical readings have in place of Hafs's (quran_qiraat), when fetched. */
+  qiraat?: QiraaVariant[];
 }
 
 /** One verse in another script, as stored in quran_verse_scripts (migration 007). */
@@ -42,6 +45,8 @@ export interface WordingCheck {
   distance: number;
   /** The quote was compared with this script's text (it fitted it better than the standard text). */
   script?: VerseScriptText["script"];
+  /** Words that differ from Hafs but are the wording of other canonical readings (not counted as mistakes). */
+  qiraat?: QiraaMatch[];
 }
 
 /** Characters that are not words (zero-width spaces, annotation signs such as «ؕ»), and the dotless «ٮ» some IndoPak texts
@@ -156,7 +161,19 @@ export function compareWithVerse(quoted: string, verse: VerseHit): WordingCheck 
     const w = compareWithText(quoted, verse, s.text, false);
     if (w.distance < best.distance) best = { ...w, script: s.script };
   }
-  return best;
+  return best.exact ? best : withQiraat(best, verse.qiraat ?? []);
+}
+
+/** A changed word that another canonical reading has is that reading, not a mistake: it leaves the list of differences
+ *  and is named with its readers; the quote is exact when nothing else is left. */
+function withQiraat(w: WordingCheck, variants: QiraaVariant[]): WordingCheck {
+  if (!variants.length) return w;
+  const replaced = w.diffs.flatMap((d, i) => (d.op === "replaced" ? [{ i, typed: d.typed, correct: d.correct }] : []));
+  const { explained, rest } = explainByQiraat(replaced, variants);
+  if (!explained.length) return w;
+  const drop = new Set(replaced.filter((_, k) => !rest.includes(k)).map((d) => d.i));
+  const diffs = w.diffs.filter((_, i) => !drop.has(i));
+  return { ...w, exact: diffs.length === 0, diffs, distance: w.distance * (diffs.length / w.diffs.length), qiraat: explained };
 }
 
 /**
@@ -372,8 +389,10 @@ export function joinVerses(verses: VerseHit[]): VerseHit {
     const texts = verses.map((v) => v.scripts?.find((s) => s.script === script)?.text);
     return texts.every((t): t is string => Boolean(t)) ? [{ script, text: join(texts) }] : [];
   });
+  const qiraat = verses.flatMap((v) => v.qiraat ?? []);
   return {
     ...verses[0],
+    ...(qiraat.length ? { qiraat } : {}),
     text_uthmani: join(verses.map((v) => v.text_uthmani)),
     text_clean: verses.map((v) => v.text_clean).join(" "),
     score: Math.min(...verses.map((v) => v.score)),
@@ -398,5 +417,24 @@ export async function fetchVerseScripts(keys: { surah: number; ayah: number }[],
     const k = `${r.surah}:${r.ayah}`;
     out.set(k, [...(out.get(k) ?? []), { script: r.script, text: r.text }]);
   }
+  return out;
+}
+
+/** The other readings' words (quran_qiraat) of the given verses, by "surah:ayah". A reading that runs across two verses
+ *  («الرحيم مالك», 1:3–4) is stored under the first, so each verse also gets the rows of the verse before it. */
+export async function fetchVerseQiraat(keys: { surah: number; ayah: number }[], cfg: RestConfig | null = publicConfig()): Promise<Map<string, QiraaVariant[]>> {
+  const out = new Map<string, QiraaVariant[]>();
+  const wanted = [...new Map(keys.flatMap((k) => [k, { surah: k.surah, ayah: k.ayah - 1 }]).filter((k) => k.ayah >= 1).map((k) => [`${k.surah}:${k.ayah}`, k])).values()];
+  if (!wanted.length) return out;
+  if (!cfg) throw new Error("Supabase is not configured");
+  const or = wanted.map((k) => `and(surah.eq.${k.surah},ayah.eq.${k.ayah})`).join(",");
+  const res = await fetch(`${cfg.url.replace(/\/+$/, "")}/rest/v1/quran_qiraat?select=surah,ayah,hafs_word,variant_word,variant_text,readers&or=(${or})`, {
+    headers: restHeaders(cfg.key),
+    signal: AbortSignal.timeout(5_000),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`quran_qiraat: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+  const rows = (await res.json()) as QiraaVariant[];
+  for (const k of keys) out.set(`${k.surah}:${k.ayah}`, rows.filter((r) => r.surah === k.surah && (r.ayah === k.ayah || r.ayah === k.ayah - 1)));
   return out;
 }
