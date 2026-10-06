@@ -24,13 +24,13 @@ Implemented locally and covered by automated checks. Production rollout and real
 Candidate ranking still starts with word edit distance. Ties are now resolved by normalized character edit distance over the aligned quotation, before the retrieval score. Alternatives must also be at least as close in characters as the top candidate, within the existing word-distance margin. This removes the unrelated «ولا تقربوا الفواحش» and «ولا تقربوا الزنا» alternatives beside «ولا تقربوا الصلاة», while keeping identical phrases found in several verses. No new similarity threshold or scholarly verdict was introduced. This is a retrieval heuristic checked against development examples; broader held-out evaluation of candidate recall remains necessary.
 
 These rules decide what a user sees. They are **deterministic code**, not model output. The scholarly decisions
-in them (the grade scheme, the circulating-texts list) were made by the project's hadith specialist.
+in them (the grade scheme, and which texts the circulating-texts list holds) were made by the project's hadith specialist. Every verdict itself comes from an approved source.
 
 ## 4.1 Order of authority
 
 For each claim, evidence is taken in this order:
 
-1. **The specialist's reviewed list** of circulating texts (`circulating_sayings`).
+1. **The circulating-texts list** (`circulating_sayings`): well-known texts and their Urdu wordings, with the verdict, its author and the reference copied verbatim from Dorar's results.
 2. **The Quran text** (for verse claims).
 3. **Dorar al-Saniyya** — the verdicts of the muhaddithun, read through the grade map.
 
@@ -43,15 +43,15 @@ If none applies, the claim is **not found** and is referred.
 | آية صحيحة النقل | Verse quoted correctly | Mushaf text |
 | آية منقولة بخطأ | Verse quoted with wrong wording; correct text shown with surah and verse | Mushaf text |
 | آية (نص مترجم) | A translated verse; the approved translation is shown for comparison | Mushaf + approved translation |
-| مقبول (صحيح أو حسن) | Accepted (sahih or hasan) | Dorar verdicts via grade map, or specialist's list |
+| مقبول (صحيح أو حسن) | Accepted (sahih or hasan) | Dorar verdicts via grade map (directly, or as copied into the circulating-texts list) |
 | ضعيف | Weak | Same |
 | شديد الضعف أو لا أصل له | Very weak, or has no basis | Same |
 | غير حاسم | Not decisive — the evidence does not settle it; all verdicts are shown with their authors | Same |
 | لم يُعثر عليه — إحالة | Not found — referred to a specialist | No matching evidence |
 | فتوى أو حالة شخصية — إحالة | Fatwa or personal case — referred | Governance level د |
 
-The specialist's list may also carry its own status for a text (for example a saying wrongly attributed to a
-scholar); that status is shown as written by the specialist.
+The list carries no verdict of the team's own. Sayings wrongly attributed to scholars are not in it: they are looked
+up in Dorar and Turath like any other text.
 
 ## 4.3 Quran rules
 

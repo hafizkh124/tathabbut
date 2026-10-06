@@ -34,7 +34,7 @@ Next.js web app ──► POST /api/verify
 | Dorar client | `src/lib/dorar.ts`, `lookup.ts`, `dorarCache.ts` | API call, HTML parsing, cache-first lookup, stale fallback |
 | Hadith matching | `src/lib/hadithMatch.ts` | Candidate selection and grade summary per narration |
 | Grade map | `src/lib/gradeMap.ts` | Specialist's rules from verdict wording to grade |
-| Circulating texts | `src/lib/sayingsMatch.ts`, `sayingsSheet.ts`, `scripts/load-sayings.ts` | Match against and load the specialist's list |
+| Circulating texts | `src/lib/sayingsMatch.ts`, `sayingsSheet.ts`, `scripts/load-sayings.ts` | Match against and load the circulating-texts list |
 | Origin tracker (experimental) | `src/lib/originTracker.ts`, `src/app/api/origin/route.ts` | Public digital traces of a viral claim; informational only — its links are search results, never a source for a verdict or attribution |
 | Dorar relay | `worker/` (Cloudflare Worker) | Forwards Dorar API calls from a network location Dorar accepts |
 | Data scripts | `scripts/` | Download and ingest Quran data, warm and upload the Dorar cache |
@@ -47,7 +47,7 @@ Schema in `supabase/migrations/`.
 |---|---|---|
 | `quran_verses` | Hafs mushaf text + normalized search text | 6,236 |
 | `quran_translations` | Urdu (Junagarhi) and English (Hilali–Khan); cleaned text plus raw text kept unshown | 12,472 |
-| `circulating_sayings` | Specialist's list: text, status, verdict, verdict author, reference, correct text, notes | ≈100–150 (55 loaded so far) |
+| `circulating_sayings` | Circulating texts and their Urdu wordings, with the verdict, its author and reference copied from Dorar's results, correct text, notes | 55 |
 | (no table) glossary | The 10 sample terms of the package's Jamhara glossary are a fixed list in `src/lib/translate.ts`, used as approved equivalents when book excerpts are machine-translated | 10 |
 | `dorar_cache` | Raw Dorar responses per normalized query, with fetch time; private (service key only) | As queried |
 | `turath_cache` | The answer to a Turath lookup per normalized query and kind (hadith, scholar_quote, fiqh), 30-day TTL; private (service key only) | As queried |
