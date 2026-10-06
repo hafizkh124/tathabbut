@@ -1,0 +1,21 @@
+# Runs on every push and pull request. With branch protection on master requiring this check, a change that brings back
+# removed code (for example a Quran comparison that reads «قال» as «قل») or forbidden data cannot be merged.
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-published-files.mjs
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - run: npx vitest run
