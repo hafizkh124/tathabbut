@@ -95,6 +95,7 @@ For each claim return:
 - question_intent (only for kind "question"): "evidence" when the user requests a hadith/reference proving a SPECIFIC stated proposition. Copy that proposition character for character into text_as_written and arabic_span if Arabic; translate only that proposition for arabic_translation, preserving its day, quantities and promised benefit. For example, asking for a sahih hadith that eating watermelon on Mondays cures all eye diseases is a source request for that precise claim, not a fiqh question. Do not replace it with a generic topic about watermelon. A question asking for a ruling or fatwa is "ruling". A request with no specific proposition stays "ruling". Never invent a supporting hadith.
 - question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
 - topic_ar (only for kind "question"): the fiqh topic of the question as the title of a chapter in a fiqh book, in Arabic, two or three words, naming the matter only and not starting with «حكم» or «أحكام» (for example «صلاة الجمعة للمسافر», «سجود السهو», «طلاق الغضبان»). It must contain no name, no number, no detail of the asker's story and no answer or ruling.
+Verses of the Quran quoted one after the other (consecutive verses, with or without verse numbers between them) are ONE claim of kind "quran"; verses quoted in different places of the post, or with other text between them, are separate claims.
 Never judge whether a claim is authentic. Never add a claim that is not in the post.
 
 POST:
@@ -115,8 +116,16 @@ const loose = (s: string) =>
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
-/** Leading/trailing punctuation the model may include or drop (quotes, «», ۔ ، : etc.). */
-const trimPunct = (s: string) => squash(s).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{M}\p{N}]+$/gu, "");
+/**
+ * Leading/trailing punctuation the model may include or drop (quotes, «», ۔ ، : etc.). A verse number «﴿٤﴾» at the end
+ * keeps its closing bracket: it is part of the quote, and the post shows it.
+ */
+const trimPunct = (s: string) => {
+  const all = squash(s);
+  const t = all.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{M}\p{N}]+$/gu, "");
+  const unclosed = (t.match(/﴿/g)?.length ?? 0) > (t.match(/﴾/g)?.length ?? 0);
+  return unclosed && all.slice(all.indexOf(t) + t.length).startsWith("﴾") ? `${t}﴾` : t;
+};
 
 function findIn(haystack: string, needle: string): "exact" | "loose" | null {
   const n = trimPunct(needle);

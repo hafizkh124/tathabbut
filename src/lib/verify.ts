@@ -8,7 +8,7 @@ import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
-import { compareWithVerse, searchForm, type VerseHit, type WordingCheck } from "./quranCheck";
+import { compareWithVerse, findVerseRuns, joinVerses, looksCopiedFromMushaf, searchForm, type VerseHit, type VerseScriptText, type WordingCheck } from "./quranCheck";
 
 import { STATES, stateOfVerse, type State } from "./states";
 import { similarSaying, similarNarrations, type SimilarExpression } from "./similarExpressions";
@@ -41,7 +41,7 @@ export interface ExternalUrls {
 export interface VerseView {
   surah: number;
   ayah: number;
-  /** the last verse shown when the adjoining verse is shown with it (a context cut) */
+  /** the last verse, when several are shown: a quote of consecutive verses, or the adjoining verse of a context cut */
   endAyah?: number;
   surahName: string;
   text: string;
@@ -70,6 +70,11 @@ export interface VerifiedClaim {
 
 export interface VerifyDeps {
   matchVerses: (quoted: string) => Promise<VerseHit[]>;
+  /** The verses inside a paste of several verses (match_verses_in_text). Without it such a paste is not split. */
+  matchVersesInText?: (quoted: string) => Promise<VerseHit[]>;
+  /** The stored Uthmani and IndoPak texts of verses (quran_verse_scripts). Without it quotes are compared with the
+   *  standard text only. */
+  verseScripts?: (keys: { surah: number; ayah: number }[]) => Promise<Map<string, VerseScriptText[]>>;
   matchSayings: (query: string) => Promise<SayingHit[]>;
   lookupDorar: (query: string) => Promise<LookupOutcome>;
 }
@@ -85,27 +90,45 @@ const MAX_VERSE_DISTANCE = 0.5;
 
 const hasArabic = (s: string) => /[ء-ي]/.test(s);
 
-function verseView(v: VerseHit, wording: WordingCheck | undefined): VerseView {
+/** The mushaf text shown with a result: in the script the quote was compared with, so its corrections read in place. */
+const shownText = (v: VerseHit, wording: WordingCheck | undefined) => v.scripts?.find((s) => s.script === wording?.script)?.text ?? v.text_uthmani;
+
+/** The verses with their stored scripts, when they can be fetched; as they are otherwise (the standard text decides). */
+async function withScripts(hits: VerseHit[], deps: VerifyDeps): Promise<VerseHit[]> {
+  if (!deps.verseScripts || !hits.length) return hits;
+  const byKey = await deps.verseScripts(hits.map((h) => ({ surah: h.surah, ayah: h.ayah }))).catch(() => null);
+  return byKey ? hits.map((h) => ({ ...h, scripts: byKey.get(`${h.surah}:${h.ayah}`) ?? [] })) : hits;
+}
+
+function verseView(v: VerseHit, wording: WordingCheck | undefined, lastAyah?: number): VerseView {
+  const endAyah = lastAyah ?? wording?.contextContinuation?.endAyah;
   return {
     surah: v.surah,
     ayah: v.ayah,
     surahName: v.surah_name_ar,
-    text: v.text_uthmani.replace(/﻿/g, "") + (wording?.contextContinuation ? ` ${wording.contextContinuation.text}` : ""),
-    ...(wording?.contextContinuation ? { endAyah: wording.contextContinuation.endAyah } : {}),
+    text: shownText(v, wording).replace(/﻿/g, "") + (wording?.contextContinuation ? ` ${wording.contextContinuation.text}` : ""),
+    ...(endAyah ? { endAyah } : {}),
     wording,
     externalUrls: {
-      quranCom: `https://quran.com/${v.surah}/${v.ayah}`,
+      quranCom: `https://quran.com/${v.surah}/${v.ayah}${lastAyah ? `-${lastAyah}` : ""}`,
       quranpedia: `https://quranpedia.net/quran/${v.surah}:${v.ayah}`,
     },
   };
 }
 
-function verseResult(claim: Claim, v: VerseHit, wording: WordingCheck | undefined, notes: string[], candidates?: VerseView[]): VerifiedClaim {
+function verseResult(
+  claim: Claim,
+  v: VerseHit,
+  wording: WordingCheck | undefined,
+  notes: string[],
+  candidates?: VerseView[],
+  lastAyah?: number,
+): VerifiedClaim {
   return {
     claim,
     state: stateOfVerse(wording),
     basis: "quran",
-    verse: { ...verseView(v, wording), ...(candidates && candidates.length > 1 ? { candidates } : {}) },
+    verse: { ...verseView(v, wording, lastAyah), ...(candidates && candidates.length > 1 ? { candidates } : {}) },
     notes,
   };
 }
@@ -136,7 +159,7 @@ function characterDistance(quoted: string, correctText: string): number {
 async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): Promise<VerifiedClaim | null> {
   const quoted = claim.arabicSpan;
   if (quoted && !claim.queryIsTranslation) {
-    const hits = (await deps.matchVerses(quoted)).filter((h) => h.score >= minScore);
+    const hits = await withScripts((await deps.matchVerses(quoted)).filter((h) => h.score >= minScore), deps);
     const ranked = hits
       .map((v) => ({ v, w: compareWithVerse(quoted, v) }))
       .filter((r) => r.w.distance <= MAX_VERSE_DISTANCE)
@@ -157,6 +180,84 @@ async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): P
   return null;
 }
 
+/** A paste is looked at as several verses only from this many words. */
+const RUNS_MIN_WORDS = 6;
+/** For a claim not presented as Quran, the verses found must cover all but this share of its words. */
+const RUNS_MAX_LEFT_OVER = 0.1;
+
+/** One part of a claim's Arabic wording, checked on its own. */
+const partOf = (claim: Claim, text: string): Claim => ({ ...claim, textAsWritten: text, arabicSpan: text, query: text });
+
+/** How many verses a set of results shows. */
+const versesShown = (rs: VerifiedClaim[]) => rs.reduce((n, r) => n + (r.verse ? (r.verse.endAyah ?? r.verse.ayah) - r.verse.ayah + 1 : 0), 0);
+
+/**
+ * A paste of several verses (src/lib/quranCheck.ts findVerseRuns): each run of consecutive verses is compared with the
+ * quote as one text, so a changed word anywhere in it is still reported. A stretch between runs is checked as a verse
+ * of its own (a verse quoted in part, a verse from elsewhere); if it is none, it is compared with the run before it
+ * (or after it), where it shows as added words. One result per run or verse, in the order of the post; null when no
+ * run is found. A claim not presented as Quran is split only when the verses cover nearly all of it.
+ */
+async function checkAsVerseRuns(claim: Claim, deps: VerifyDeps, minScore: number, presentedAsQuran: boolean): Promise<VerifiedClaim[] | null> {
+  const quoted = claim.arabicSpan;
+  if (!quoted || claim.queryIsTranslation || !deps.matchVersesInText || wordCount(quoted) < RUNS_MIN_WORDS) return null;
+  // The search failing (migration 008 not applied, the database unreachable) leaves the one-verse result as it was.
+  const inText = await deps.matchVersesInText(quoted).catch(() => null);
+  if (!inText) return null;
+  const segments = findVerseRuns(quoted, await withScripts(inText, deps));
+  if (!segments.some((s) => s.kind === "run")) return null;
+
+  type Part = { start: number; end: number; verses?: VerseHit[]; result?: VerifiedClaim };
+  const parts: Part[] = [];
+  for (const s of segments) {
+    if (s.kind === "run") parts.push({ start: s.start, end: s.end, verses: s.verses });
+    else {
+      const text = quoted.slice(s.start, s.end);
+      const alone = wordCount(text) >= 2 ? await checkAsVerse(partOf(claim, text), deps, minScore) : null;
+      parts.push({ start: s.start, end: s.end, ...(alone ? { result: alone } : {}) });
+    }
+  }
+  // Words that are no verse join the run beside them: compared with it, they show as added words, never dropped.
+  let leftOver = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.verses || p.result) continue;
+    const run = parts[i - 1]?.verses ? parts[i - 1] : parts[i + 1]?.verses ? parts[i + 1] : undefined;
+    leftOver += wordCount(quoted.slice(p.start, p.end));
+    if (run) {
+      run.start = Math.min(run.start, p.start);
+      run.end = Math.max(run.end, p.end);
+      parts.splice(i--, 1);
+    }
+  }
+  if (!presentedAsQuran && leftOver > RUNS_MAX_LEFT_OVER * wordCount(quoted)) return null;
+
+  const whole = parts.length === 1;
+  return parts.map((p): VerifiedClaim => {
+    const text = quoted.slice(p.start, p.end);
+    if (p.result) return p.result;
+    if (!p.verses) return { claim: partOf(claim, text), state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة لهذا الجزء"] };
+    const span = joinVerses(p.verses);
+    const last = p.verses[p.verses.length - 1].ayah;
+    return verseResult(whole ? claim : partOf(claim, text), span, compareWithVerse(text, span), [], undefined, p.verses.length > 1 ? last : undefined);
+  });
+}
+
+/**
+ * The verse check for a claim: one verse first; when that finds nothing, or a verse that does not fit exactly, the
+ * quote is looked at as several verses, and that reading is kept when the one-verse check found nothing or when it
+ * finds more than one verse. A claim not presented as Quran is looked at as several verses only when it was copied
+ * from a mushaf (verse numbers «﴿١﴾» or the Uthmani script's signs), so ordinary hadith do not cost a second search.
+ */
+async function checkQuran(claim: Claim, deps: VerifyDeps, minScore: number, presentedAsQuran: boolean): Promise<VerifiedClaim[] | null> {
+  const single = await checkAsVerse(claim, deps, minScore);
+  if (single?.verse?.wording?.exact) return [single];
+  if (!presentedAsQuran && !(claim.arabicSpan && looksCopiedFromMushaf(claim.arabicSpan))) return single ? [single] : null;
+  const runs = await checkAsVerseRuns(claim, deps, minScore, presentedAsQuran);
+  if (runs && (!single || versesShown(runs) > 1)) return runs;
+  return single ? [single] : null;
+}
+
 function fromSaying(claim: Claim, s: SayingHit): VerifiedClaim {
   const query = encodeURIComponent(s.text_ar);
   return {
@@ -174,12 +275,18 @@ function fromSaying(claim: Claim, s: SayingHit): VerifiedClaim {
   };
 }
 
+/** The first result for a claim (a paste of verses from several places gives more: see verifyClaimParts). */
 export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim> {
+  return (await verifyClaimParts(claim, deps))[0];
+}
+
+/** The results for a claim: one, or one per verse or run of verses when the claim quotes verses from several places. */
+export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim[]> {
   if (claim.kind === "question") {
     // A general question with a usable topic is shown as fiqh (the books answer it, the screen asks them); a personal case, or
     // a general one the model could not give a topic for, is a referral. In doubt it is personal (specialist's rule).
     const general = claim.scope === "general" && Boolean(claim.topic);
-    return { claim, state: general ? STATES.fiqh : STATES.fatwa, basis: "kind", notes: [general ? "سؤال فقهي عام: أقوال المذاهب" : "سؤال عن حكم أو حالة: يُحال إلى أهل العلم"] };
+    return [{ claim, state: general ? STATES.fiqh : STATES.fatwa, basis: "kind", notes: [general ? "سؤال فقهي عام: أقوال المذاهب" : "سؤال عن حكم أو حالة: يُحال إلى أهل العلم"] }];
   }
 
   // Urdu is written in Arabic script too, so "has Arabic letters" is not enough: search only with the post's
@@ -187,8 +294,8 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   const canSearch = Boolean(claim.arabicSpan) || (claim.queryIsTranslation && hasArabic(claim.query));
   // A claimed verse must never receive a hadith grade through a fuzzy saying match.
   if (claim.kind === "quran") {
-    const verse = await checkAsVerse(claim, deps, VERSE_MIN);
-    return verse ?? { claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] };
+    const verses = await checkQuran(claim, deps, VERSE_MIN, true);
+    return verses ?? [{ claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] }];
   }
   // 1) the specialist's own list
   let nearbySayings: SimilarExpression[] = [];
@@ -200,21 +307,21 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
     const covers = (h: SayingHit) => !claim.queryIsTranslation || wordCount(claim.query) >= TRANSLATION_COVERAGE * wordCount(h.text_ar);
     for (const h of hits) if (h.score >= SAYING_MIN && !covers(h) && nearbySayings.length < 3) nearbySayings.push(similarSaying(h));
     const [s] = hits.filter((h) => h.score >= SAYING_MIN && covers(h));
-    if (s && (claim.kind !== "scholar_quote" || s.claimed_attribution)) return fromSaying(claim, s);
+    if (s && (claim.kind !== "scholar_quote" || s.claimed_attribution)) return [fromSaying(claim, s)];
   }
   // A scholar's saying that is not in the specialist's list is still looked up: Dorar and the hadith books record the
   // sayings of many scholars, and its muhaddith's words are shown as they are (specialist's decision, 2026-10-04).
 
   // 2) the Quran: a claimed verse, or an Arabic text that is in fact a verse
   if (claim.arabicSpan && !claim.queryIsTranslation) {
-    const r = await checkAsVerse(claim, deps, VERSE_AS_HADITH_MIN);
-    if (r) return { ...r, notes: [...r.notes, "النص آية من القرآن وليس حديثا"] };
+    const rs = await checkQuran(claim, deps, VERSE_AS_HADITH_MIN, false);
+    if (rs) return rs.map((r) => ({ ...r, notes: [...r.notes, "النص آية من القرآن وليس حديثا"] }));
   }
 
   // 3) Dorar
-  if (!canSearch) return { claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] };
+  if (!canSearch) return [{ claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] }];
   const looked = await deps.lookupDorar(claim.query);
-  if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings };
+  if (!looked.ok) return [{ claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings }];
   const rawNarrations = selectRelevant(claim.query, looked.results);
   const notes: string[] = [];
   if (!rawNarrations.length) {
@@ -226,12 +333,12 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
       seen.add(key);
       return true;
     }).slice(0, 3);
-    return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"], similarExpressions };
+    return [{ claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"], similarExpressions }];
   }
   const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
   const summary = summarizeGrades(rawNarrations);
   const encodedQuery = encodeURIComponent(claim.query);
-  return {
+  return [{
     claim,
     state: summary.grade as Grade,
     basis: "dorar",
@@ -246,22 +353,23 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
       },
     },
     notes,
-  };
+  }];
 }
 
-/** Verifies all claims of a post, a few at a time (Dorar is reached through one relay). */
+/** Verifies all claims of a post, a few at a time (Dorar is reached through one relay), in the post's order; a claim
+ *  quoting verses from several places gives one result per verse or run of verses. */
 export async function verifyClaims(claims: Claim[], deps: VerifyDeps, concurrency = 3): Promise<VerifiedClaim[]> {
-  const out: VerifiedClaim[] = new Array(claims.length);
+  const out: VerifiedClaim[][] = new Array(claims.length);
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(concurrency, claims.length) }, async () => {
       while (next < claims.length) {
         const i = next++;
-        out[i] = await verifyClaim(claims[i], deps);
+        out[i] = await verifyClaimParts(claims[i], deps);
       }
     }),
   );
-  return out;
+  return out.flat();
 }
 
 export type { DorarResult };

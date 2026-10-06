@@ -1,6 +1,6 @@
 // POST /api/report  { "text": "<the claim>", "query": "<what the books were asked>", "state": "<result shown>", "locale": "ar" | "en" | "ur" }
 //   →  { "ok": true }
-// «Is this result wrong?»: the report is stored for the team (table reports, migration 007). Nothing about the reader is kept.
+// «Is this result wrong?»: the report is stored for the team (table reports, migration 009). Nothing about the reader is kept.
 import { restHeaders, serviceConfig } from "@/lib/supabaseRest";
 
 export const dynamic = "force-dynamic";

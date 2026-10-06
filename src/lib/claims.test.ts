@@ -78,6 +78,17 @@ describe("checkClaims — the model points, the post decides", () => {
     expect(claims[0].warnings[0]).toContain("altered");
   });
 
+  it("keeps the closing bracket of a verse number at the end of a quote (live case 2026-10-06)", () => {
+    const post = "قال تعالى: قُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾\nوقال: إن مع العسر يسرا.";
+    const quote = "قُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾";
+    const { claims } = checkClaims(post, [{ kind: "quran", text_as_written: quote, arabic_span: quote }]);
+    expect(claims[0].textAsWritten).toBe(quote);
+    expect(claims[0].arabicSpan).toBe(quote);
+    // A verse only wrapped in the brackets loses both, as before.
+    const wrapped = checkClaims("قال تعالى: ﴿إن مع العسر يسرا﴾", [{ kind: "quran", text_as_written: "﴿إن مع العسر يسرا﴾" }]);
+    expect(wrapped.claims[0].textAsWritten).toBe("إن مع العسر يسرا");
+  });
+
   it("removes duplicates, keeps 'question' and 'other', and maps an unknown kind to other", () => {
     const post = "کیا یہ حدیث صحیح ہے؟ یہ پیغام دس لوگوں کو بھیجو، جنت ملے گی۔";
     const { claims } = checkClaims(post, [
