@@ -5,7 +5,9 @@ until then, every number in these documents is a **target**.
 
 ## 7.1 Test set
 
-- **200 texts**, prepared and labelled by the project's hadith specialist **before** the tool is run on them.
+- **Actual sets (see [results](results.md)):** 104 texts in Arabic, Urdu and English prepared and labelled by the project's
+  hadith specialist **before** the tool was run on them, and an independent set of 195 prompts in 13 categories.
+  The 200-text plan below was the starting target.
 - Each expected answer is verified against the book and number.
 - The test set is kept **separate from the database**: its answers live only in the test sheet
   (`Tathabbut_TestSet.xlsx`), not in `circulating_sayings`, otherwise the tool would simply return its own answers.
@@ -32,7 +34,7 @@ Planned composition:
 | Cost per verification | Tokens and cost per call, logged by the evaluation script | Measured, reported in the business model |
 | Claim extraction recall | Share of claims in a post that are found (e.g. chain-message lines must not be dropped) | Measured |
 
-## 7.3 Baseline comparison
+## 7.3 Baseline comparison (planned, not run for this submission)
 
 The same texts are given to **ChatGPT** and **Gemini** (plain chat, no retrieval) and compared with manual search on:
 time per text, fabricated attributions, abstention when no reference exists, and support for Urdu/translated text.

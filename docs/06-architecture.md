@@ -35,7 +35,7 @@ Next.js web app ──► POST /api/verify
 | Hadith matching | `src/lib/hadithMatch.ts` | Candidate selection and grade summary per narration |
 | Grade map | `src/lib/gradeMap.ts` | Specialist's rules from verdict wording to grade |
 | Circulating texts | `src/lib/sayingsMatch.ts`, `sayingsSheet.ts`, `scripts/load-sayings.ts` | Match against and load the specialist's list |
-| Origin tracker (experimental) | `src/lib/originTracker.ts`, `src/app/api/origin/route.ts` | Public digital traces of a viral claim; informational only |
+| Origin tracker (experimental) | `src/lib/originTracker.ts`, `src/app/api/origin/route.ts` | Public digital traces of a viral claim; informational only — its links are search results, never a source for a verdict or attribution |
 | Dorar relay | `worker/` (Cloudflare Worker) | Forwards Dorar API calls from a network location Dorar accepts |
 | Data scripts | `scripts/` | Download and ingest Quran data, warm and upload the Dorar cache |
 

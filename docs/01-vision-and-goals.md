@@ -58,7 +58,7 @@ When the evidence is missing or confidence is low, Tathabbut **abstains and refe
 - **G4 — Reach:** work across Arabic, Urdu and English, including translated and paraphrased text.
 - **G5 — Shareability:** give the user an answer they can paste back into the group.
 
-### Measurable targets (to be measured on the 200-text test set; see [Evaluation plan](07-evaluation-plan.md))
+### Measurable targets (measured on the 104-text specialist set and the 195-prompt independent set; see [Results](results.md))
 
 | Metric | Target |
 |---|---|

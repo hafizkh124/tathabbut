@@ -113,7 +113,7 @@ are always shown beside it.
 | Level | Scope | Required handling | In Tathabbut |
 |---|---|---|---|
 | **أ** — settled core information | Quran, authentic approved hadith, pillars of Islam and iman, core seerah, ethics | Direct answer documented with its source | Verse found; hadith graded مقبول — shown with full source |
-| **ب** — explanation and argument | Concepts, comparisons, objectives of the Sharia, general questions | Answer from approved material, show the reference, avoid certainty where disagreement is possible | Terminology from the approved glossary; explanations kept separate from source text |
+| **ب** — explanation and argument | Concepts, comparisons, objectives of the Sharia, general questions | Answer from approved material, show the reference, avoid certainty where disagreement is possible | Terminology from the approved glossary; explanations kept separate from source text; a question about a text's meaning is referred to the approved commentary |
 | **ج** — disputed or highly sensitive | Fiqh disagreement, detailed creed, controversial history | Restricted answer, state the disagreement, or refer | «غير حاسم»: all verdicts shown with their authors, no merged ruling |
 | **د** — fatwa or personal case | Ruling on an individual case, validity of a contract or act of worship, family disputes, legal/medical matters with a religious effect | No independent ruling; general information and referral to a qualified body | «فتوى أو حالة شخصية — إحالة» |
 
