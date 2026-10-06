@@ -200,9 +200,10 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
         {/* FR-44: an AI tool that does not issue fatwas, said where the person presses Check */}
         <p className="nastaliq-pad -mt-2 text-center text-[12px] text-muted lg:-mt-3" role="note">{t("notice")}</p>
 
-        <div className="space-y-2 lg:flex lg:flex-wrap lg:items-center lg:gap-2.5 lg:space-y-0">
-          <p className="text-[13px] text-muted lg:me-1.5">{t("home.examples")}</p>
-          <div className="flex flex-wrap gap-2 lg:contents">
+        {/* the label on its own line, the chips centred under it */}
+        <div className="space-y-2.5">
+          <p className="text-center text-[13px] text-muted">{t("home.examples")}</p>
+          <div className="flex flex-wrap justify-center gap-2 lg:gap-2.5">
             {EXAMPLES.map((e) => (
               <button
                 key={e.key}

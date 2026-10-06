@@ -190,6 +190,11 @@ html[lang="ur"] body {
   font-family: var(--font-nastaliq), var(--font-readex), serif;
   line-height: 2.2;
 }
+/* Outside any layer, so it wins over a component's tighter leading-* (set for Arabic and English): two wrapped lines of
+   Nastaliq overlap at those, so they get the body's own Urdu line height. The Quran and hadith in Amiri keep theirs. */
+html[lang="ur"] :is(h1, h2, h3, p, li):not(.quran, .font-quran) {
+  line-height: 2.2;
+}
 html[lang="ur"] .nastaliq-pad {
   padding-top: 0.5em;
   line-height: 2.1;
