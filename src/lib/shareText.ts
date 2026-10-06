@@ -56,7 +56,7 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
     if (r.verse?.wording?.contextOmitted) lines.push(translate(locale, "verse.contextWarning"));
     if (r.verse && (r.verse.wording?.contextOmitted || r.verse.wording?.exact === false)) lines.push(`${translate(locale, "label.mushaf")}: ${r.verse.text}`);
     if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
-    if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fatwa.warn"));
+    if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fiqh.refer"));
     return lines.join("\n");
   });
   return `${blocks.join("\n\n")}\n\n${translate(locale, "share.footer")}: ${APP_URL}`;

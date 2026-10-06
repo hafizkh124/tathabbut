@@ -141,7 +141,17 @@ function ReferenceCard({ r: ref_, phrase, showCategory = true }: { r: TurathRefe
 
 /** The passages of the books that hold the claim's text, under the result. It never changes the result by itself: the state is
  *  changed only by the server's patch (turathFallback.ts), and no passage is read as a verdict. */
-export function TurathBox({ r, title = "turath.title", note, phrase, startOpen }: { r: ClaimResult; title?: Key; note?: Key; phrase?: string; startOpen?: boolean }) {
+export function TurathBox({ r, title = "turath.title", note, phrase, startOpen, lead, intro }: {
+  r: ClaimResult;
+  title?: Key;
+  note?: Key;
+  phrase?: string;
+  startOpen?: boolean;
+  /** said above the closed section, only when it has passages to show */
+  lead?: React.ReactNode;
+  /** the first thing inside the open section */
+  intro?: React.ReactNode;
+}) {
   const { t, num } = useI18n();
   const [more, setMore] = useState(false);
   // Closed unless the books are the answer itself: the text was found only in them, or a general fiqh question (specialist, 2026-10-05).
@@ -164,6 +174,7 @@ export function TurathBox({ r, title = "turath.title", note, phrase, startOpen }
   const [shown, rest] = [turath.references.slice(0, SHOWN), turath.references.slice(SHOWN)];
   return (
     <div className="border-t border-line/60 pt-1">
+      {lead}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -179,6 +190,7 @@ export function TurathBox({ r, title = "turath.title", note, phrase, startOpen }
       </button>
       {open && (
         <div className="space-y-2 pb-1">
+          {intro}
           {note && <p className="text-[13px] text-muted">{t(note)}</p>}
           <ul className="space-y-2">
             {shown.map((ref_, i) => (
@@ -211,6 +223,6 @@ export function TurathBox({ r, title = "turath.title", note, phrase, startOpen }
  * citation and the kind of book it is (a school's fiqh, or fatwa collections). No school is preferred and nothing is summed up
  * (specialist, 2026-10-05). The question's own words never reach here, only its topic did, and the topic is what is marked.
  */
-export function FiqhBox({ r }: { r: ClaimResult }) {
-  return <TurathBox r={r} title="fiqh.title" note="fiqh.note" phrase={topicQuery(r.claim.topic ?? "")} startOpen={r.claim.scope === "general"} />;
+export function FiqhBox({ r, lead, intro }: { r: ClaimResult; lead?: React.ReactNode; intro?: React.ReactNode }) {
+  return <TurathBox r={r} title="fiqh.title" note="fiqh.note" phrase={topicQuery(r.claim.topic ?? "")} startOpen={r.claim.scope === "general"} lead={lead} intro={intro} />;
 }

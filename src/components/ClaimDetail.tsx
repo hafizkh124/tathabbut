@@ -342,11 +342,10 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         <p className="text-[14px] text-muted">{t("notfound.hint")}</p>
       </div>
     ) : tone === "fatwa" ? (
-      <div className="space-y-2">
-        <p role="note" className="rounded-xl border p-3 text-[14px] font-semibold leading-relaxed" style={{ background: "var(--t-weak-bg)", color: "var(--t-weak-fg)", borderColor: "var(--t-weak-bd)" }}>
-          {t("fatwa.warn")}
-        </p>
-        {r.claim.topic ? <p className="text-[14px]">{t("fiqh.topic", { topic: r.claim.topic })}</p> : <p className="text-base">{t("fatwa.body")}</p>}
+      // a personal case: the answer is to ask a mufti, so that comes first; the books are offered after it, closed
+      <div className="space-y-1">
+        <p className="text-[17px] font-semibold leading-relaxed text-ink">{t("fiqh.refer")}</p>
+        {!r.claim.topic && <p className="text-[14px] text-muted">{t("fatwa.body")}</p>}
       </div>
     ) : isQuestion && r.claim.topic ? (
       <p className="text-[14px]">{t("fiqh.topic", { topic: r.claim.topic })}</p>
@@ -391,8 +390,22 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       <SourceBox r={r} />
       {r.similarExpressions?.length ? <SimilarExpressions key={r.claim.textAsWritten} candidates={r.similarExpressions} /> : null}
 
-      {isQuestion ? <FiqhBox r={r} /> : <TurathBox r={r} />}
-      {tone === "fatwa" && r.claim.topic && <p className="text-[14px] font-semibold text-ink">{t("fiqh.refer")}</p>}
+      {isQuestion ? (
+        <FiqhBox
+          r={r}
+          lead={tone === "fatwa" && <p className="pt-2 text-[14px] text-muted">{t("fiqh.optional")}</p>}
+          intro={
+            tone === "fatwa" && (
+              <div className="space-y-1 rounded-xl border border-line bg-paper p-3 text-[14px]">
+                {r.claim.topic && <p>{t("fiqh.topic", { topic: r.claim.topic })}</p>}
+                <p className="font-semibold" style={{ color: "var(--t-weak-fg)" }}>{t("fatwa.warn")}</p>
+              </div>
+            )
+          }
+        />
+      ) : (
+        <TurathBox r={r} />
+      )}
 
       <div className="flex gap-2.5 pt-1">
         {tone === "notFound" ? (

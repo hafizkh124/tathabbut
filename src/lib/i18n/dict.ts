@@ -98,9 +98,14 @@ export const DICT = {
   "narrations.more": { ar: "نتائج أخرى ({n})", en: "Other results ({n})", ur: "دیگر نتائج ({n})" },
   "narrations.weakVariants": { ar: "طرق وأسانيد ضعيفة ({n})", en: "Weak chains ({n})", ur: "دیگر ضعیف اسناد ({n})" },
   "fatwa.warn": {
-    ar: "تنبيه قبل العمل: هذه معلومات علمية عامة فقط. والحكم في واقعة بعينها يرجع فيه إلى دار الإفتاء أو مفتٍ مؤهل، لأن الحكم يتعلق بالتفاصيل الكاملة للواقعة.",
-    en: "Before you act: this is general scholarly information only. A ruling on a particular case belongs to a Dar al-Ifta or a qualified mufti, because a ruling depends on the full details of the case.",
-    ur: "تنبیہ برائے عملی فتویٰ: یہ معلومات صرف عمومی علمی فہم کے لیے ہیں۔ کسی بھی انفرادی واقعے کے حتمی فیصلے کے لیے دار الافتاء یا مستند مفتیانِ کرام سے ذاتی رجوع لازم ہے، کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔",
+    ar: "تنبيه: هذه معلومات علمية عامة فقط. والحكم في واقعة بعينها يرجع فيه إلى دار الإفتاء أو مفتٍ مؤهل.",
+    en: "Note: this is general scholarly information only. A ruling on a particular case belongs to a Dar al-Ifta or a qualified mufti.",
+    ur: "تنبیہ: یہ معلومات صرف عمومی علمی فہم کے لیے ہیں۔ کسی بھی انفرادی واقعے کے حتمی فیصلے کے لیے دار الافتاء یا مستند مفتیانِ کرام سے ذاتی رجوع لازم ہے۔",
+  },
+  "fiqh.optional": {
+    ar: "ولمعلومات علمية عامة عن هذا الموضوع من كتب الفقه والفتاوى، افتح القسم أدناه.",
+    en: "For general scholarly information on this topic from the books of fiqh and fatwa, open the section below.",
+    ur: "اس موضوع پر کتبِ فقہ و فتاویٰ سے عمومی علمی معلومات کے لیے نیچے والا حصہ کھولیں۔",
   },
   "fiqh.topic": { ar: "الموضوع الذي بحثنا فيه: {topic}", en: "Topic searched: {topic}", ur: "جس موضوع پر تلاش کی گئی: {topic}" },
   "fiqh.refer": {

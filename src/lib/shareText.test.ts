@@ -77,9 +77,9 @@ describe("share text", () => {
     expect(text).toContain("آیت کا سیاق حذف ہوا ہے");
     expect(text).toContain("وأنتم سكارى");
   });
-  it("preserves the approved personal-case reason when sharing", () => {
+  it("tells the reader of a shared personal case to ask a mufti", () => {
     const r = { ...hadith, claim: { ...claim, kind: "question" as const, scope: "personal" as const } };
-    expect(buildShareText([r], "ur")).toContain("کیونکہ حکم کا تعلق واقعے کی مکمل تفصیل سے ہوتا ہے۔");
+    expect(buildShareText([r], "ur")).toContain("اپنے معتمد دار الافتاء یا مفتی سے رجوع کریں۔");
   });
   it("names the book and page for a hadith, and the surah and verse for the Quran", () => {
     expect(sourceLine(hadith, "ar")).toBe("السلسلة الضعيفة، 416");
