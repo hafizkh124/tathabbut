@@ -115,9 +115,10 @@ async function onceChat<T>(provider: string, name: string, prompt: string, opts:
   const p = PROVIDERS[provider];
   const url = p.url();
   const key = p.key();
-  // 400 so the chain moves on: this provider is not set up here, or cannot read a picture
-  if (!url || !key) throw new GeminiError(`${provider}: not configured`, 400);
-  if (opts.images?.length) throw new GeminiError(`${provider}: reads no pictures`, 400);
+  // 501 (not this one): the chain moves on, even from the first model, when this provider is not set up here or cannot
+  // read a picture
+  if (!url || !key) throw new GeminiError(`${provider}: not configured`, 501);
+  if (opts.images?.length) throw new GeminiError(`${provider}: reads no pictures`, 501);
   let res: Response;
   try {
     res = await f(url, {

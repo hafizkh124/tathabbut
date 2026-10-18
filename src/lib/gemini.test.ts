@@ -175,6 +175,9 @@ describe("generateJson", () => {
     resetQuotaMemory();
     const p = await generateJson("x", { schema, images: [{ mimeType: "image/png", data: "AA" }], fallbackModel: "groq:openai/gpt-oss-120b,gemini-2.5-flash" }, { fetch: pic, sleep: noSleep });
     expect(p.model).toBe("gemini-2.5-flash"); // a picture skips the provider that reads none
+    const first = vi.fn().mockResolvedValueOnce(ok({ a: 3 }));
+    const q = await generateJson("x", { schema, images: [{ mimeType: "image/png", data: "AA" }], model: "groq:openai/gpt-oss-120b", fallbackModel: "gemini-2.5-flash" }, { fetch: first, sleep: noSleep });
+    expect(q.model).toBe("gemini-2.5-flash"); // also when it is the first model
     vi.stubEnv("GROQ_API_KEY", "g");
     resetQuotaMemory();
     const limit = new Response('{"error":{"message":"Rate limit reached for model on tokens per day (TPD): Limit 200000"}}', { status: 429 });
