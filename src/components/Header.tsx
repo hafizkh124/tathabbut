@@ -2,6 +2,7 @@
 import React, { useSyncExternalStore } from "react";
 import { LOCALES, type Locale } from "@/lib/i18n/dict";
 import { useI18n } from "@/lib/i18n/i18n";
+import { useInstallPrompt } from "@/lib/pwa";
 import { LogoMark, Wordmark, type LogoMotion } from "./ui/Logo";
 import { Icon } from "./ui/Icon";
 
@@ -95,6 +96,27 @@ export function LangSwitch() {
   );
 }
 
+/** Install the app, shown only while the browser offers it (see useInstallPrompt): the words on a computer, a short one on a
+ *  phone, the icon alone on small phones, and nothing below 360px, where the header has no room (the browser menu still installs). */
+export function InstallButton() {
+  const { t } = useI18n();
+  const install = useInstallPrompt();
+  if (!install) return null;
+  return (
+    <button
+      type="button"
+      onClick={install}
+      title={t("install.button")}
+      aria-label={t("install.button")}
+      className="nastaliq-pad flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full border-[1.5px] border-brand px-3 text-[13px] font-semibold text-brand-ink hover:bg-brand-soft max-[400px]:w-10 max-[400px]:px-0 max-[359px]:hidden"
+    >
+      <Icon name="download" size={16} strokeWidth={1.9} />
+      <span className="max-[400px]:hidden sm:hidden">{t("install.short")}</span>
+      <span className="hidden sm:inline">{t("install.button")}</span>
+    </button>
+  );
+}
+
 export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHome?: () => void }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
@@ -104,6 +126,7 @@ export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHom
           <Wordmark size={24} />
         </button>
         <div className="flex items-center gap-1" translate="no">
+          <InstallButton />
           <ThemeToggle />
           <LangSwitch />
         </div>

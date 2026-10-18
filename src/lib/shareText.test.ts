@@ -98,14 +98,14 @@ describe("share text", () => {
   it("puts no source link in the shared text, only the app's address at the end (specialist, 2026-10-06)", () => {
     const text = buildShareText([verse], "ar");
     expect(text).not.toContain("quranpedia");
-    expect(text.trim().endsWith("تحقّق من النصوص قبل نشرها: https://tathabbut-rho.vercel.app")).toBe(true);
+    expect(text.trim().endsWith("تحقّق من النصوص قبل نشرها: https://tathabbut.alulama.org")).toBe(true);
   });
 
   it("keeps a list entry's web address out of the shared text", () => {
     const r = { claim, state: "قول منسوب خطأً إلى عالم", basis: "specialist-list", notes: [], saying: { reference: "موقع العلماء، 2023، https://alulama.org/x/", externalUrls: { dorar: "https://dorar.net/hadith/search?q=x" } } } as unknown as ClaimResult;
     const text = buildShareText([r], "ar");
     expect(text).toContain("المصدر: موقع العلماء، 2023");
-    expect(text).not.toContain("alulama.org");
+    expect(text).not.toContain("alulama.org/x");
     expect(text).not.toContain("dorar.net");
   });
 

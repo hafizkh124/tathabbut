@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Amiri, Noto_Nastaliq_Urdu, Readex_Pro } from "next/font/google";
 import { LocaleProvider } from "@/lib/i18n/i18n";
+import { APP_URL } from "@/lib/shareText";
 import "./globals.css";
 
 // UI (Arabic, English): Readex Pro, the same family the challenge's own site uses.
@@ -13,10 +14,14 @@ const nastaliq = Noto_Nastaliq_Urdu({ variable: "--font-nastaliq", subsets: ["ar
 const DESCRIPTION = "ذكاء اصطناعي ينقل من مصادر إسلامية معتبرة للتحقق من الآيات والأحاديث والأقوال المتداولة.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: "تَثَبُّت",
   description: DESCRIPTION,
   openGraph: { title: "تَثَبُّت · Tathabbut", description: DESCRIPTION, type: "website", locale: "ar", siteName: "تَثَبُّت" },
   twitter: { card: "summary_large_image", title: "تَثَبُّت · Tathabbut", description: DESCRIPTION },
+  // installed on an iPhone (Share → Add to Home Screen): iOS reads these, not the manifest's icons
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "تَثَبُّت", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

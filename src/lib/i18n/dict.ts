@@ -75,6 +75,8 @@ export const DICT = {
   },
   "home.voice": { ar: "صوت", en: "Voice", ur: "آواز" },
   "home.soon": { ar: "قريبًا", en: "Soon", ur: "جلد" },
+  "install.button": { ar: "ثبّت التطبيق", en: "Install app", ur: "ایپ انسٹال کریں" },
+  "install.short": { ar: "تثبيت", en: "Install", ur: "انسٹال" },
   "home.verify": { ar: "تحقّق", en: "Check", ur: "تصدیق کریں" },
   "home.examples": { ar: "جرّب مثالًا", en: "Try an example", ur: "ایک مثال آزمائیں" },
   "home.history": { ar: "السجل", en: "History", ur: "تاریخ" },

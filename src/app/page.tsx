@@ -14,6 +14,7 @@ import { LogoMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
+import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
@@ -134,6 +135,25 @@ export default function Home() {
     },
     [keepPreview],
   );
+
+  // Opened from the share sheet (manifest.ts): public/sw.js left the shared message or screenshot in a cache (?shared=1), or
+  // the fallback route passed the text in the address (?text=). Either is checked at once, as if pasted and Check pressed;
+  // the address is then cleaned, so a reload does not check it again.
+  useEffect(() => {
+    registerServiceWorker();
+    const params = new URLSearchParams(window.location.search);
+    const fromAddress = params.get("text");
+    if (!params.has("shared") && fromAddress === null) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const incoming = fromAddress !== null ? Promise.resolve({ text: fromAddress, image: null }) : takeShared();
+    incoming.then(({ text: shared, image }) => {
+      if (image) readPicture(image);
+      else if (shared) {
+        setText(shared);
+        verify(shared);
+      }
+    });
+  }, [verify, readPicture]);
 
   const toInput = useCallback(() => {
     run.current++;

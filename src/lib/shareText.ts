@@ -5,7 +5,7 @@ import { sahihAttribution } from "./sahihAttribution";
 import { matchedArabic } from "./matchedArabic";
 import { splitReferenceUrl } from "./viaLinks";
 
-export const APP_URL = "https://tathabbut-rho.vercel.app";
+export const APP_URL = "https://tathabbut.alulama.org";
 
 /** The data holds «سورة البقرة»; the sentence adds the word «سورة» itself, in the user's language. */
 export const plainSurah = (name: string) => name.replace(/^سورة\s+/, "");
