@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { track } from "@/lib/analytics";
 import type { ClaimResult } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { buildShareText, shareOrCopy, whatsappUrl, type ShareOutcome } from "@/lib/shareText";
@@ -35,6 +36,7 @@ export function ShareDialog({ open, onClose, claims }: { open: boolean; onClose:
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(buildShareText(chosen, locale));
+      track("copy", { n, states: chosen.map((c) => c.state), linked: chosen.every((c) => c.shareId) });
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
@@ -46,6 +48,7 @@ export function ShareDialog({ open, onClose, claims }: { open: boolean; onClose:
   };
   const share = async () => {
     const result = await shareOrCopy(buildShareText(chosen, locale));
+    track("share", { n, states: chosen.map((c) => c.state), linked: chosen.every((c) => c.shareId), outcome: result });
     if (result === "shared") onClose();
     else setOutcome(result);
   };

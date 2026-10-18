@@ -2,13 +2,15 @@
 // server writes them (table shared_claims, migration 011), so a link on our address always shows what the sources said;
 // nothing a reader sends is ever stored as a result. The id is a keyed hash of the stored result: the same result gets the
 // same link (a viral text is stored once), and ids cannot be guessed or walked.
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import type { ClaimResult } from "./clientTypes";
 import { restHeaders, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
 
-/** Narrations kept with a stored result: the first ones are the ones the card shows; the rest stay a click away on Dorar. */
-const KEEP_NARRATIONS = 8;
+/** Narrations kept with a stored result: the first ones are the ones the card shows; the rest stay a click away on Dorar.
+ *  Few, so the results fit Supabase's free 500 MB for a long time. */
+const KEEP_NARRATIONS = 5;
+const KEEP_WEAK_VARIANTS = 3;
 export const SHARE_ID = /^[0-9A-Za-z]{12}$/;
 /** At most this many results in one link («/r/<id>-<id>-…»). */
 export const MAX_IDS = 10;
@@ -30,7 +32,7 @@ export function storedClaim(c: ClaimResult): ClaimResult | null {
     dorar: rest.dorar && {
       ...rest.dorar,
       narrations: rest.dorar.narrations.slice(0, KEEP_NARRATIONS),
-      weakVariants: rest.dorar.weakVariants?.slice(0, KEEP_NARRATIONS),
+      weakVariants: rest.dorar.weakVariants?.slice(0, KEEP_WEAK_VARIANTS),
     },
   };
 }
@@ -91,4 +93,52 @@ export async function loadSharedClaims(ids: string[], cfg: RestConfig | null = s
   const rows = (await res.json()) as Array<{ id: string; claim: ClaimResult }>;
   const byId = new Map(rows.map((r) => [r.id, r.claim]));
   return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+}
+
+// ── Answers by text (table verify_cache): a post checked before is answered from its stored results, with no AI call ──
+
+/** How long a cached answer is used before the post is checked afresh. */
+const CACHE_DAYS = 30;
+
+/** The cache key of a post: the same words, whatever the spacing, give the same key. The post itself is not kept. */
+export function postKey(post: string): string {
+  return createHash("sha256").update(post.trim().replace(/\s+/g, " "), "utf8").digest("hex");
+}
+
+/** The stored results of a post checked before, or null (never checked, too old, a result missing, or the cache down). */
+export async function cachedAnswer(key: string, cfg: RestConfig | null = serviceConfig(), nowMs = Date.now()): Promise<ClaimResult[] | null> {
+  if (!cfg) return null;
+  try {
+    const since = new Date(nowMs - CACHE_DAYS * 86_400_000).toISOString();
+    const res = await fetch(`${cfg.url}/rest/v1/verify_cache?select=ids&key=eq.${key}&created_at=gte.${since}`, {
+      headers: restHeaders(cfg.key),
+      signal: AbortSignal.timeout(2_000),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const ids = ((await res.json()) as Array<{ ids: string[] }>)[0]?.ids;
+    if (!ids?.length) return null;
+    const claims = await loadSharedClaims(ids, cfg);
+    return claims.length === ids.length ? claims : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Remembers which results answer this post. Only a post whose every result has a link: one with a personal question is
+ *  not cached, so it is never stored. A post with no claims at all is not cached either (the AI may have stumbled). */
+export async function saveAnswer(key: string, claims: ClaimResult[], cfg: RestConfig | null = serviceConfig()): Promise<void> {
+  const ids = claims.map((c) => c.shareId);
+  if (!cfg || ids.length === 0 || !ids.every(Boolean)) return;
+  try {
+    await fetch(`${cfg.url}/rest/v1/verify_cache?on_conflict=key`, {
+      method: "POST",
+      headers: { ...restHeaders(cfg.key), Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ key, ids, created_at: new Date().toISOString() }),
+      signal: AbortSignal.timeout(5_000),
+      cache: "no-store",
+    });
+  } catch {
+    /* next time the post is checked afresh */
+  }
 }

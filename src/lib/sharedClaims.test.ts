@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ClaimResult } from "./clientTypes";
-import { loadSharedClaims, parseShareIds, saveSharedClaims, SHARE_ID, shareIdOf, storedClaim, withShareIds } from "./sharedClaims";
+import { cachedAnswer, loadSharedClaims, parseShareIds, postKey, saveAnswer, saveSharedClaims, SHARE_ID, shareIdOf, storedClaim, withShareIds } from "./sharedClaims";
 
 const narration = (n: number) => ({ text: `رواية ${n}`, muhaddith: "الألباني", verdict: "ضعيف" });
 const hadith = {
@@ -16,7 +16,7 @@ describe("shared results", () => {
   it("stores the result without the books' answer and with fewer narrations", () => {
     const s = storedClaim(hadith)!;
     expect(s.turath).toBeUndefined();
-    expect(s.dorar?.narrations).toHaveLength(8);
+    expect(s.dorar?.narrations).toHaveLength(5);
   });
 
   it("never stores a personal question", () => {
@@ -50,6 +50,40 @@ describe("shared results", () => {
     fetchMock.mockResolvedValue(Response.json([{ id: "B00000000000", claim: { state: "b" } }, { id: "A00000000000", claim: { state: "a" } }]));
     const got = await loadSharedClaims(["A00000000000", "C00000000000", "B00000000000"], { url: "http://db", key: "k" });
     expect(got.map((c) => c.state)).toEqual(["a", "b"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("keys a post by its words, whatever the spacing", () => {
+    expect(postKey("  صوموا   تصحوا\n")).toBe(postKey("صوموا تصحوا"));
+    expect(postKey("صوموا تصحوا")).toMatch(/^[0-9a-f]{64}$/);
+    expect(postKey("صوموا تصحوا")).not.toBe(postKey("صوموا"));
+  });
+
+  it("answers a post checked before from its stored results, and only when every result is still there", async () => {
+    const cfg = { url: "http://db", key: "k" };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json([{ ids: ["A00000000000"] }]))
+      .mockResolvedValueOnce(Response.json([{ id: "A00000000000", claim: { state: "a" } }]));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await cachedAnswer("k".repeat(64), cfg))?.map((c) => c.state)).toEqual(["a"]);
+
+    fetchMock.mockResolvedValueOnce(Response.json([{ ids: ["A00000000000", "B00000000000"] }])).mockResolvedValueOnce(Response.json([{ id: "A00000000000", claim: { state: "a" } }]));
+    expect(await cachedAnswer("k".repeat(64), cfg)).toBeNull();
+
+    fetchMock.mockRejectedValueOnce(new Error("down"));
+    expect(await cachedAnswer("k".repeat(64), cfg)).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("caches only a post whose every result has a link", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const cfg = { url: "http://db", key: "k" };
+    await saveAnswer("k".repeat(64), [{ ...hadith, shareId: "A00000000000" }, personal], cfg);
+    await saveAnswer("k".repeat(64), [], cfg);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await saveAnswer("k".repeat(64), [{ ...hadith, shareId: "A00000000000" }], cfg);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).ids).toEqual(["A00000000000"]);
     vi.unstubAllGlobals();
   });
 });

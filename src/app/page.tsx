@@ -14,6 +14,7 @@ import { LogoMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
+import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
 import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
@@ -79,7 +80,7 @@ export default function Home() {
       try {
         const res = await fetch("/api/verify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...analyticsHeaders() },
           body: JSON.stringify({ text: submitted }),
         });
         const data = (await res.json()) as VerifyResponse & { limit?: string };
@@ -114,7 +115,7 @@ export default function Home() {
       try {
         const res = await fetch("/api/ocr", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...analyticsHeaders() },
           body: JSON.stringify({ image: prepared.data, mimeType: prepared.mimeType }),
         });
         const data = (await res.json()) as { text?: string; uncertain?: string[] };
@@ -144,9 +145,11 @@ export default function Home() {
 
   // Opened from the share sheet (manifest.ts): public/sw.js left the shared message or screenshot in a cache (?shared=1), or
   // the fallback route passed the text in the address (?text=). Either is checked at once, as if pasted and Check pressed;
-  // the address is then cleaned, so a reload does not check it again.
+  // the address is then cleaned, so a reload does not check it again. The visit is counted first, with how it began.
   useEffect(() => {
     registerServiceWorker();
+    rememberSource();
+    track("visit");
     const params = new URLSearchParams(window.location.search);
     const fromAddress = params.get("text");
     if (!params.has("shared") && fromAddress === null) return;

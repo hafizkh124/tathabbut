@@ -2,6 +2,7 @@
 // Tathabbut as an installed app: the service worker (public/sw.js), the browser's install prompt, and what another app
 // shared to it through the share sheet (manifest.ts).
 import { useCallback, useEffect, useState } from "react";
+import { track } from "./analytics";
 import { SHARE_CACHE, SHARED_IMAGE_KEY, SHARED_TEXT_KEY, sharedText, type SharedFields } from "./sharedInput";
 
 /** Registers public/sw.js, which receives shares. Without it the app still works; only sharing into it falls back to text. */
@@ -27,7 +28,10 @@ export function useInstallPrompt(): (() => void) | null {
       e.preventDefault(); // keep the browser's mini bar away; the button in the header offers it instead
       setEvent(e as InstallPromptEvent);
     };
-    const installed = () => setEvent(null);
+    const installed = () => {
+      setEvent(null);
+      track("installed");
+    };
     window.addEventListener("beforeinstallprompt", offer);
     window.addEventListener("appinstalled", installed);
     return () => {
@@ -38,7 +42,10 @@ export function useInstallPrompt(): (() => void) | null {
   const install = useCallback(() => {
     if (!event) return;
     event.prompt().catch(() => {});
-    event.userChoice.finally(() => setEvent(null)); // a prompt can be shown only once
+    event.userChoice
+      .then(({ outcome }) => track("install_prompt", { outcome }))
+      .catch(() => {})
+      .finally(() => setEvent(null)); // a prompt can be shown only once
   }, [event]);
   return event ? install : null;
 }

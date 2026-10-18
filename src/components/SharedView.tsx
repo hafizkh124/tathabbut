@@ -3,6 +3,7 @@
 // books asked again (they are not stored with the result), and an invitation to check a message of one's own.
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { rememberSource, track } from "@/lib/analytics";
 import type { ClaimResult } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
@@ -20,6 +21,12 @@ export function SharedView({ claims: stored }: { claims: ClaimResult[] }) {
   const [originQuery, setOriginQuery] = useState<string | null>(null);
   const home = useCallback(() => router.push("/"), [router]);
   const closeOrigin = useCallback(() => setOriginQuery(null), []);
+
+  // a visit from a shared link, with which results it opened
+  useEffect(() => {
+    rememberSource();
+    track("visit", { ids: stored.map((c) => c.shareId), found: stored.length });
+  }, [stored]);
 
   // as on the home page: each claim's books land on it when they come
   useEffect(() => {

@@ -1,15 +1,16 @@
 // POST /api/verify  { "text": "<the pasted post>" }  →  the claims found in it, each with its state and evidence.
 // Claims are found by Gemini but checked against the post itself (src/lib/claims.ts); states come only from the
 // specialist's list, the mushaf text, or Dorar's muhaddithun read through gradeMap (src/lib/verify.ts).
-import { after } from "next/server";
+import { later } from "@/lib/later";
 import { extractClaims } from "@/lib/claims";
+import { eventRow, logEvent } from "@/lib/events";
 import { supabaseDorarCache } from "@/lib/dorarCache";
 import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
 import { fetchVerseQiraat, fetchVerseScripts, matchVerses, matchVersesInText } from "@/lib/quranCheck";
 import { limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
-import { saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
+import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
 import { verifyClaims } from "@/lib/verify";
 import { signExcerpt } from "@/lib/turathSign";
 import type { ClaimResult } from "@/lib/clientTypes";
@@ -28,10 +29,18 @@ export async function POST(request: Request) {
   }
   if (!text) return Response.json({ error: "empty text" }, { status: 400 });
   if (text.length > MAX_TEXT) return Response.json({ error: `text longer than ${MAX_TEXT} characters` }, { status: 400 });
+  const t0 = Date.now();
+  // a post checked before: its stored results, with no AI call and not counted against the client's limit
+  const key = postKey(text);
+  const cached = await cachedAnswer(key);
+  if (cached) {
+    later(() => logEvent(eventRow(request, "verify", { cached: true, claims: cached.length, states: cached.map((c) => c.state), ms: Date.now() - t0 })));
+    return Response.json({ claims: cached, cached: true, ms: { extract: 0, total: Date.now() - t0 } });
+  }
+
   const refused = await limited(request, "verify");
   if (refused) return refused;
 
-  const t0 = Date.now();
   let extraction;
   try {
     extraction = await extractClaims(text);
@@ -60,13 +69,18 @@ export async function POST(request: Request) {
   }));
   // each result gets a link (/r/<id>) and is stored for it once the answer has gone out
   const { claims, rows } = withShareIds(shown);
-  after(() => saveSharedClaims(rows));
+  const ms = Date.now() - t0;
+  later(async () => {
+    await saveSharedClaims(rows);
+    await saveAnswer(key, claims);
+    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, model: extraction.model }));
+  });
 
   return Response.json({
     claims,
     dropped: extraction.dropped,
     model: extraction.model,
     usage: extraction.usage,
-    ms: { extract: extraction.ms, total: Date.now() - t0 },
+    ms: { extract: extraction.ms, total: ms },
   });
 }

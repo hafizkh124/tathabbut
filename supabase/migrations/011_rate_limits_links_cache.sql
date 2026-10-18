@@ -1,8 +1,8 @@
--- Two server-only tables (row level security on, NO policy: the public key can neither read nor write; the service key,
+-- Three server-only tables (row level security on, NO policy: the public key can neither read nor write; the service key,
 -- used by the API routes, bypasses it). Neither keeps anything that names a reader.
 
 -- 1. Rate limits (src/lib/rateLimit.ts): how many checks a client, and the whole site, asked for in each time window, so one
---    script cannot run up the AI bill or crowd out everyone else. The client is a keyed hash of its address, never the address.
+--    script cannot spend the free AI quota the whole site shares. The client is a keyed hash of its address, never the address.
 create table if not exists rate_limits (
   key           text        not null,   -- "verify:min:<hash>", "verify:day:<hash>", "ai:day:all", …
   window_start  timestamptz not null,
@@ -56,3 +56,14 @@ create table if not exists shared_claims (
 );
 
 alter table shared_claims enable row level security;
+
+-- 3. Answers by text (src/lib/sharedClaims.ts): a post checked before is answered from its stored results, without asking
+--    the AI again (the free quota is small, and viral texts are checked again and again). The key is a hash of the post;
+--    the post itself is not kept. Answers older than 30 days are asked again, so new grading reaches readers.
+create table if not exists verify_cache (
+  key         text        primary key check (char_length(key) = 64),
+  ids         text[]      not null,
+  created_at  timestamptz not null default now()
+);
+
+alter table verify_cache enable row level security;

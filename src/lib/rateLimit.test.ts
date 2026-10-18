@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { checkRateLimit, clientAddress, clientKey, memoryCheck, rulesFor, secondsLeft, tooManyResponse } from "./rateLimit";
+import { checkRateLimit, clientAddress, clientKey, dailyAiLimit, memoryCheck, RULES, rulesFor, secondsLeft, tooManyResponse } from "./rateLimit";
 
 const request = (ip = "203.0.113.7") => new Request("http://x/api/verify", { method: "POST", headers: { "x-forwarded-for": `${ip}, 10.0.0.1` } });
 const cfg = { url: "http://db", key: "k" };
@@ -22,6 +22,7 @@ describe("rate limit", () => {
     const rules = rulesFor("verify", "c", 1000);
     expect(rules.map((r) => r.key)).toEqual(["verify:min:c", "verify:day:c", "ai:day:all"]);
     expect(rulesFor("verify", "c", 0)).toHaveLength(2); // site limit off
+    expect(dailyAiLimit()).toBe(0); // off unless DAILY_AI_LIMIT is set: the free tier bills nothing
   });
 
   it("lets a request through when the database says all rules are within", async () => {
@@ -35,16 +36,19 @@ describe("rate limit", () => {
   it("names whose limit refused it: the client's or the site's", async () => {
     const client = await checkRateLimit(request(), "verify", { cfg, call: vi.fn().mockResolvedValue(1) });
     expect(client).toMatchObject({ ok: false, scope: "client" });
+    vi.stubEnv("DAILY_AI_LIMIT", "1000"); // the site's limit is a third rule only when it is set
     const site = await checkRateLimit(request(), "verify", { cfg, call: vi.fn().mockResolvedValue(3) });
     expect(site).toMatchObject({ ok: false, scope: "site" });
+    vi.unstubAllEnvs();
   });
 
   it("falls back to this instance's memory when the database fails, and still stops a loop", async () => {
     const call = vi.fn().mockRejectedValue(new Error("down"));
     const ip = "192.0.2.99";
     const results = [];
-    for (let i = 0; i < 13; i++) results.push((await checkRateLimit(request(ip), "verify", { cfg, call })).ok);
-    expect(results.filter(Boolean)).toHaveLength(12);
+    const limit = RULES.verify.perMinute;
+    for (let i = 0; i <= limit; i++) results.push((await checkRateLimit(request(ip), "verify", { cfg, call })).ok);
+    expect(results.filter(Boolean)).toHaveLength(limit);
     expect(results.at(-1)).toBe(false);
   });
 

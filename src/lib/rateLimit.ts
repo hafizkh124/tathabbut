@@ -9,20 +9,23 @@ import { signingKey } from "./turathSign";
 export type Bucket = "verify" | "ocr" | "translate" | "origin";
 
 /**
- * Per client: generous, since many phones in Pakistan share one public address (carrier NAT), yet enough to stop a script.
- * A person checking posts one by one stays far below these.
+ * Per client. The AI runs on Gemini's free tier, whose daily quota the whole site shares, so one client must not be able
+ * to spend it: the day's limit is what a busy person might really check, yet small enough that a script cannot empty the
+ * quota. Many phones in Pakistan share one public address (carrier NAT), so the minute's limit is not too tight.
+ * A text checked before is answered from the cache (src/lib/sharedClaims.ts) and does not count.
  */
 export const RULES: Record<Bucket, { perMinute: number; perDay: number }> = {
-  verify: { perMinute: 12, perDay: 300 },
-  ocr: { perMinute: 6, perDay: 100 },
-  translate: { perMinute: 20, perDay: 400 },
-  origin: { perMinute: 4, perDay: 60 },
+  verify: { perMinute: 8, perDay: 100 },
+  ocr: { perMinute: 4, perDay: 30 },
+  translate: { perMinute: 10, perDay: 150 },
+  origin: { perMinute: 3, perDay: 20 },
 };
 
-/** All AI calls of the whole site in one UTC day; set DAILY_AI_LIMIT to change it, 0 to turn it off. */
+/** All AI calls of the whole site in one UTC day. Off by default (0): on the free tier Gemini itself stops at its quota
+ *  and nothing is billed. Set DAILY_AI_LIMIT if the key ever has billing on, so the bill has a ceiling. */
 export const dailyAiLimit = (): number => {
   const v = Number(process.env.DAILY_AI_LIMIT);
-  return Number.isFinite(v) && process.env.DAILY_AI_LIMIT?.trim() ? Math.max(0, Math.floor(v)) : 30_000;
+  return Number.isFinite(v) && process.env.DAILY_AI_LIMIT?.trim() ? Math.max(0, Math.floor(v)) : 0;
 };
 
 const MINUTE = 60;

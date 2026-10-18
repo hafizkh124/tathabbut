@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GeminiError, generateJson } from "./gemini";
+import { fallbackModels, GeminiError, generateJson } from "./gemini";
 
 const ok = (obj: unknown) =>
   new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: JSON.stringify(obj) }] } }] }), { status: 200 });
@@ -44,6 +44,15 @@ describe("generateJson", () => {
     expect(r.model).toBe("gemini-2.5-flash");
     expect(f).toHaveBeenCalledTimes(3);
     expect(JSON.parse((f.mock.calls[2] as [string, { body: string }])[1].body).generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+  });
+
+  it("moves on through several fallback models, each with its own free quota", async () => {
+    expect(fallbackModels(" gemini-2.5-flash , gemini-2.5-flash-lite ,")).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+    expect(fallbackModels(undefined)).toEqual(["gemini-2.5-flash"]);
+    const f = vi.fn().mockResolvedValueOnce(fail(429)).mockResolvedValueOnce(fail(429)).mockResolvedValueOnce(fail(429)).mockResolvedValueOnce(ok({ a: 3 }));
+    const r = await generateJson("x", { schema, fallbackModel: "gemini-2.5-flash,gemini-2.5-flash-lite" }, { fetch: f, sleep: noSleep });
+    expect(r.model).toBe("gemini-2.5-flash-lite");
+    expect(f).toHaveBeenCalledTimes(4);
   });
 
   it("does not retry a request the API rejects (400)", async () => {

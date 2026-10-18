@@ -101,15 +101,21 @@ async function once<T>(model: string, prompt: string, opts: GenerateOptions, key
   }
 }
 
-/** Asks for JSON. Order of attempts: model, model again (after a pause), fallback model — retrying only transient failures. */
+/** The fallback models, in order: GEMINI_FALLBACK_MODEL may name several, comma-separated. On the free tier each model has
+ *  its own daily quota, so every extra model is more checks a day before the AI is out. */
+export const fallbackModels = (value: string | undefined): string[] =>
+  (value ?? "gemini-2.5-flash").split(",").map((m) => m.trim()).filter(Boolean);
+
+/** Asks for JSON. Order of attempts: model, model again (after a pause), then each fallback model — retrying only
+ *  transient failures (a 429 when a model's quota is spent is one). */
 export async function generateJson<T>(prompt: string, opts: GenerateOptions, deps: { fetch?: Fetch; sleep?: (ms: number) => Promise<void> } = {}): Promise<GenerateResult<T>> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new GeminiError("GEMINI_API_KEY is not set");
   const f = deps.fetch ?? fetch;
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const model = opts.model ?? process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
-  const fallback = opts.fallbackModel ?? process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-flash";
-  const attempts = [model, model, fallback].filter((m, i, a) => i < 2 || m !== a[0]);
+  const fallbacks = fallbackModels(opts.fallbackModel ?? process.env.GEMINI_FALLBACK_MODEL);
+  const attempts = [model, model, ...fallbacks].filter((m, i, a) => i < 2 || (m !== a[0] && a.indexOf(m) === i));
 
   let last: GeminiError | undefined;
   for (const [i, m] of attempts.entries()) {

@@ -1,12 +1,16 @@
 // GET /api/health — one cheap read from Supabase. Vercel calls it daily (vercel.json "crons") so the free-tier
-// project is never paused for inactivity while the judges review; it also tells us whether the database answers.
-import { publicConfig, restHeaders } from "@/lib/supabaseRest";
+// project is never paused for inactivity; it also tells us whether the database answers, and clears rows past their time
+// (purge_old_rows, migration 012) so the free 500 MB lasts.
+import { publicConfig, restHeaders, rpc, serviceConfig } from "@/lib/supabaseRest";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const cfg = publicConfig();
   if (!cfg) return Response.json({ ok: false, error: "not configured" }, { status: 503 });
+  await rpc(serviceConfig(), "purge_old_rows", {}, 10_000).catch(() => {
+    /* not migrated yet, or the database is busy: tomorrow's run clears it */
+  });
   try {
     const res = await fetch(`${cfg.url}/rest/v1/data_sources?select=id&limit=1`, {
       headers: restHeaders(cfg.key),
