@@ -147,6 +147,43 @@ describe("generateJson", () => {
     expect(body.contents[0].parts.at(-1).text).toContain('{"type":"OBJECT"}');
   });
 
+  it("asks an OpenAI-style provider named by its prefix, with the schema in the prompt and JSON mode", async () => {
+    vi.stubEnv("IFM_BASE_URL", "https://api.example/v1/");
+    vi.stubEnv("IFM_API_KEY", "ifm-key");
+    const chat = new Response(JSON.stringify({ choices: [{ message: { content: '\n{"a": 9}', reasoning: "thinking {not json}" } }], usage: { prompt_tokens: 10, completion_tokens: 30, total_tokens: 40, completion_tokens_details: { reasoning_tokens: 25 } } }), { status: 200 });
+    const f = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(chat);
+    const r = await generateJson<{ a: number }>("find the claims", { schema, fallbackModel: "ifm:IFM/K2-Horizon-375B-A23B" }, { fetch: f, sleep: noSleep });
+    expect(r).toMatchObject({ data: { a: 9 }, model: "ifm:IFM/K2-Horizon-375B-A23B", usage: { promptTokens: 10, outputTokens: 5, thoughtsTokens: 25, totalTokens: 40 } });
+    const [url, init] = f.mock.calls[1] as [string, { body: string; headers: Record<string, string> }];
+    expect(url).toBe("https://api.example/v1/chat/completions");
+    expect(init.headers.Authorization).toBe("Bearer ifm-key");
+    const body = JSON.parse(init.body);
+    expect(body).toMatchObject({ model: "IFM/K2-Horizon-375B-A23B", response_format: { type: "json_object" } });
+    expect(body.messages[0].content).toContain('{"type":"OBJECT"}');
+    vi.unstubAllEnvs();
+  });
+
+  it("passes over a provider that is not set up or cannot read the picture, and reads its daily limit", async () => {
+    vi.stubEnv("GROQ_API_KEY", "");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const f = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(ok({ a: 1 }));
+    const r = await generateJson("x", { schema, fallbackModel: "groq:openai/gpt-oss-120b,gemini-2.5-flash" }, { fetch: f, sleep: noSleep });
+    expect(r.model).toBe("gemini-2.5-flash");
+    expect(f).toHaveBeenCalledTimes(2); // the main model, out for the day, then 2.5: Groq without a key is never called
+    const pic = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(ok({ a: 2 }));
+    vi.stubEnv("GROQ_API_KEY", "g");
+    resetQuotaMemory();
+    const p = await generateJson("x", { schema, images: [{ mimeType: "image/png", data: "AA" }], fallbackModel: "groq:openai/gpt-oss-120b,gemini-2.5-flash" }, { fetch: pic, sleep: noSleep });
+    expect(p.model).toBe("gemini-2.5-flash"); // a picture skips the provider that reads none
+    vi.stubEnv("GROQ_API_KEY", "g");
+    resetQuotaMemory();
+    const limit = new Response('{"error":{"message":"Rate limit reached for model on tokens per day (TPD): Limit 200000"}}', { status: 429 });
+    const g = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(limit);
+    const err = await generateJson("x", { schema, fallbackModel: "groq:openai/gpt-oss-120b" }, { fetch: g, sleep: noSleep }).catch((e: GeminiError) => e);
+    expect(err).toMatchObject({ quota: "day" });
+    vi.unstubAllEnvs();
+  });
+
   it("finds the JSON object in a reply with or without a code fence", () => {
     expect(jsonIn('```json\n{"a":1}\n```')).toBe('{"a":1}');
     expect(jsonIn('The answer: {"a":{"b":2}} done')).toBe('{"a":{"b":2}}');

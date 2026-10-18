@@ -95,11 +95,77 @@ export function jsonIn(text: string): string {
   return start >= 0 && end > start ? text.slice(start, end + 1) : text;
 }
 
+/** Other providers with an OpenAI-style chat API, named in the model lists with a prefix ("ifm:IFM/K2-Horizon-375B-A23B",
+ *  "groq:openai/gpt-oss-120b"), so they join the same fallback chain with their own free quotas. They read no pictures,
+ *  so a picture skips them; the schema goes into the prompt and JSON mode is asked for. */
+const PROVIDERS: Record<string, { url: () => string | undefined; key: () => string | undefined }> = {
+  ifm: { url: () => process.env.IFM_BASE_URL && `${process.env.IFM_BASE_URL.replace(/\/$/, "")}/chat/completions`, key: () => process.env.IFM_API_KEY },
+  groq: { url: () => "https://api.groq.com/openai/v1/chat/completions", key: () => process.env.GROQ_API_KEY },
+};
+
+export function providerOf(model: string): { provider: string; name: string } | null {
+  const m = model.match(/^(\w+):(.+)$/);
+  return m && PROVIDERS[m[1]] ? { provider: m[1], name: m[2] } : null;
+}
+
+const schemaPrompt = (prompt: string, schema: object) =>
+  `${prompt}\n\nReply with one JSON object only, no other text, that follows this schema:\n${JSON.stringify(schema)}`;
+
+async function onceChat<T>(provider: string, name: string, prompt: string, opts: GenerateOptions, f: Fetch): Promise<{ data: T; usage?: GeminiUsage }> {
+  const p = PROVIDERS[provider];
+  const url = p.url();
+  const key = p.key();
+  // 400 so the chain moves on: this provider is not set up here, or cannot read a picture
+  if (!url || !key) throw new GeminiError(`${provider}: not configured`, 400);
+  if (opts.images?.length) throw new GeminiError(`${provider}: reads no pictures`, 400);
+  let res: Response;
+  try {
+    res = await f(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: name, temperature: 0, response_format: { type: "json_object" }, messages: [{ role: "user", content: schemaPrompt(prompt, opts.schema) }] }),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
+      cache: "no-store",
+    });
+  } catch (err) {
+    throw new GeminiError(`network: ${(err as Error).message}`);
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    // a 429 that names a daily limit (Groq: "requests per day (RPD)", "tokens per day (TPD)") is out for the day; any
+    // other 429 is the minute's, with the wait the provider sends in Retry-After
+    const quota: QuotaKind | undefined = res.status === 429 ? (/per day|\bRPD\b|\bTPD\b/i.test(text) ? "day" : "minute") : undefined;
+    const wait = Math.ceil(parseFloat(res.headers.get("retry-after") ?? ""));
+    throw new GeminiError(`HTTP ${res.status}: ${text.slice(0, 200)}`, res.status, quota, Number.isFinite(wait) ? wait : undefined);
+  }
+  const body = (await res.json()) as {
+    choices?: { message?: { content?: string | null } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } };
+  };
+  const u = body.usage;
+  const usage: GeminiUsage | undefined = u
+    ? {
+        promptTokens: u.prompt_tokens ?? 0,
+        outputTokens: (u.completion_tokens ?? 0) - (u.completion_tokens_details?.reasoning_tokens ?? 0),
+        thoughtsTokens: u.completion_tokens_details?.reasoning_tokens ?? 0,
+        totalTokens: u.total_tokens ?? 0,
+      }
+    : undefined;
+  const text = body.choices?.[0]?.message?.content ?? "";
+  try {
+    return { data: JSON.parse(jsonIn(text)) as T, usage };
+  } catch {
+    throw new GeminiError(`not JSON: ${text.slice(0, 120)}`, 502);
+  }
+}
+
 async function once<T>(model: string, prompt: string, opts: GenerateOptions, key: string, f: Fetch): Promise<{ data: T; usage?: GeminiUsage }> {
+  const other = providerOf(model);
+  if (other) return onceChat<T>(other.provider, other.name, prompt, opts, f);
   const gemma = isGemma(model);
   const parts: object[] = (opts.images ?? []).map((img) => ({ inline_data: { mime_type: img.mimeType, data: img.data } }));
   parts.push({
-    text: gemma ? `${prompt}\n\nReply with one JSON object only, no other text, that follows this schema:\n${JSON.stringify(opts.schema)}` : prompt,
+    text: gemma ? schemaPrompt(prompt, opts.schema) : prompt,
   });
   let res: Response;
   try {
