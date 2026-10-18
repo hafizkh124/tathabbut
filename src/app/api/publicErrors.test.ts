@@ -3,6 +3,7 @@ import { extractClaims } from "@/lib/claims";
 import { readImage } from "@/lib/ocr";
 import { trackClaimOrigin } from "@/lib/originTracker";
 import { lookupDorar } from "@/lib/lookup";
+import { GeminiError } from "@/lib/gemini";
 import { POST as verify } from "./verify/route";
 import { POST as ocr } from "./ocr/route";
 import { POST as origin } from "./origin/route";
@@ -25,6 +26,14 @@ describe("public failure responses", () => {
     const r = await verify(post("verify", { text: "عبارة تجريبية" }));
     expect(r.status).toBe(502);
     expect(await r.json()).toEqual({ error: "could not read the post" });
+  });
+  it("tells the page when the AI's free quota is spent for the day, without the provider's message", async () => {
+    vi.mocked(extractClaims).mockRejectedValue(new GeminiError("HTTP 429: api-key=secret", 429, "day"));
+    const r = await verify(post("verify", { text: "عبارة تجريبية للحصة" }));
+    expect(r.status).toBe(429);
+    const body = await r.json();
+    expect(body).toMatchObject({ limit: "ai-day" });
+    expect(JSON.stringify(body)).not.toContain("secret");
   });
   it("does not expose image provider messages", async () => {
     vi.mocked(readImage).mockRejectedValue(privateError);

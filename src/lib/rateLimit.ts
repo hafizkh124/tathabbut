@@ -3,6 +3,7 @@
 // a keyed hash of its address: the address itself is never stored. When the database cannot be reached the check falls back
 // to this instance's memory (per-minute only), so an outage of the counter never stops the checks.
 import { createHash } from "node:crypto";
+import { GeminiError } from "./gemini";
 import { rpc, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
 
@@ -101,4 +102,15 @@ export function tooManyResponse(r: Extract<RateLimitResult, { ok: false }>): Res
 export async function limited(request: Request, bucket: Bucket): Promise<Response | null> {
   const r = await checkRateLimit(request, bucket);
   return r.ok ? null : tooManyResponse(r);
+}
+
+/** When the AI itself is out of free quota (src/lib/gemini.ts): the 429 that tells the page to try in a minute, or
+ *  tomorrow. Null for any other failure. */
+export function aiQuotaResponse(err: unknown): Response | null {
+  if (!(err instanceof GeminiError) || !err.quota) return null;
+  const retryAfter = err.quota === "minute" ? (err.retryAfter ?? 60) : 3_600;
+  return Response.json(
+    { error: err.quota === "day" ? "the free AI quota for today is used up, try tomorrow" : "the AI is busy, try again in a minute", limit: `ai-${err.quota}`, retryAfter },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } },
+  );
 }

@@ -354,6 +354,11 @@ export const DICT = {
     en: "Too many checks in a short time. Wait a minute and try again. Your text is saved.",
     ur: "تھوڑی دیر میں بہت زیادہ تحقیقات ہو گئیں۔ ایک منٹ رک کر دوبارہ کوشش کریں۔ آپ کا متن محفوظ ہے۔",
   },
+  "error.aiDay": {
+    ar: "انتهى حدّ التحقق المجاني لهذا اليوم. أعد المحاولة غدًا، ونعتذر عن ذلك.",
+    en: "Today's free checking limit is used up. Please try again tomorrow; we are sorry.",
+    ur: "آج کی مفت تحقیق کی حد پوری ہو گئی ہے۔ براہِ کرم کل دوبارہ کوشش کریں، معذرت۔",
+  },
   "error.busySite": {
     ar: "بلغ تَثَبُّت حدّه اليومي من التحقق. أعد المحاولة لاحقًا، ونعتذر عن ذلك.",
     en: "Tathabbut has reached its daily limit of checks. Please try again later; we are sorry.",

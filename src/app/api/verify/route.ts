@@ -8,7 +8,7 @@ import { supabaseDorarCache } from "@/lib/dorarCache";
 import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
 import { fetchVerseQiraat, fetchVerseScripts, matchVerses, matchVersesInText } from "@/lib/quranCheck";
-import { limited } from "@/lib/rateLimit";
+import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
 import { verifyClaims } from "@/lib/verify";
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
   let extraction;
   try {
     extraction = await extractClaims(text);
-  } catch {
-    return Response.json({ error: "could not read the post" }, { status: 502 });
+  } catch (err) {
+    return aiQuotaResponse(err) ?? Response.json({ error: "could not read the post" }, { status: 502 });
   }
   const cache = supabaseDorarCache();
   const results = await verifyClaims(extraction.claims, {

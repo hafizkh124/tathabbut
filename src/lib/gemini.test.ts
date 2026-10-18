@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fallbackModels, GeminiError, generateJson } from "./gemini";
+import { fallbackModels, GeminiError, generateJson, quotaOf, resetQuotaMemory } from "./gemini";
 
 const ok = (obj: unknown) =>
   new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: JSON.stringify(obj) }] } }] }), { status: 200 });
 const fail = (status: number) => new Response("{}", { status });
 const noSleep = async () => {};
+/** A free-tier 429 as Google sends it: which quota, and how long to wait. */
+const quota = (quotaId: string, retryDelay?: string) =>
+  new Response(
+    JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        details: [
+          { "@type": "type.googleapis.com/google.rpc.QuotaFailure", violations: [{ quotaId }] },
+          ...(retryDelay ? [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay }] : []),
+        ],
+      },
+    }),
+    { status: 429 },
+  );
+const perDay = () => quota("GenerateRequestsPerDayPerProjectPerModel-FreeTier");
+const perMinute = (delay = "7s") => quota("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", delay);
 const schema = { type: "OBJECT" };
 
 describe("generateJson", () => {
@@ -13,7 +30,10 @@ describe("generateJson", () => {
     vi.stubEnv("GEMINI_MODEL", "gemini-3.8-flash");
     vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash");
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    resetQuotaMemory();
+  });
 
   it("sends the key in a header (never in the URL), the schema, and low thinking", async () => {
     const f = vi.fn().mockResolvedValue(ok({ a: 1 }));
@@ -71,5 +91,40 @@ describe("generateJson", () => {
   it("refuses to run without a key", async () => {
     vi.stubEnv("GEMINI_API_KEY", "");
     await expect(generateJson("x", { schema })).rejects.toBeInstanceOf(GeminiError);
+  });
+
+  it("reads which free-tier quota a 429 hit, and how long to wait", () => {
+    expect(quotaOf(JSON.stringify({ error: { details: [{ violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] }] } }))).toEqual({ quota: "day" });
+    expect(quotaOf(JSON.stringify({ error: { details: [{ violations: [{ quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier" }] }, { retryDelay: "42.5s" }] } }))).toEqual({ quota: "minute", retryAfter: 43 });
+    expect(quotaOf("not json")).toEqual({});
+  });
+
+  it("skips a model out for the day, on this call and the next", async () => {
+    const f = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(ok({ a: 1 })).mockResolvedValueOnce(ok({ a: 2 }));
+    expect((await generateJson("x", { schema }, { fetch: f, sleep: noSleep })).model).toBe("gemini-2.5-flash");
+    expect(f).toHaveBeenCalledTimes(2); // the spent model is not asked twice
+    expect((await generateJson("x", { schema }, { fetch: f, sleep: noSleep })).model).toBe("gemini-2.5-flash");
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("says the day's quota is spent when every model is out", async () => {
+    const f = vi.fn().mockImplementation(async () => perDay());
+    await expect(generateJson("x", { schema }, { fetch: f, sleep: noSleep })).rejects.toMatchObject({ status: 429, quota: "day" });
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits for the soonest model when every one is busy for the minute, then tries it once more", async () => {
+    const sleep = vi.fn(async () => {});
+    const f = vi.fn().mockResolvedValueOnce(perMinute("9s")).mockResolvedValueOnce(perMinute("4s")).mockResolvedValueOnce(ok({ a: 1 }));
+    const r = await generateJson("x", { schema }, { fetch: f, sleep });
+    expect(r.model).toBe("gemini-2.5-flash");
+    expect(sleep).toHaveBeenCalledWith(4_000);
+  });
+
+  it("gives up on a long wait and says when to try again", async () => {
+    const f = vi.fn().mockImplementation(async () => perMinute("50s"));
+    const err = await generateJson("x", { schema }, { fetch: f, sleep: noSleep }).catch((e: GeminiError) => e);
+    expect(err).toMatchObject({ quota: "minute", retryAfter: 50 });
+    expect(f).toHaveBeenCalledTimes(2);
   });
 });

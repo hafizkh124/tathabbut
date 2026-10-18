@@ -26,9 +26,10 @@ type Phase =
   | { name: "results"; claims: ClaimResult[] }
   | { name: "error"; kind: ErrorKind };
 
-/** What a failed check means for the person: too long, over a rate limit (theirs or the site's), or not readable now. */
+/** What a failed check means for the person: too long, over a limit (theirs, the site's, or the AI's free quota for the
+ *  day or the minute), or not readable now. */
 function errorKindOf(status: number, data: { error?: string; limit?: string }): ErrorKind {
-  if (status === 429) return data.limit === "site" ? "busySite" : "busy";
+  if (status === 429) return data.limit === "ai-day" ? "aiDay" : data.limit === "site" ? "busySite" : "busy";
   return status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read";
 }
 
@@ -118,14 +119,14 @@ export default function Home() {
           headers: { "Content-Type": "application/json", ...analyticsHeaders() },
           body: JSON.stringify({ image: prepared.data, mimeType: prepared.mimeType }),
         });
-        const data = (await res.json()) as { text?: string; uncertain?: string[] };
+        const data = (await res.json()) as { text?: string; uncertain?: string[]; limit?: string };
         if (id !== run.current) {
           URL.revokeObjectURL(prepared.previewUrl);
           return;
         }
         if (!res.ok) {
           URL.revokeObjectURL(prepared.previewUrl);
-          setPhase({ name: "error", kind: res.status === 429 ? "pictureBusy" : res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
+          setPhase({ name: "error", kind: res.status === 429 ? (data.limit === "ai-day" ? "pictureAiDay" : "pictureBusy") : res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
           return;
         }
         if (!data.text?.trim()) {

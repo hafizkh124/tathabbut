@@ -5,7 +5,7 @@ import type { Key } from "@/lib/i18n/dict";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 
-export type ErrorKind = "network" | "pictureNetwork" | "tooLong" | "read" | "ocr" | "noText" | "badImage" | "busy" | "busySite" | "pictureBusy";
+export type ErrorKind = "network" | "pictureNetwork" | "tooLong" | "read" | "ocr" | "noText" | "badImage" | "busy" | "busySite" | "pictureBusy" | "aiDay" | "pictureAiDay";
 const BODY: Record<ErrorKind, Key> = {
   network: "error.network",
   pictureNetwork: "error.network",
@@ -18,9 +18,12 @@ const BODY: Record<ErrorKind, Key> = {
   busy: "error.busy",
   busySite: "error.busySite",
   pictureBusy: "error.busy",
+  // the AI's free quota (src/lib/gemini.ts) is spent for the day
+  aiDay: "error.aiDay",
+  pictureAiDay: "error.aiDay",
 };
 /** Errors about a picture have no text to keep: the only way on is back to choose another. */
-const PICTURE: ErrorKind[] = ["pictureNetwork", "ocr", "noText", "badImage", "pictureBusy"];
+const PICTURE: ErrorKind[] = ["pictureNetwork", "ocr", "noText", "badImage", "pictureBusy", "pictureAiDay"];
 
 export function ErrorView({ kind, text, onRetry, onEdit }: { kind: ErrorKind; text: string; onRetry: () => void; onEdit: () => void }) {
   const { t } = useI18n();
@@ -51,7 +54,7 @@ export function ErrorView({ kind, text, onRetry, onEdit }: { kind: ErrorKind; te
           </Button>
         ) : (
           <>
-            {kind !== "tooLong" && (
+            {kind !== "tooLong" && kind !== "aiDay" && kind !== "busySite" && (
               <Button size="lg" onClick={onRetry}>
                 {t("action.retry")}
               </Button>

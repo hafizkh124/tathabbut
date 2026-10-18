@@ -1,7 +1,7 @@
 // POST /api/translate  { "text": "<an excerpt as /api/turath returned it>", "sig": "<its signature>", "to": "ur" | "en" }
 //   →  { "translation": "...", "cached": boolean }
 // Only server-signed retrieved text (Turath or a similar expression from verification) is translated.
-import { limited } from "@/lib/rateLimit";
+import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { isTranslateLang, MAX_TRANSLATE_CHARS, translateExcerpt } from "@/lib/translate";
 import { supabaseTranslationCache } from "@/lib/turathCache";
 import { verifyExcerpt } from "@/lib/turathSign";
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const r = await translateExcerpt(text, body.to, { cache });
     return Response.json({ translation: r.translation, cached: r.cached });
-  } catch {
-    return Response.json({ error: "could not translate" }, { status: 502 });
+  } catch (err) {
+    return aiQuotaResponse(err) ?? Response.json({ error: "could not translate" }, { status: 502 });
   }
 }
