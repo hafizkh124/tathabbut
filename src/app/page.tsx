@@ -100,9 +100,10 @@ export default function Home() {
     [keepPreview, askTurath],
   );
 
-  /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. */
+  /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. A caption shared with
+   *  it (the share sheet) joins the reading in the confirm box; with no text in the picture, the caption alone is checked. */
   const readPicture = useCallback(
-    async (file: File) => {
+    async (file: File, caption = "") => {
       const id = ++run.current;
       setPhase({ name: "reading" });
       window.scrollTo({ top: 0 });
@@ -131,17 +132,20 @@ export default function Home() {
         }
         if (!data.text?.trim()) {
           URL.revokeObjectURL(prepared.previewUrl);
-          setPhase({ name: "error", kind: "noText" });
+          if (caption) {
+            setText(caption);
+            verify(caption);
+          } else setPhase({ name: "error", kind: "noText" });
           return;
         }
         keepPreview(prepared.previewUrl);
-        setPhase({ name: "confirm", text: data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
+        setPhase({ name: "confirm", text: caption ? `${data.text}\n${caption}` : data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
       } catch {
         URL.revokeObjectURL(prepared.previewUrl);
         if (id === run.current) setPhase({ name: "error", kind: "pictureNetwork" });
       }
     },
-    [keepPreview],
+    [keepPreview, verify],
   );
 
   // Opened from the share sheet (manifest.ts): public/sw.js left the shared message or screenshot in a cache (?shared=1), or
@@ -157,7 +161,7 @@ export default function Home() {
     window.history.replaceState(null, "", window.location.pathname);
     const incoming = fromAddress !== null ? Promise.resolve({ text: fromAddress, image: null }) : takeShared();
     incoming.then(({ text: shared, image }) => {
-      if (image) readPicture(image);
+      if (image) readPicture(image, shared);
       else if (shared) {
         setText(shared);
         verify(shared);
