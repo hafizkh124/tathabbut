@@ -59,7 +59,8 @@ cp .env.example .env.local
 |---|---|
 | `GEMINI_API_KEY` | مفتاح من [Google AI Studio](https://aistudio.google.com) (يلزم رصيد أو فوترة مفعّلة؛ عند نفاد الرصيد يفشل كل تحقق) |
 | `GEMINI_MODEL` | `gemini-3.8-flash` |
-| `GEMINI_FALLBACK_MODEL` | `gemini-2.5-flash` — ويقبل عدة نماذج مفصولة بفواصل، تُجرَّب بالترتيب إذا نفدت حصة ما قبلها (لكل نموذج حصته المجانية) |
+| `GEMINI_FALLBACK_MODEL` أو `GEMINI_FALLBACK_MODELS` | `gemini-2.5-flash` — ويقبل عدة نماذج مفصولة بفواصل (ومنها Gemma)، تُجرَّب بالترتيب إذا نفدت حصة ما قبلها (لكل نموذج حصته المجانية). أسماء النماذج المتاحة للمفتاح: `/api/health?models=1` |
+| `GEMINI_ORIGIN_MODELS` | اختياري: نماذج البحث عن أصل النص (يحتاج البحث في Google، وهو مجاني لنماذج 2.5 وحدها). الافتراضي `gemini-2.5-flash,gemini-2.5-flash-lite` |
 | `NEXT_PUBLIC_SUPABASE_URL` و`NEXT_PUBLIC_SUPABASE_ANON_KEY` و`SUPABASE_SERVICE_ROLE_KEY` | من مشروع Supabase (مجاني يكفي): Settings ← API |
 | `TRANSLATE_SIGNING_KEY` | أي نص عشوائي طويل؛ يوقّع مقتطفات تراث قبل ترجمتها (إن تُرك فارغاً استُعمل مفتاح آخر من مفاتيح الخادم) |
 | `DORAR_RELAY_URL` و`DORAR_RELAY_KEY` | اختياريان، انظر الخطوة ٤ |

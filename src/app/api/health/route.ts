@@ -5,7 +5,24 @@ import { publicConfig, restHeaders, rpc, serviceConfig } from "@/lib/supabaseRes
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/** GET /api/health?models=1: the Gemini and Gemma models this key may call, by their API names, so the fallback lists
+ *  (GEMINI_FALLBACK_MODELS, GEMINI_ORIGIN_MODELS) can be checked against what really exists. Names only, never the key. */
+async function listModels(): Promise<Response> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return Response.json({ error: "not configured" }, { status: 503 });
+  try {
+    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(10_000), cache: "no-store" });
+    if (!res.ok) return Response.json({ error: `HTTP ${res.status}` }, { status: 502 });
+    const { models = [] } = (await res.json()) as { models?: Array<{ name: string; supportedGenerationMethods?: string[] }> };
+    const names = models.filter((m) => m.supportedGenerationMethods?.includes("generateContent")).map((m) => m.name.replace(/^models\//, ""));
+    return Response.json({ models: names.filter((n) => /^(gemini|gemma)-/.test(n)).sort() }, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({ error: "could not list the models" }, { status: 502 });
+  }
+}
+
+export async function GET(request: Request) {
+  if (new URL(request.url).searchParams.has("models")) return listModels();
   const cfg = publicConfig();
   if (!cfg) return Response.json({ ok: false, error: "not configured" }, { status: 503 });
   await rpc(serviceConfig(), "purge_old_rows", {}, 10_000).catch(() => {

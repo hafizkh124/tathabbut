@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fallbackModels, GeminiError, generateJson, quotaOf, resetQuotaMemory } from "./gemini";
+import { fallbackModels, GeminiError, generateJson, jsonIn, quotaOf, resetQuotaMemory } from "./gemini";
 
 const ok = (obj: unknown) =>
   new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: JSON.stringify(obj) }] } }] }), { status: 200 });
@@ -136,5 +136,19 @@ describe("generateJson", () => {
     f.mockResolvedValueOnce(ok({ a: 2 }));
     await generateJson("x", { schema, fallbackModel: "gemini-typo,gemini-2.5-flash" }, { fetch: f, sleep: noSleep });
     expect(f.mock.calls.map((c) => String(c[0]).match(/models\/([^:]+)/)?.[1])).toEqual(["gemini-3.8-flash", "gemini-typo", "gemini-2.5-flash", "gemini-2.5-flash"]);
+  });
+
+  it("asks Gemma with the schema in the prompt and reads the JSON out of its reply", async () => {
+    const f = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Here it is:\n```json\n{"a": 7}\n```' }] } }] }), { status: 200 }));
+    const r = await generateJson<{ a: number }>("find the claims", { schema, fallbackModel: "gemma-4-31b-it" }, { fetch: f, sleep: noSleep });
+    expect(r).toMatchObject({ data: { a: 7 }, model: "gemma-4-31b-it" });
+    const body = JSON.parse((f.mock.calls[1] as [string, { body: string }])[1].body);
+    expect(body.generationConfig).toEqual({ temperature: 0 }); // no JSON mode, schema or thinking: Gemma refuses them
+    expect(body.contents[0].parts.at(-1).text).toContain('{"type":"OBJECT"}');
+  });
+
+  it("finds the JSON object in a reply with or without a code fence", () => {
+    expect(jsonIn('```json\n{"a":1}\n```')).toBe('{"a":1}');
+    expect(jsonIn('The answer: {"a":{"b":2}} done')).toBe('{"a":{"b":2}}');
   });
 });

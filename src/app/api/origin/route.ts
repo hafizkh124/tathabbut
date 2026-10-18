@@ -1,6 +1,6 @@
 // POST /api/origin  { "text": "<the claim to investigate>" }  →  digital provenance and earliest public records.
 import { trackClaimOrigin } from "@/lib/originTracker";
-import { limited } from "@/lib/rateLimit";
+import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       report,
       ms: Date.now() - t0,
     });
-  } catch {
-    return Response.json({ error: "could not investigate origin" }, { status: 502 });
+  } catch (err) {
+    return aiQuotaResponse(err) ?? Response.json({ error: "could not investigate origin" }, { status: 502 });
   }
 }

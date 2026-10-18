@@ -19,7 +19,7 @@ export const RULES: Record<Bucket, { perMinute: number; perDay: number }> = {
   verify: { perMinute: 8, perDay: 100 },
   ocr: { perMinute: 4, perDay: 30 },
   translate: { perMinute: 10, perDay: 150 },
-  origin: { perMinute: 3, perDay: 20 },
+  origin: { perMinute: 2, perDay: 5 }, // the search runs on the 2.5 models only: about 40 a day for the whole site
 };
 
 /** All AI calls of the whole site in one UTC day. Off by default (0): on the free tier Gemini itself stops at its quota

@@ -82,9 +82,25 @@ function thinkingFor(model: string): object {
 
 const transient = (status: number | undefined) => status === undefined || status === 429 || status >= 500;
 
+/** Gemma (open models served by the same API, with a far larger free daily quota) takes no JSON mode, schema or
+ *  thinking setting: the schema goes into the prompt instead, and the JSON is read out of the reply. */
+export const isGemma = (model: string) => /^gemma-/.test(model);
+
+/** The JSON object in a reply that may wrap it in a code fence or a sentence. */
+export function jsonIn(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenced) return fenced[1];
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? text.slice(start, end + 1) : text;
+}
+
 async function once<T>(model: string, prompt: string, opts: GenerateOptions, key: string, f: Fetch): Promise<{ data: T; usage?: GeminiUsage }> {
+  const gemma = isGemma(model);
   const parts: object[] = (opts.images ?? []).map((img) => ({ inline_data: { mime_type: img.mimeType, data: img.data } }));
-  parts.push({ text: prompt });
+  parts.push({
+    text: gemma ? `${prompt}\n\nReply with one JSON object only, no other text, that follows this schema:\n${JSON.stringify(opts.schema)}` : prompt,
+  });
   let res: Response;
   try {
     res = await f(`${API}/${model}:generateContent`, {
@@ -92,12 +108,14 @@ async function once<T>(model: string, prompt: string, opts: GenerateOptions, key
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: opts.schema,
-          temperature: 0,
-          thinkingConfig: thinkingFor(model),
-        },
+        generationConfig: gemma
+          ? { temperature: 0 }
+          : {
+              responseMimeType: "application/json",
+              responseSchema: opts.schema,
+              temperature: 0,
+              thinkingConfig: thinkingFor(model),
+            },
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
       cache: "no-store",
@@ -128,7 +146,7 @@ async function once<T>(model: string, prompt: string, opts: GenerateOptions, key
     .map((p) => p.text)
     .join("");
   try {
-    return { data: JSON.parse(text) as T, usage };
+    return { data: JSON.parse(gemma ? jsonIn(text) : text) as T, usage };
   } catch {
     throw new GeminiError(`not JSON: ${text.slice(0, 120)}`, 502);
   }
