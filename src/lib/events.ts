@@ -1,6 +1,7 @@
 // Usage analytics on the server: one row per event in our own table (migration 012). The browser's device id, how the
 // page was opened and its language come from the page (src/lib/analytics.ts), as headers on the API calls or in the body
 // of /api/event; the country, region and city come from Vercel's geo headers. Writing never holds up an answer.
+import { isEvalRun } from "./evalRun";
 import { restHeaders, serviceConfig, type RestConfig } from "./supabaseRest";
 
 /** What the page may report itself; checks and pictures are logged by their own routes. */
@@ -52,7 +53,7 @@ export function eventRow(request: Request, event: string, data: Record<string, u
 
 /** Stores the row; a failure is dropped (a lost count is better than a slow or failed check). */
 export async function logEvent(row: EventRow, cfg: RestConfig | null = serviceConfig()): Promise<void> {
-  if (!cfg) return;
+  if (!cfg || isEvalRun()) return;
   try {
     await fetch(`${cfg.url}/rest/v1/events`, {
       method: "POST",

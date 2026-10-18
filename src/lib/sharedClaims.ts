@@ -4,6 +4,7 @@
 // same link (a viral text is stored once), and ids cannot be guessed or walked.
 import { createHash, createHmac } from "node:crypto";
 import type { ClaimResult } from "./clientTypes";
+import { isEvalRun } from "./evalRun";
 import { restHeaders, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
 
@@ -61,7 +62,7 @@ export function withShareIds(claims: ClaimResult[], key: string | null = signing
 
 /** Stores the rows; a result stored before is left as it is. Failures are swallowed: the check itself has been answered. */
 export async function saveSharedClaims(rows: Array<{ id: string; claim: ClaimResult }>, cfg: RestConfig | null = serviceConfig()): Promise<void> {
-  if (!cfg || rows.length === 0) return;
+  if (!cfg || rows.length === 0 || isEvalRun()) return;
   try {
     await fetch(`${cfg.url}/rest/v1/shared_claims?on_conflict=id`, {
       method: "POST",
@@ -107,7 +108,7 @@ export function postKey(post: string): string {
 
 /** The stored results of a post checked before, or null (never checked, too old, a result missing, or the cache down). */
 export async function cachedAnswer(key: string, cfg: RestConfig | null = serviceConfig(), nowMs = Date.now()): Promise<ClaimResult[] | null> {
-  if (!cfg) return null;
+  if (!cfg || isEvalRun()) return null;
   try {
     const since = new Date(nowMs - CACHE_DAYS * 86_400_000).toISOString();
     const res = await fetch(`${cfg.url}/rest/v1/verify_cache?select=ids&key=eq.${key}&created_at=gte.${since}`, {
@@ -129,7 +130,7 @@ export async function cachedAnswer(key: string, cfg: RestConfig | null = service
  *  not cached, so it is never stored. A post with no claims at all is not cached either (the AI may have stumbled). */
 export async function saveAnswer(key: string, claims: ClaimResult[], cfg: RestConfig | null = serviceConfig()): Promise<void> {
   const ids = claims.map((c) => c.shareId);
-  if (!cfg || ids.length === 0 || !ids.every(Boolean)) return;
+  if (!cfg || ids.length === 0 || !ids.every(Boolean) || isEvalRun()) return;
   try {
     await fetch(`${cfg.url}/rest/v1/verify_cache?on_conflict=key`, {
       method: "POST",

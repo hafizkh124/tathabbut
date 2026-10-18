@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { checkRateLimit, clientAddress, clientKey, dailyAiLimit, memoryCheck, RULES, rulesFor, secondsLeft, tooManyResponse } from "./rateLimit";
+import { checkRateLimit, clientAddress, clientKey, dailyAiLimit, limited, memoryCheck, RULES, rulesFor, secondsLeft, tooManyResponse } from "./rateLimit";
+import { EVAL_RUN_ENV } from "./evalRun";
+import { logEvent } from "./events";
+import { cachedAnswer } from "./sharedClaims";
 
 const request = (ip = "203.0.113.7") => new Request("http://x/api/verify", { method: "POST", headers: { "x-forwarded-for": `${ip}, 10.0.0.1` } });
 const cfg = { url: "http://db", key: "k" };
@@ -65,5 +68,20 @@ describe("rate limit", () => {
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("30");
     expect(await res.json()).toMatchObject({ limit: "site", retryAfter: 30 });
+  });
+
+  it("leaves an evaluation run out of the visitors' limits, cache and analytics", async () => {
+    const f = vi.fn();
+    vi.stubGlobal("fetch", f);
+    vi.stubEnv(EVAL_RUN_ENV, "1");
+    try {
+      expect(await limited(request(), "verify")).toBeNull();
+      expect(await cachedAnswer("k", cfg)).toBeNull();
+      await logEvent({ device: null, event: "verify", source: null, locale: null, country: null, region: null, city: null, referrer: null, data: null }, cfg);
+      expect(f).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -3,6 +3,7 @@
 // a keyed hash of its address: the address itself is never stored. When the database cannot be reached the check falls back
 // to this instance's memory (per-minute only), so an outage of the counter never stops the checks.
 import { createHash } from "node:crypto";
+import { isEvalRun } from "./evalRun";
 import { GeminiError } from "./gemini";
 import { rpc, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
@@ -100,6 +101,7 @@ export function tooManyResponse(r: Extract<RateLimitResult, { ok: false }>): Res
 
 /** Checks the limit and gives the 429 to send, or null to go on. */
 export async function limited(request: Request, bucket: Bucket): Promise<Response | null> {
+  if (isEvalRun()) return null;
   const r = await checkRateLimit(request, bucket);
   return r.ok ? null : tooManyResponse(r);
 }
