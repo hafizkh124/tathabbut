@@ -134,8 +134,8 @@ async function once<T>(model: string, prompt: string, opts: GenerateOptions, key
   }
 }
 
-/** The fallback models, in order: GEMINI_FALLBACK_MODEL may name several, comma-separated. On the free tier each model has
- *  its own daily quota, so every extra model is more checks a day before the AI is out. */
+/** The fallback models, in order: GEMINI_FALLBACK_MODELS (or the older GEMINI_FALLBACK_MODEL) may name several,
+ *  comma-separated. On the free tier each model has its own quota, so every extra model is more checks before the AI is out. */
 export const fallbackModels = (value: string | undefined): string[] =>
   (value ?? "gemini-2.5-flash").split(",").map((m) => m.trim()).filter(Boolean);
 
@@ -153,7 +153,7 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = deps.now ?? Date.now;
   const model = opts.model ?? process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
-  const fallbacks = fallbackModels(opts.fallbackModel ?? process.env.GEMINI_FALLBACK_MODEL);
+  const fallbacks = fallbackModels(opts.fallbackModel ?? (process.env.GEMINI_FALLBACK_MODELS || process.env.GEMINI_FALLBACK_MODEL));
   const attempts = [model, model, ...fallbacks].filter((m, i, a) => i < 2 || (m !== a[0] && a.indexOf(m) === i));
   const available = (m: string) => (outForTheDay.get(m) ?? 0) <= now();
 
@@ -168,8 +168,15 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
       last = err instanceof GeminiError ? err : new GeminiError(String(err));
       if (last.quota === "day") outForTheDay.set(m, now() + DAY_OUT_MS);
       if (last.quota === "minute") busy.set(m, last.retryAfter ?? MAX_MINUTE_WAIT_S);
-      if (!transient(last.status)) throw last;
-      return null;
+      if (transient(last.status)) return null;
+      // a fallback model the API does not know (404) or will not take this request from (400, e.g. a setting that model
+      // lacks): the next model is tried; an unknown one is left out for the hour. The main model's 400 is the request's.
+      if (m !== model && (last.status === 404 || last.status === 400)) {
+        console.warn(`gemini: fallback model ${m} failed with ${last.status}; trying the next one`);
+        if (last.status === 404) outForTheDay.set(m, now() + DAY_OUT_MS);
+        return null;
+      }
+      throw last;
     }
   };
 

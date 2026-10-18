@@ -349,20 +349,22 @@ export const DICT = {
   },
 
   "error.title": { ar: "تعذّر إكمال التحقق", en: "We could not finish the check", ur: "تصدیق مکمل نہ ہو سکی" },
+  // the limits (rate limits, the AI's free quota): said as what they are, many people checking at once, never as a fault
+  "error.busyTitle": { ar: "إقبال كبير الآن", en: "High demand right now", ur: "اس وقت رش بہت زیادہ ہے" },
   "error.busy": {
-    ar: "طلبات كثيرة في وقت قصير. انتظر دقيقة ثم أعد المحاولة. نصّك محفوظ.",
-    en: "Too many checks in a short time. Wait a minute and try again. Your text is saved.",
-    ur: "تھوڑی دیر میں بہت زیادہ تحقیقات ہو گئیں۔ ایک منٹ رک کر دوبارہ کوشش کریں۔ آپ کا متن محفوظ ہے۔",
+    ar: "يتحقق كثيرون عبر تَثَبُّت في هذه اللحظة. انتظر دقيقة ثم أعد المحاولة؛ نصّك محفوظ.",
+    en: "Many people are checking with Tathabbut at this moment. Wait a minute and try again; your text is saved.",
+    ur: "اس لمحے بہت سے لوگ تَثَبُّت سے تحقیق کر رہے ہیں۔ ایک منٹ بعد دوبارہ کوشش کریں، آپ کا متن محفوظ ہے۔",
   },
   "error.aiDay": {
-    ar: "انتهى حدّ التحقق المجاني لهذا اليوم. أعد المحاولة غدًا، ونعتذر عن ذلك.",
-    en: "Today's free checking limit is used up. Please try again tomorrow; we are sorry.",
-    ur: "آج کی مفت تحقیق کی حد پوری ہو گئی ہے۔ براہِ کرم کل دوبارہ کوشش کریں، معذرت۔",
+    ar: "ما شاء الله، تحقق اليوم عدد كبير من الناس عبر تَثَبُّت، فاكتملت طاقة اليوم. نرجو المحاولة غدًا، وشكرًا لصبرك.",
+    en: "So many people checked with Tathabbut today that today's capacity is full. Please try again tomorrow; thank you for your patience.",
+    ur: "ماشاء اللہ، آج بہت بڑی تعداد میں لوگوں نے تَثَبُّت سے تحقیق کی، اس لیے آج کی گنجائش پوری ہو گئی ہے۔ براہِ کرم کل دوبارہ کوشش کریں، آپ کے صبر کا شکریہ۔",
   },
   "error.busySite": {
-    ar: "بلغ تَثَبُّت حدّه اليومي من التحقق. أعد المحاولة لاحقًا، ونعتذر عن ذلك.",
-    en: "Tathabbut has reached its daily limit of checks. Please try again later; we are sorry.",
-    ur: "تَثَبُّت آج کی تحقیقات کی حد تک پہنچ گیا ہے۔ براہِ کرم بعد میں کوشش کریں، معذرت۔",
+    ar: "ما شاء الله، تحقق اليوم عدد كبير من الناس عبر تَثَبُّت، فاكتملت طاقة اليوم. نرجو المحاولة لاحقًا، وشكرًا لصبرك.",
+    en: "So many people checked with Tathabbut today that today's capacity is full. Please try again later; thank you for your patience.",
+    ur: "ماشاء اللہ، آج بہت بڑی تعداد میں لوگوں نے تَثَبُّت سے تحقیق کی، اس لیے آج کی گنجائش پوری ہو گئی ہے۔ براہِ کرم کچھ دیر بعد کوشش کریں، آپ کے صبر کا شکریہ۔",
   },
   "shared.banner": {
     ar: "نتيجة تحقق شاركها أحدهم معك من تَثَبُّت.",

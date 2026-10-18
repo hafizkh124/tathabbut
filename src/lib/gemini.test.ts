@@ -127,4 +127,14 @@ describe("generateJson", () => {
     expect(err).toMatchObject({ quota: "minute", retryAfter: 50 });
     expect(f).toHaveBeenCalledTimes(2);
   });
+
+  it("passes over a fallback model the API does not know, and leaves it out from then on", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const f = vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValueOnce(fail(404)).mockResolvedValueOnce(ok({ a: 1 }));
+    const r = await generateJson("x", { schema, fallbackModel: "gemini-typo,gemini-2.5-flash" }, { fetch: f, sleep: noSleep });
+    expect(r.model).toBe("gemini-2.5-flash");
+    f.mockResolvedValueOnce(ok({ a: 2 }));
+    await generateJson("x", { schema, fallbackModel: "gemini-typo,gemini-2.5-flash" }, { fetch: f, sleep: noSleep });
+    expect(f.mock.calls.map((c) => String(c[0]).match(/models\/([^:]+)/)?.[1])).toEqual(["gemini-3.8-flash", "gemini-typo", "gemini-2.5-flash", "gemini-2.5-flash"]);
+  });
 });
