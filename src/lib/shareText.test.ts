@@ -63,8 +63,8 @@ describe("share text", () => {
       expect(text).not.toContain("حکم:");
       expect(text).not.toContain("ماخذ:");
     }
-    const ar = { ...hadith, dorar: { ...hadith.dorar!, narrations: [{ source: "صحيح مسلم", muhaddith: "مسلم", reference: "41", verdict: "[صحيح]", matn: "x" }] } } as unknown as ClaimResult;
-    expect(buildShareText([ar], "ar").split("\n").slice(0, 2)).toEqual(["«اطلبوا العلم ولو بالصين»", "أخرجه الإمام مسلم في صحيحه، 41."]);
+    const ar = { ...hadith, state: "مقبول", dorar: { ...hadith.dorar!, narrations: [{ source: "صحيح مسلم", muhaddith: "مسلم", reference: "41", verdict: "[صحيح]", matn: "x" }] } } as unknown as ClaimResult;
+    expect(buildShareText([ar], "ar").split("\n").slice(2, 4)).toEqual(["«اطلبوا العلم ولو بالصين»", "🟢 *أخرجه الإمام مسلم في صحيحه، 41.*"]);
   });
 
   it("never puts a Dorar link in the shared text", () => {
@@ -105,7 +105,7 @@ describe("share text", () => {
   it("puts no source link in the shared text, only the app's address at the end (specialist, 2026-10-06)", () => {
     const text = buildShareText([verse], "ar");
     expect(text).not.toContain("quranpedia");
-    expect(text.trim().endsWith("تحقّق من النصوص قبل نشرها: https://tathabbut.alulama.org")).toBe(true);
+    expect(text.trim().endsWith("لمزيد من التحقق:\nhttps://tathabbut.alulama.org")).toBe(true);
   });
 
   it("keeps a list entry's web address out of the shared text", () => {
@@ -117,6 +117,35 @@ describe("share text", () => {
   });
 
   it("separates several claims", () => {
-    expect(buildShareText([hadith, verse], "ar").split("\n\n").length).toBe(3);
+    // the platform's name, two claims, the link
+    expect(buildShareText([hadith, verse], "ar").split("\n\n").length).toBe(4);
+  });
+
+  it("opens with the platform's name, numbers several claims and marks each result with its badge's colour (2026-10-19)", () => {
+    const text = buildShareText([hadith, verse], "ur");
+    expect(text.startsWith("*تثبت پلیٹ فارم*\n\n")).toBe(true);
+    expect(text).not.toContain("العلماء");
+    expect(text).toContain("*1.* «اطلبوا العلم ولو بالصين»\n🟡 *");
+    expect(text).toContain("*2.* «إن الله مع الصابرين»\n🟢 *");
+    expect(buildShareText([hadith], "ur").startsWith("*تثبت پلیٹ فارم*\n\n«اطلبوا")).toBe(true);
+    expect(text.endsWith("مزید تحقیق کے لیے:\nhttps://tathabbut.alulama.org")).toBe(true);
+  });
+
+  it("gives a misquoted verse as written, the mistake, the mushaf's wording, then its place (2026-10-19)", () => {
+    const r = { ...verse, claim: { ...verse.claim, arabicSpan: "إن الله مع الصابرون" }, state: "آية منقولة بخطأ", verse: { ...verse.verse!, text: "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ", wording: { exact: false, distance: 1, diffs: [{ op: "replaced" as const, typed: "الصابرون", correct: "الصابرين" }] } } } as unknown as ClaimResult;
+    expect(buildShareText([r], "ur").split("\n").slice(2, 7)).toEqual([
+      "«إن الله مع الصابرون»",
+      "🟠 *آیت غلط نقل ہوئی*",
+      "«الصابرون» لکھا ہے، درست «الصابرين» ہے",
+      "مصحفِ حفص کا متن: إِنَّ اللَّهَ مَعَ الصَّابِرِينَ",
+      "ماخذ: سورہ البقرة، آیت 153",
+    ]);
+  });
+
+  it("gives a question by its topic, never by the person's own words, as the screen does", () => {
+    const q = { claim: { ...claim, kind: "question" as const, scope: "personal" as const, textAsWritten: "میں نے روزے میں دوا لی", topic: "تناول الدواء في الصيام" }, state: "فتوى أو حالة شخصية — إحالة", basis: "none", notes: [] } as unknown as ClaimResult;
+    const text = buildShareText([q], "ur");
+    expect(text).toContain("«تناول الدواء في الصيام»");
+    expect(text).not.toContain("دوا لی");
   });
 });

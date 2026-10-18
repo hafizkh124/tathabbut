@@ -218,8 +218,9 @@ export const DICT = {
   },
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
-  "share.grade": { ar: "الحكم", en: "Grading", ur: "حکم" },
-  "share.footer": { ar: "تحقّق من النصوص قبل نشرها", en: "Check texts before you share them", ur: "آگے بھیجنے سے پہلے تحقیق کریں" },
+  // the shared text's first and last lines (team lead, 2026-10-19): the platform's name, and the link «for more»
+  "share.header": { ar: "منصة تثبت", en: "Tathabbut Platform", ur: "تثبت پلیٹ فارم" },
+  "share.more": { ar: "لمزيد من التحقق", en: "For more detail", ur: "مزید تحقیق کے لیے" },
   "share.pickTitle": { ar: "اختر ما تنسخه أو تشاركه", en: "Choose what to copy or share", ur: "منتخب کریں کیا کاپی یا شیئر کرنا ہے" },
   "share.copyN": { ar: "نسخ ({n})", en: "Copy ({n})", ur: "کاپی ({n})" },
   "share.shareN": { ar: "مشاركة ({n})", en: "Share ({n})", ur: "شیئر ({n})" },

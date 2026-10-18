@@ -4,6 +4,7 @@ import { stateLabel, translate, type Locale } from "./i18n/dict";
 import { sahihAttribution } from "./sahihAttribution";
 import { matchedArabic } from "./matchedArabic";
 import { splitReferenceUrl } from "./viaLinks";
+import { toneOf, type Tone } from "./gradeStyle";
 
 export const APP_URL = "https://tathabbut.alulama.org";
 
@@ -30,38 +31,80 @@ function withNumber(sentence: string, reference: string | undefined): string {
   return `${sentence.slice(0, sentence.length - stop.length)}، ${reference}${stop}`;
 }
 
+/** The mark before a result's state in the shared text: the colour of the app's badge for that state (gradeStyle.ts), so a
+ *  reader sees the result at a glance. The words always say it too; the mark never stands alone. */
+export const TONE_MARK: Record<Tone, string> = {
+  accepted: "🟢",
+  verse: "🟢",
+  weak: "🟡",
+  veryWeak: "🔴",
+  misquote: "🟠",
+  unsure: "⚪",
+  notFound: "⚪",
+  translated: "🔵",
+  fatwa: "🟣",
+  found: "🟤",
+};
+
+/** WhatsApp's bold. Elsewhere the stars stay as plain marks, which still read as emphasis. */
+const bold = (s: string) => `*${s}*`;
+
+/** The difference between a quoted verse and the mushaf, word by word, as the app shows it (ClaimDetail → Diffs). */
+function diffLines(r: ClaimResult, locale: Locale): string[] {
+  return (r.verse?.wording?.diffs ?? []).map((d) =>
+    d.op === "replaced"
+      ? translate(locale, "diff.replaced", { typed: d.typed ?? "", correct: d.correct ?? "" })
+      : d.op === "missing"
+        ? translate(locale, "diff.missing", { correct: d.correct ?? "" })
+        : translate(locale, "diff.added", { typed: d.typed ?? "" }),
+  );
+}
+
 /**
- * The short text for WhatsApp and the like (specialist, 2026-10-05/06). Per claim: its words, then
- * - a hadith of the Sahihayn: one line, «أخرجه الإمام مسلم في صحيحه، 41.», which holds book, imam and number;
- * - any other result: the grading, the source and its scholar;
+ * The short text for WhatsApp and the like (specialist, 2026-10-05/06; layout by the team lead, 2026-10-19). It opens with
+ * the platform's name; several claims are numbered. Per claim: its words, then its result marked with the badge's colour,
+ * then
+ * - a hadith of the Sahihayn: the result is one line, «أخرجه الإمام مسلم في صحيحه، 41.», which holds book, imam and number;
+ * - a misquoted verse: what differs, the verse as the mushaf has it, and its place, in that order;
+ * - any other result: the source and its scholar;
  * then, for an Urdu or English claim, the Arabic text it was matched to (never dropped), and for a personal question the
  * warning. No links to sources at all (the app shows them); no wording-variant, narrator or isnad notes. Only the app's
  * address closes it: the link to these very results when they have one (resultUrl).
  */
 export function buildShareText(results: ClaimResult[], locale: Locale): string {
-  const blocks = results.map((r) => {
-    const quote = r.claim.arabicSpan || r.claim.textAsWritten;
-    const lines = [`«${quote}»`];
+  const blocks = results.map((r, i) => {
+    // a question goes by its topic, as on the screen (ClaimDetail): a person's own case never leaves in their words
+    const quote = r.claim.kind === "question" ? r.claim.topic : r.claim.arabicSpan || r.claim.textAsWritten;
+    const head = [results.length > 1 ? bold(`${i + 1}.`) : "", quote ? `«${quote}»` : ""].filter(Boolean).join(" ");
+    const lines = head ? [head] : [];
+    const mark = TONE_MARK[toneOf(r.state)];
     const n = r.dorar?.narrations[0];
     const sahih = n && sahihAttribution(n, locale);
-    if (sahih) lines.push(withNumber(sahih, n.reference));
-    else {
-      lines.push(`${translate(locale, "share.grade")}: ${stateLabel(r.state, locale, true)}`);
+    if (sahih) lines.push(`${mark} ${bold(withNumber(sahih, n.reference))}`);
+    else lines.push(`${mark} ${bold(stateLabel(r.state, locale, true))}`);
+
+    if (r.verse) {
+      // the mistake, then the right wording, then where it stands in the mushaf (an omitted context is the state itself,
+      // and the full wording follows, so the app's warning is not repeated here)
+      lines.push(...diffLines(r, locale));
+      // as the app shows it (ClaimDetail): for a misquote, a translated verse, or a verse read in another qira'a
+      const tone = toneOf(r.state);
+      if (tone === "misquote" || tone === "translated" || r.verse.wording?.qiraat?.length) lines.push(`${translate(locale, "label.mushaf")}: ${r.verse.text}`);
+      for (const q of r.verse.wording?.qiraat ?? [])
+        lines.push(`${translate(locale, "label.qiraa")}: «${q.typed}» ${translate(locale, "qiraa.of", { readers: readersLine(q.readers) })}`);
+    }
+    if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
+    if (!sahih) {
       const src = sourceLine(r, locale);
       if (src) lines.push(`${translate(locale, "label.source")}: ${src}`);
       if (n?.muhaddith) lines.push(`${translate(locale, "label.scholar")}: ${n.muhaddith}`);
     }
     const arabic = matchedArabic(r);
     if (arabic) lines.push(`${translate(locale, "label.matchedArabic")}: ${arabic}`, translate(locale, "note.translationMatch"));
-    for (const q of r.verse?.wording?.qiraat ?? [])
-      lines.push(`${translate(locale, "label.qiraa")}: «${q.typed}» ${translate(locale, "qiraa.of", { readers: readersLine(q.readers) })}`);
-    if (r.verse?.wording?.contextOmitted) lines.push(translate(locale, "verse.contextWarning"));
-    if (r.verse && (r.verse.wording?.contextOmitted || r.verse.wording?.exact === false)) lines.push(`${translate(locale, "label.mushaf")}: ${r.verse.text}`);
-    if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
     if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fiqh.refer"));
     return lines.join("\n");
   });
-  return `${blocks.join("\n\n")}\n\n${translate(locale, "share.footer")}: ${resultUrl(results)}`;
+  return `${bold(translate(locale, "share.header"))}\n\n${blocks.join("\n\n")}\n\n${translate(locale, "share.more")}:\n${resultUrl(results)}`;
 }
 
 /** The address that closes a shared text: the link to these results (/r/<id>-<id>…, src/lib/sharedClaims.ts) when each
