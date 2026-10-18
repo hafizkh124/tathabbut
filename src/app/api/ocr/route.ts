@@ -1,6 +1,7 @@
 // POST /api/ocr  { "image": "<base64>", "mimeType": "image/jpeg" }  →  { text, uncertain } read from a screenshot.
 // The picture is sent to Google Gemini for reading and is not stored here.
 import { readImage, validateImage } from "@/lib/ocr";
+import { limited } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -15,6 +16,8 @@ export async function POST(request: Request) {
 
   const checked = validateImage(body);
   if (!checked.ok) return Response.json({ error: checked.error }, { status: checked.status });
+  const refused = await limited(request, "ocr");
+  if (refused) return refused;
 
   const t0 = Date.now();
   try {

@@ -36,7 +36,7 @@ function withNumber(sentence: string, reference: string | undefined): string {
  * - any other result: the grading, the source and its scholar;
  * then, for an Urdu or English claim, the Arabic text it was matched to (never dropped), and for a personal question the
  * warning. No links to sources at all (the app shows them); no wording-variant, narrator or isnad notes. Only the app's
- * address closes it.
+ * address closes it: the link to these very results when they have one (resultUrl).
  */
 export function buildShareText(results: ClaimResult[], locale: Locale): string {
   const blocks = results.map((r) => {
@@ -61,7 +61,14 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
     if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fiqh.refer"));
     return lines.join("\n");
   });
-  return `${blocks.join("\n\n")}\n\n${translate(locale, "share.footer")}: ${APP_URL}`;
+  return `${blocks.join("\n\n")}\n\n${translate(locale, "share.footer")}: ${resultUrl(results)}`;
+}
+
+/** The address that closes a shared text: the link to these results (/r/<id>-<id>…, src/lib/sharedClaims.ts) when each
+ *  of them has one, else the app itself. */
+export function resultUrl(results: ClaimResult[]): string {
+  const ids = results.map((r) => r.shareId);
+  return ids.length > 0 && ids.every(Boolean) ? `${APP_URL}/r/${ids.join("-")}` : APP_URL;
 }
 
 /** What became of a share: the system sheet took it, it was copied instead, the person closed the sheet, or nothing worked. */

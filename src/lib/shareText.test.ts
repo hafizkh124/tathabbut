@@ -95,6 +95,13 @@ describe("share text", () => {
     expect(text).toContain("السلسلة الضعيفة، 416");
   });
 
+  it("ends with the link to the results themselves when each has one, else the app's address", () => {
+    const a = { ...verse, shareId: "abcDEF123456" } as ClaimResult;
+    const b = { ...verse, shareId: "xyzXYZ987654" } as ClaimResult;
+    expect(buildShareText([a, b], "ar").trim().endsWith("https://tathabbut.alulama.org/r/abcDEF123456-xyzXYZ987654")).toBe(true);
+    expect(buildShareText([a, verse], "ar").trim().endsWith("https://tathabbut.alulama.org")).toBe(true);
+  });
+
   it("puts no source link in the shared text, only the app's address at the end (specialist, 2026-10-06)", () => {
     const text = buildShareText([verse], "ar");
     expect(text).not.toContain("quranpedia");

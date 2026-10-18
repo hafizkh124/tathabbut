@@ -1,6 +1,7 @@
 // POST /api/translate  { "text": "<an excerpt as /api/turath returned it>", "sig": "<its signature>", "to": "ur" | "en" }
 //   →  { "translation": "...", "cached": boolean }
 // Only server-signed retrieved text (Turath or a similar expression from verification) is translated.
+import { limited } from "@/lib/rateLimit";
 import { isTranslateLang, MAX_TRANSLATE_CHARS, translateExcerpt } from "@/lib/translate";
 import { supabaseTranslationCache } from "@/lib/turathCache";
 import { verifyExcerpt } from "@/lib/turathSign";
@@ -23,6 +24,8 @@ export async function POST(request: Request) {
   if (text.length > MAX_TRANSLATE_CHARS) return Response.json({ error: `text longer than ${MAX_TRANSLATE_CHARS} characters` }, { status: 400 });
   if (!isTranslateLang(body.to)) return Response.json({ error: 'to must be "ur" or "en"' }, { status: 400 });
   if (!verifyExcerpt(text, body.sig)) return Response.json({ error: "this text was not returned by the books" }, { status: 403 });
+  const refused = await limited(request, "translate");
+  if (refused) return refused;
 
   try {
     const r = await translateExcerpt(text, body.to, { cache });

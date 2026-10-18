@@ -25,6 +25,12 @@ type Phase =
   | { name: "results"; claims: ClaimResult[] }
   | { name: "error"; kind: ErrorKind };
 
+/** What a failed check means for the person: too long, over a rate limit (theirs or the site's), or not readable now. */
+function errorKindOf(status: number, data: { error?: string; limit?: string }): ErrorKind {
+  if (status === 429) return data.limit === "site" ? "busySite" : "busy";
+  return status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read";
+}
+
 export default function Home() {
   const { t } = useI18n();
   const [text, setText] = useState("");
@@ -76,10 +82,10 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: submitted }),
         });
-        const data = (await res.json()) as VerifyResponse;
+        const data = (await res.json()) as VerifyResponse & { limit?: string };
         if (id !== run.current) return;
         if (!res.ok) {
-          setPhase({ name: "error", kind: res.status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read" });
+          setPhase({ name: "error", kind: errorKindOf(res.status, data) });
           return;
         }
         const claims = (data.claims ?? []).map((c) => (turathKindOf(c) ? { ...c, turath: { status: "loading" as const } } : c));
@@ -118,7 +124,7 @@ export default function Home() {
         }
         if (!res.ok) {
           URL.revokeObjectURL(prepared.previewUrl);
-          setPhase({ name: "error", kind: res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
+          setPhase({ name: "error", kind: res.status === 429 ? "pictureBusy" : res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
           return;
         }
         if (!data.text?.trim()) {

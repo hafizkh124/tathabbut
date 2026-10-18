@@ -10,6 +10,8 @@ export type TurathView = { status: "loading" } | TurathLookupOutcome;
 
 export type ClaimResult = Omit<VerifiedClaim, "dorar"> & {
   turath?: TurathView;
+  /** the id of this result's link, /r/<id> (src/lib/sharedClaims.ts); none for a personal question */
+  shareId?: string;
   dorar?: Omit<NonNullable<VerifiedClaim["dorar"]>, "narrations" | "weakVariants"> & {
     narrations: NarrationView[];
     weakVariants?: NarrationView[];

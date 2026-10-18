@@ -5,10 +5,22 @@ import type { Key } from "@/lib/i18n/dict";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 
-export type ErrorKind = "network" | "pictureNetwork" | "tooLong" | "read" | "ocr" | "noText" | "badImage";
-const BODY: Record<ErrorKind, Key> = { network: "error.network", pictureNetwork: "error.network", tooLong: "error.tooLong", read: "error.read", ocr: "error.ocr", noText: "error.noText", badImage: "error.badImage" };
+export type ErrorKind = "network" | "pictureNetwork" | "tooLong" | "read" | "ocr" | "noText" | "badImage" | "busy" | "busySite" | "pictureBusy";
+const BODY: Record<ErrorKind, Key> = {
+  network: "error.network",
+  pictureNetwork: "error.network",
+  tooLong: "error.tooLong",
+  read: "error.read",
+  ocr: "error.ocr",
+  noText: "error.noText",
+  badImage: "error.badImage",
+  // over the rate limit (src/lib/rateLimit.ts): this device's own, or the site's for the day
+  busy: "error.busy",
+  busySite: "error.busySite",
+  pictureBusy: "error.busy",
+};
 /** Errors about a picture have no text to keep: the only way on is back to choose another. */
-const PICTURE: ErrorKind[] = ["pictureNetwork", "ocr", "noText", "badImage"];
+const PICTURE: ErrorKind[] = ["pictureNetwork", "ocr", "noText", "badImage", "pictureBusy"];
 
 export function ErrorView({ kind, text, onRetry, onEdit }: { kind: ErrorKind; text: string; onRetry: () => void; onEdit: () => void }) {
   const { t } = useI18n();

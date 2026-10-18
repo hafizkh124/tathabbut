@@ -349,6 +349,27 @@ export const DICT = {
   },
 
   "error.title": { ar: "تعذّر إكمال التحقق", en: "We could not finish the check", ur: "تصدیق مکمل نہ ہو سکی" },
+  "error.busy": {
+    ar: "طلبات كثيرة في وقت قصير. انتظر دقيقة ثم أعد المحاولة. نصّك محفوظ.",
+    en: "Too many checks in a short time. Wait a minute and try again. Your text is saved.",
+    ur: "تھوڑی دیر میں بہت زیادہ تحقیقات ہو گئیں۔ ایک منٹ رک کر دوبارہ کوشش کریں۔ آپ کا متن محفوظ ہے۔",
+  },
+  "error.busySite": {
+    ar: "بلغ تَثَبُّت حدّه اليومي من التحقق. أعد المحاولة لاحقًا، ونعتذر عن ذلك.",
+    en: "Tathabbut has reached its daily limit of checks. Please try again later; we are sorry.",
+    ur: "تَثَبُّت آج کی تحقیقات کی حد تک پہنچ گیا ہے۔ براہِ کرم بعد میں کوشش کریں، معذرت۔",
+  },
+  "shared.banner": {
+    ar: "نتيجة تحقق شاركها أحدهم معك من تَثَبُّت.",
+    en: "A check someone shared with you from Tathabbut.",
+    ur: "یہ تَثَبُّت کی ایک تحقیق ہے جو کسی نے آپ کو بھیجی ہے۔",
+  },
+  "shared.cta": { ar: "تحقّق من رسالة وصلتك", en: "Check a message you received", ur: "اپنا موصول پیغام چیک کریں" },
+  "shared.missing": {
+    ar: "لم نجد هذه النتيجة. يمكنك لصق النص والتحقق منه من جديد.",
+    en: "We could not find this result. You can paste the text and check it again.",
+    ur: "یہ نتیجہ نہیں ملا۔ آپ متن ڈال کر دوبارہ تحقیق کر سکتے ہیں۔",
+  },
   "error.network": {
     ar: "تحقّق من اتصالك بالإنترنت ثم أعد المحاولة. نصّك محفوظ ولم يضِع.",
     en: "Check your internet connection and try again. Your text is saved.",
