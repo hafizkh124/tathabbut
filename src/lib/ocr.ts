@@ -59,10 +59,10 @@ export function validateImage(body: { image?: unknown; mimeType?: unknown }): Im
   return { ok: true, image: { mimeType, data } };
 }
 
-type Generate = <T>(prompt: string, opts: { schema: object; images?: GeminiImage[] }) => Promise<GenerateResult<T>>;
+type Generate = <T>(prompt: string, opts: { schema: object; images?: GeminiImage[]; timeoutMs?: number }) => Promise<GenerateResult<T>>;
 
 export async function readImage(image: GeminiImage, deps: { generate?: Generate } = {}): Promise<OcrReading & { model: string; ms: number; usage?: GeminiUsage }> {
   const generate = deps.generate ?? generateJson;
-  const r = await generate<{ text?: unknown; uncertain?: unknown }>(OCR_PROMPT, { schema: OCR_SCHEMA, images: [image] });
+  const r = await generate<{ text?: unknown; uncertain?: unknown }>(OCR_PROMPT, { schema: OCR_SCHEMA, images: [image], timeoutMs: 20_000 }); // a picture takes longer than text
   return { ...checkReading(r.data), model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
 }
