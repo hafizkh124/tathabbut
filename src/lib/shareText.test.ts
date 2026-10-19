@@ -148,4 +148,33 @@ describe("share text", () => {
     expect(text).toContain("«تناول الدواء في الصيام»");
     expect(text).not.toContain("دوا لی");
   });
+
+  describe("the book a post names (2026-10-19)", () => {
+    const muslim = { source: "صحيح مسلم", reference: "780", muhaddith: "مسلم", verdict: "[صحيح]", matn: "لا تجعلوا بيوتكم مقابر", grade: "مقبول" };
+    const hakim = { source: "المستدرك على الصحيحين", reference: "2062", muhaddith: "الحاكم", verdict: "صحيح على شرط مسلم", matn: "اقرؤوا سورة البقرة في بيوتكم", grade: "مقبول", display: { grade: "مقبول", label: "مقبول (صحيح أو حسن)", caution: false } };
+    const base = { ...hadith, state: "مقبول", dorar: { narrations: [muslim, hakim], summary: {}, externalUrls: {} } } as unknown as ClaimResult;
+
+    it("puts the cited book's narration under the state, then the Sahih line", () => {
+      const r = { ...base, dorar: { ...base.dorar!, cited: { book: "مستدرک حاکم", known: true, narration: hakim } } } as unknown as ClaimResult;
+      expect(buildShareText([r], "ar").split("\n").slice(2, 6)).toEqual([
+        "«اطلبوا العلم ولو بالصين»",
+        "🟢 *مقبول (صحيح أو حسن)*",
+        "ذُكر في الرسالة: المستدرك على الصحيحين، 2062 — الحاكم: مقبول (صحيح أو حسن)",
+        "أخرجه الإمام مسلم في صحيحه، 780.",
+      ]);
+    });
+    it("changes nothing when the cited book's narration is the first one", () => {
+      const r = { ...base, dorar: { ...base.dorar!, cited: { book: "صحيح مسلم", known: true, narration: muslim } } } as unknown as ClaimResult;
+      expect(buildShareText([r], "ar")).toBe(buildShareText([base], "ar"));
+    });
+    it("says when the book named is not among the results", () => {
+      const r = { ...base, dorar: { ...base.dorar!, cited: { book: "سنن الترمذي", known: true } } } as unknown as ClaimResult;
+      expect(buildShareText([r], "ur")).toContain("پیغام میں مذکور: سنن الترمذي — الدرر کے نتائج میں اس کی روایت نہیں ملی");
+    });
+    it("lists the narrations the person chose, one per line", () => {
+      const text = buildShareText([base], "ar", { narrations: [hakim, muslim] } as never);
+      expect(text).toContain("🟢 *مقبول (صحيح أو حسن)*\n• المستدرك على الصحيحين، 2062 — الحاكم: مقبول (صحيح أو حسن)\n• صحيح مسلم، 780 — أخرجه الإمام مسلم في صحيحه.");
+      expect(text).not.toContain("المصدر:");
+    });
+  });
 });

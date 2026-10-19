@@ -6,6 +6,7 @@ import type { Claim } from "./claims";
 import type { DorarResult } from "./dorar";
 import type { Grade } from "./gradeMap";
 import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
+import { citedNarration, isKnownBook } from "./citedBook";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
 import type { QiraaVariant } from "./qiraat";
@@ -65,6 +66,9 @@ export interface VerifiedClaim {
   dorar?: {
     narrations: GradedNarration[];
     weakVariants?: GradedNarration[];
+    /** the book the post names for this text, and its narration when Dorar has one from that book (citedBook.ts):
+     *  shown first, with its own verdict; the state above still comes from all the narrations */
+    cited?: { book: string; known: boolean; narration?: GradedNarration };
     summary: GradeSummary;
     origin?: string;
     externalUrls?: { dorar: string; shamela: string };
@@ -351,6 +355,8 @@ export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<
   }
   const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
   const summary = summarizeGrades(rawNarrations);
+  const citedBook = claim.citedSource?.trim();
+  const citedHit = citedBook ? citedNarration(citedBook, [ranked.allRanked, ranked.weakVariants]) : null;
   const encodedQuery = encodeURIComponent(claim.query);
   return [{
     claim,
@@ -359,6 +365,7 @@ export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<
     dorar: {
       narrations: ranked.allRanked,
       weakVariants: ranked.weakVariants.length > 0 ? ranked.weakVariants : undefined,
+      ...(citedBook ? { cited: { book: citedBook, known: isKnownBook(citedBook), ...(citedHit ? { narration: citedHit } : {}) } } : {}),
       summary,
       origin: looked.origin,
       externalUrls: {

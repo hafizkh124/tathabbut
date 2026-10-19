@@ -338,6 +338,14 @@ export const DICT = {
     ur: "یہ کسی عالم سے منسوب قول ہے۔ یہ الدرر کے نتائج جوں کے توں ہیں؛ محدث کے الفاظ پورے پڑھیں۔",
   },
   "label.cited": { ar: "ذُكر في الرسالة", en: "Named in the message", ur: "پیغام میں مذکور" },
+  // the book a post names for its hadith (citedBook.ts, team lead 2026-10-19)
+  "cited.first": { ar: "رواية الكتاب المذكور في الرسالة", en: "The narration of the book named in the message", ur: "پیغام میں مذکور کتاب کی روایت" },
+  "cited.strongest": { ar: "أقوى ما في النتائج", en: "The strongest in the results", ur: "نتائج میں سب سے مضبوط" },
+  "cited.missing": { ar: "لا رواية منه في نتائج الدرر", en: "no narration from it is among Dorar's results", ur: "الدرر کے نتائج میں اس کی روایت نہیں ملی" },
+  "share.choose": { ar: "ماذا تشارك؟", en: "What to share?", ur: "کیا شیئر کریں؟" },
+  "share.main": { ar: "النتيجة الرئيسية", en: "The main result", ur: "مرکزی نتیجہ" },
+  "share.pick": { ar: "أختار الروايات", en: "Choose narrations", ur: "روایات خود چنیں" },
+  "share.allNarrations": { ar: "كل الروايات ({n})", en: "All narrations ({n})", ur: "تمام روایات ({n})" },
   "fatwa.body": {
     ar: "هذا سؤال عن حكم أو حالة شخصية، والجواب فيه لأهل العلم.",
     en: "This is a question about a ruling or a personal case, and the answer belongs to the scholars.",
