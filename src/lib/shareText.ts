@@ -46,6 +46,11 @@ export const TONE_MARK: Record<Tone, string> = {
   found: "🟤",
 };
 
+/** U+200F, put before a line that starts with an emoji, a bullet or a number: WhatsApp then lays the line out right to
+ *  left, as the Arabic and Urdu after it, instead of putting the emoji at its far left (seen on the team lead's phone,
+ *  2026-10-19). Not for English, which reads left to right. */
+const rtl = (locale: Locale) => (locale === "en" ? "" : "‏");
+
 /** WhatsApp's bold. Elsewhere the stars stay as plain marks, which still read as emphasis. */
 const bold = (s: string) => `*${s}*`;
 
@@ -76,7 +81,8 @@ export function buildShareText(results: ClaimResult[], locale: Locale, opts: { n
     // a question goes by its topic, as on the screen (ClaimDetail): a person's own case never leaves in their words
     const quote = r.claim.kind === "question" ? r.claim.topic : r.claim.arabicSpan || r.claim.textAsWritten;
     const head = [results.length > 1 ? bold(`${i + 1}.`) : "", quote ? `«${quote}»` : ""].filter(Boolean).join(" ");
-    const lines = head ? [head] : [];
+    const start = rtl(locale);
+    const lines = head ? [`${results.length > 1 ? start : ""}${head}`] : [];
     const mark = TONE_MARK[toneOf(r.state)];
     const n = r.dorar?.narrations[0];
     // narrations the person chose to send (one result only): each on its own line, under the state
@@ -85,9 +91,9 @@ export function buildShareText(results: ClaimResult[], locale: Locale, opts: { n
     const cited = r.dorar?.cited;
     const citedFirst = cited?.narration && !(n && sameNarration(cited.narration, n)) ? cited.narration : undefined;
     const sahih = n && sahihAttribution(n, locale);
-    if (sahih && !picked && !citedFirst) lines.push(`${mark} ${bold(withNumber(sahih, n.reference))}`);
-    else lines.push(`${mark} ${bold(stateLabel(r.state, locale, true))}`);
-    if (picked) lines.push(...picked.map((x) => `• ${narrationLine(x, locale)}`));
+    if (sahih && !picked && !citedFirst) lines.push(`${start}${mark} ${bold(withNumber(sahih, n.reference))}`);
+    else lines.push(`${start}${mark} ${bold(stateLabel(r.state, locale, true))}`);
+    if (picked) lines.push(...picked.map((x) => `${start}• ${narrationLine(x, locale)}`));
     else if (citedFirst) {
       lines.push(`${translate(locale, "label.cited")}: ${narrationLine(citedFirst, locale)}`);
       if (sahih) lines.push(withNumber(sahih, n.reference));
