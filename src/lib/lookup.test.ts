@@ -49,10 +49,10 @@ describe("lookupDorar", () => {
     expect(r).toEqual({ ok: false, error: "http", detail: "403" });
   });
 
-  it("returns an empty list, and never an old cache, when Dorar answers 'nothing found'", async () => {
+  it("reports an empty page as a failed check, never as 'nothing found' and never with an old cache (2026-10-19)", async () => {
     const { cache, put } = fakeCache({ results: [result("old")], fetchedAt: ago(FRESH_MS * 2) });
     const r = await lookupDorar("x", { cache, search: async () => ({ ok: false, error: "empty" }), now: () => NOW });
-    expect(r).toEqual({ ok: true, results: [], origin: "live" });
+    expect(r).toEqual({ ok: false, error: "empty" });
     expect(put).not.toHaveBeenCalled();
   });
 });

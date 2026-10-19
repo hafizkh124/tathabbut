@@ -55,6 +55,9 @@ export interface VerifiedClaim {
   similarExpressions?: SimilarExpression[];
   claim: Claim;
   state: State;
+  /** Dorar could not be asked (down, or an empty page twice): the claim was not checked, so the answer is not given
+   *  or stored as "not found" (api/verify answers 503) */
+  lookupFailed?: true;
   /** where the state comes from */
   basis: "specialist-list" | "quran" | "dorar" | "turath" | "none" | "kind";
   verse?: VerseView & { candidates?: VerseView[] };
@@ -332,7 +335,7 @@ export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<
   // 3) Dorar
   if (!canSearch) return [{ claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] }];
   const looked = await deps.lookupDorar(claim.query);
-  if (!looked.ok) return [{ claim, state: STATES.notFound, basis: "none", notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings }];
+  if (!looked.ok) return [{ claim, state: STATES.notFound, basis: "none", lookupFailed: true, notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings }];
   const rawNarrations = selectRelevant(claim.query, looked.results);
   const notes: string[] = [];
   if (!rawNarrations.length) {

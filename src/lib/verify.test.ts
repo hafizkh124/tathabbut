@@ -81,6 +81,13 @@ describe("verifyClaim — routing and authority", () => {
     expect(r.dorar?.narrations.length).toBeGreaterThan(0);
   });
 
+  it("marks a hadith Dorar could not be asked about as not checked, not as found nowhere (2026-10-19)", async () => {
+    const r = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: false as const, error: "empty" })) }));
+    expect(r).toMatchObject({ lookupFailed: true, state: STATES.notFound });
+    const ok = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })) }));
+    expect(ok.lookupFailed).toBeUndefined();
+  });
+
   it("a scholar's quote found nowhere is referred", async () => {
     const r = await verifyClaim(arabic("scholar_quote", "قول لا نعرفه عن عالم"), deps());
     expect(r.state).toBe(STATES.notFound);

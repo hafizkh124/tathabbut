@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeArabic } from "./arabic";
-import { parseDorarHtml } from "./dorar";
+import { parseDorarHtml, searchDorar } from "./dorar";
 
 // A real dorar.net response for «اطلبوا العلم ولو بالصين», saved 2026-10-02.
 const html = readFileSync(join(__dirname, "__fixtures__", "dorar_talab_al_ilm.html"), "utf-8");
@@ -42,5 +42,35 @@ describe("parseDorarHtml", () => {
 
   it("returns nothing for empty input", () => {
     expect(parseDorarHtml("")).toEqual([]);
+  });
+});
+
+describe("searchDorar", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
+  const page = (result: string) => new Response(JSON.stringify({ ahadith: { result } }), { status: 200 });
+
+  it("asks again when Dorar sends an empty page, which it never does for a real query (2026-10-19)", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    const f = vi.fn().mockResolvedValueOnce(page("")).mockResolvedValueOnce(page(html));
+    vi.stubGlobal("fetch", f);
+    vi.useFakeTimers();
+    const pending = searchDorar("اطلبوا العلم ولو بالصين");
+    await vi.runAllTimersAsync();
+    const r = await pending;
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(r.ok && r.results.length).toBe(15);
+  });
+
+  it("reports an empty page that stays empty as such", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => page("")));
+    vi.useFakeTimers();
+    const pending = searchDorar("x y z");
+    await vi.runAllTimersAsync();
+    expect(await pending).toEqual({ ok: false, error: "empty" });
   });
 });

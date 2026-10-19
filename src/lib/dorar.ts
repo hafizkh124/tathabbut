@@ -79,9 +79,12 @@ export async function searchDorar(text: string, limit = 15, opts: { books?: stri
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
     last = await fetchOnce(query, limit, extra);
-    // Only transient failures are worth another call; an answer (even an empty one) is final.
+    // Only transient failures are worth another call. An empty answer counts as one: Dorar returns its 15 nearest
+    // results even for an invented text (checked 2026-10-03), so an empty page is a glitch of Dorar or the relay
+    // (2026-10-19: the same query came back empty, then with 15 results a moment later).
     const transient =
-      !last.ok && (last.error === "network" || last.error === "timeout" || (last.error === "http" && Number(last.detail) >= 500));
+      !last.ok &&
+      (last.error === "network" || last.error === "timeout" || last.error === "empty" || (last.error === "http" && Number(last.detail) >= 500));
     if (!transient) return last;
   }
   return last;

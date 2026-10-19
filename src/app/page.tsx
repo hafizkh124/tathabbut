@@ -31,6 +31,7 @@ type Phase =
  *  day or the minute), or not readable now. */
 function errorKindOf(status: number, data: { error?: string; limit?: string }): ErrorKind {
   if (status === 429) return data.limit === "ai-day" ? "aiDay" : data.limit === "site" ? "busySite" : "busy";
+  if (status === 503 && data.limit === "source") return "busy"; // Dorar could not be reached: try again in a minute
   return status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read";
 }
 

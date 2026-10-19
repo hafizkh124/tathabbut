@@ -28,8 +28,9 @@ export async function lookupDorar(
     if (key) await cache.put(key, live.results);
     return { ok: true, results: live.results, origin: "live" };
   }
-  // Dorar answered "nothing found": that is an answer, not a failure, and an old cache would only be misleading.
-  if (live.error === "empty") return { ok: true, results: [], origin: "live" };
+  // An empty page even after a retry (dorar.ts): no answer at all, so the check could not be made. An old cache is not
+  // offered for it either (it might not be about this text's wording), and it is never taken as "nothing found".
+  if (live.error === "empty") return { ok: false, error: "empty" };
   if (cached) return { ok: true, results: cached.results, origin: "stale-cache", fetchedAt: cached.fetchedAt.toISOString() };
   return { ok: false, error: live.error, detail: live.detail };
 }

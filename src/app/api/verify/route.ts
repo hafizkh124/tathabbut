@@ -57,6 +57,12 @@ export async function POST(request: Request) {
     lookupDorar: (q) => lookupDorar(q, { cache }),
   });
 
+  // a claim Dorar could not be asked about was not checked: saying "not found" (and keeping it 30 days in the cache)
+  // would be wrong, so the page says it is busy and the person tries again
+  if (results.some((r) => r.lookupFailed)) {
+    later(() => logEvent(eventRow(request, "verify", { cached: false, failed: "dorar", ms: Date.now() - t0, model: extraction.model })));
+    return Response.json({ error: "the sources could not be reached, try again in a minute", limit: "source" }, { status: 503, headers: { "Retry-After": "60" } });
+  }
   const shown: ClaimResult[] = results.map((r) => ({
     ...r,
     similarExpressions: r.similarExpressions?.map((x) => ({ ...x, sig: signExcerpt(x.text) })),
