@@ -72,7 +72,7 @@ export function toneOf(state: string): Tone {
 
 export const styleOf = (state: string): ToneStyle => TONE_STYLE[toneOf(state)];
 
-export type IconKey = IconName | "ext" | "copy" | "share" | "image" | "camera" | "mic" | "history" | "info" | "close" | "report" | "chevron" | "sun" | "moon" | "plus" | "download";
+export type IconKey = IconName | "ext" | "copy" | "share" | "image" | "camera" | "mic" | "history" | "info" | "close" | "report" | "chevron" | "sun" | "moon" | "plus" | "download" | "installPhone" | "installDesktop";
 
 /** Paths for a 16×16 viewBox, drawn with a rounded stroke. */
 export const ICON_PATHS: Record<IconKey, string> = {
@@ -98,4 +98,7 @@ export const ICON_PATHS: Record<IconKey, string> = {
   moon: "M13.5 9.6 A5.8 5.8 0 1 1 6.4 2.5 A4.6 4.6 0 0 0 13.5 9.6 Z",
   plus: "M8 3 V13 M3 8 H13",
   download: "M8 2.5 V10 M5 7 L8 10 L11 7 M3 11.5 V13.5 H13 V11.5",
+  // a phone, and a screen, each with an arrow coming down into it: «put the app on this device»
+  installPhone: "M5 1.5 H11 A1 1 0 0 1 12 2.5 V13.5 A1 1 0 0 1 11 14.5 H5 A1 1 0 0 1 4 13.5 V2.5 A1 1 0 0 1 5 1.5 Z M8 4.2 V9.4 M6.1 7.6 L8 9.5 L9.9 7.6 M7.3 12.3 H8.7",
+  installDesktop: "M1.5 2.5 H14.5 V10.5 H1.5 Z M5.5 13.8 H10.5 M8 10.5 V13.8 M8 3.9 V8 M6.2 6.3 L8 8.1 L9.8 6.3",
 };

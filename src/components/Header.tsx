@@ -96,8 +96,10 @@ export function LangSwitch() {
   );
 }
 
-/** Install the app, shown only while the browser offers it (see useInstallPrompt): the words on a computer, a short one on a
- *  phone, the icon alone on small phones, and nothing below 360px, where the header has no room (the browser menu still installs). */
+/** Install the app, shown only while the browser offers it (see useInstallPrompt). An icon alone, as the theme button
+ *  beside it (team lead, 2026-10-19): a phone on a touch screen, a computer screen elsewhere, each with an arrow coming
+ *  down into it. Its name is said by screen readers and shown on hover. Hidden below 360px, where the header has no room
+ *  (the browser menu still installs). */
 export function InstallButton() {
   const { t } = useI18n();
   const install = useInstallPrompt();
@@ -108,11 +110,14 @@ export function InstallButton() {
       onClick={install}
       title={t("install.button")}
       aria-label={t("install.button")}
-      className="nastaliq-pad flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full border-[1.5px] border-brand px-3 text-[13px] font-semibold text-brand-ink hover:bg-brand-soft max-[400px]:w-10 max-[400px]:px-0 max-[359px]:hidden"
+      className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-brand-ink hover:bg-line max-[359px]:hidden"
     >
-      <Icon name="download" size={16} strokeWidth={1.9} />
-      <span className="max-[400px]:hidden sm:hidden">{t("install.short")}</span>
-      <span className="hidden sm:inline">{t("install.button")}</span>
+      <span className="[@media(pointer:fine)]:hidden" aria-hidden="true">
+        <Icon name="installPhone" size={19} strokeWidth={1.7} />
+      </span>
+      <span className="hidden [@media(pointer:fine)]:inline" aria-hidden="true">
+        <Icon name="installDesktop" size={19} strokeWidth={1.7} />
+      </span>
     </button>
   );
 }
