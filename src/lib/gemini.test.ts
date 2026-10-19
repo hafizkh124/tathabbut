@@ -187,6 +187,26 @@ describe("generateJson", () => {
     vi.unstubAllEnvs();
   });
 
+  it("does not ask a model that timed out again, and leaves it out for the next request too (2026-10-19)", async () => {
+    const hang = () => Promise.reject(new Error("The operation was aborted due to timeout"));
+    const f = vi.fn().mockImplementationOnce(hang).mockResolvedValueOnce(ok({ a: 1 }));
+    const r = await generateJson("x", { schema, fallbackModel: "gemini-3.5-flash-lite" }, { fetch: f, sleep: noSleep });
+    expect(r.model).toBe("gemini-3.5-flash-lite");
+    expect(f).toHaveBeenCalledTimes(2); // the slow model once, not twice
+    const g = vi.fn().mockResolvedValueOnce(ok({ a: 2 }));
+    expect((await generateJson("x", { schema, fallbackModel: "gemini-3.5-flash-lite" }, { fetch: g, sleep: noSleep })).model).toBe("gemini-3.5-flash-lite");
+    expect(String(g.mock.calls[0][0])).toContain("gemini-3.5-flash-lite"); // the slow one is skipped straight away
+  });
+
+  it("stops within the time budget and says it is busy when nothing answered in time", async () => {
+    let t = 0;
+    const slow = () => { t += 16_000; return Promise.reject(new Error("The operation was aborted due to timeout")); };
+    const f = vi.fn().mockImplementation(slow);
+    const err = await generateJson("x", { schema, fallbackModel: "a-1,a-2,a-3,a-4" }, { fetch: f, sleep: noSleep, now: () => t }).catch((e: GeminiError) => e);
+    expect(f.mock.calls.length).toBeLessThanOrEqual(3); // 3 × 16 s passes the 45 s budget
+    expect(err).toMatchObject({ status: 429, quota: "minute" });
+  });
+
   it("finds the JSON object in a reply with or without a code fence", () => {
     expect(jsonIn('```json\n{"a":1}\n```')).toBe('{"a":1}');
     expect(jsonIn('The answer: {"a":{"b":2}} done')).toBe('{"a":{"b":2}}');

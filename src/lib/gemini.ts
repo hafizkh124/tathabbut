@@ -72,6 +72,15 @@ const outForTheDay = new Map<string, number>();
 const DAY_OUT_MS = 60 * 60 * 1000;
 /** The longest wait for a minute's quota to free up before giving up: the person is still looking at the screen. */
 const MAX_MINUTE_WAIT_S = 20;
+/** A model that did not answer in time is left out for a minute (this instance's memory): on 2026-10-19 the 3.8 and 3.7
+ *  Flash models hung for 30 s+ while the others answered in 1-2 s, and asking each slow one again spent the whole
+ *  function. One call waits at most CALL_MS; all the models of one request together at most BUDGET_MS, under Vercel's
+ *  60 s limit. */
+const slowUntil = new Map<string, number>();
+const SLOW_OUT_MS = 60 * 1000;
+const CALL_MS = 15_000;
+const BUDGET_MS = 45_000;
+const MIN_CALL_MS = 3_000;
 
 type Fetch = typeof fetch;
 
@@ -241,19 +250,22 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   const model = opts.model ?? process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
   const fallbacks = fallbackModels(opts.fallbackModel ?? (process.env.GEMINI_FALLBACK_MODELS || process.env.GEMINI_FALLBACK_MODEL));
   const attempts = [model, model, ...fallbacks].filter((m, i, a) => i < 2 || (m !== a[0] && a.indexOf(m) === i));
-  const available = (m: string) => (outForTheDay.get(m) ?? 0) <= now();
+  const available = (m: string) => (outForTheDay.get(m) ?? 0) <= now() && (slowUntil.get(m) ?? 0) <= now();
+  const started = now();
+  const left = () => BUDGET_MS - (now() - started);
 
   let last: GeminiError | undefined;
   const busy = new Map<string, number>(); // models busy for the minute, and how long Google said to wait
   const tryModel = async (m: string): Promise<GenerateResult<T> | null> => {
     const t0 = now();
     try {
-      const { data, usage } = await once<T>(m, prompt, opts, key, f);
+      const { data, usage } = await once<T>(m, prompt, { ...opts, timeoutMs: Math.min(opts.timeoutMs ?? CALL_MS, left()) }, key, f);
       return { data, model: m, ms: now() - t0, ...(usage ? { usage } : {}) };
     } catch (err) {
       last = err instanceof GeminiError ? err : new GeminiError(String(err));
       if (last.quota === "day") outForTheDay.set(m, now() + DAY_OUT_MS);
       if (last.quota === "minute") busy.set(m, last.retryAfter ?? MAX_MINUTE_WAIT_S);
+      if (last.status === undefined && /timeout|abort/i.test(last.message)) slowUntil.set(m, now() + SLOW_OUT_MS);
       if (transient(last.status)) return null;
       // a fallback model the API does not know (404) or will not take this request from (400, e.g. a setting that model
       // lacks): the next model is tried; an unknown one is left out for the hour. The main model's 400 is the request's.
@@ -267,6 +279,7 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   };
 
   for (const [i, m] of attempts.entries()) {
+    if (left() < MIN_CALL_MS) break;
     if (!available(m) || busy.has(m)) continue;
     if (i === 1) await sleep(1_000);
     const r = await tryModel(m);
@@ -274,16 +287,22 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   }
   // every model was busy for the minute, or out for the day: wait for the soonest busy one, if it is soon enough
   const soonest = [...busy].filter(([m]) => available(m)).sort((a, b) => a[1] - b[1])[0];
-  if (soonest && soonest[1] <= MAX_MINUTE_WAIT_S) {
+  if (soonest && soonest[1] <= MAX_MINUTE_WAIT_S && left() - soonest[1] * 1000 >= MIN_CALL_MS) {
     await sleep(soonest[1] * 1000);
     busy.delete(soonest[0]);
     const r = await tryModel(soonest[0]);
     if (r) return r;
   }
-  if (attempts.every((m) => !available(m))) throw new GeminiError(last?.message ?? "every model is out of quota for the day", 429, "day");
+  if (attempts.every((m) => (outForTheDay.get(m) ?? 0) > now())) throw new GeminiError(last?.message ?? "every model is out of quota for the day", 429, "day");
+  // nothing answered in time (slow models, or the budget ran out): the page says it is busy, try in a minute
+  if (busy.size === 0 && (left() < MIN_CALL_MS || attempts.some((m) => (slowUntil.get(m) ?? 0) > now())))
+    throw new GeminiError(last?.message ?? "every model is slow", 429, "minute", 60);
   if (busy.size > 0) throw new GeminiError(last?.message ?? "every model is busy", 429, "minute", Math.min(...busy.values()));
   throw last ?? new GeminiError("no attempt made");
 }
 
 /** For tests: forget which models were out for the day. */
-export const resetQuotaMemory = () => outForTheDay.clear();
+export const resetQuotaMemory = () => {
+  outForTheDay.clear();
+  slowUntil.clear();
+};
