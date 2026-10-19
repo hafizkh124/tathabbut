@@ -2,7 +2,7 @@
 // of viral religious claims / spurious texts using Gemini with Google Search Grounding.
 // Strictly observes ethical guidelines: reports public digital traces without defamatory accusations against individuals.
 
-import { GeminiError } from "./gemini";
+import { GeminiError, fallbackModels, quotaOf } from "./gemini";
 
 const API = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -106,7 +106,9 @@ export async function trackClaimOrigin(claimText: string, deps: OriginTrackerDep
   const lang: OriginLang = deps.lang && deps.lang in TEXT ? deps.lang : "ur";
   const tx = TEXT[lang];
   const f = deps.fetch ?? fetch;
-  const model = deps.model ?? process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  // Search grounding is free for the 2.5 models only (none for Gemini 3 and newer on the free tier), so the origin search
+  // keeps to them: GEMINI_ORIGIN_MODELS, tried in order while one is out of quota.
+  const models = deps.model ? [deps.model] : fallbackModels(process.env.GEMINI_ORIGIN_MODELS || "gemini-2.5-flash,gemini-2.5-flash-lite");
 
   const prompt = `You are a digital fact-checking and provenance researcher specializing in Islamic circulating texts, chain messages, and viral posts.
 Analyze the earliest digital traces, public forums, websites, blogs, or social media circulation of the following text:
@@ -129,28 +131,35 @@ Return ONLY a valid JSON object with the following fields. Write every field val
   "summary": "a detailed yet concise summary of when and how this text started circulating on the internet"
 }`;
 
-  let res: Response;
-  try {
-    res = await f(`${API}/${model}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: {
-          temperature: 0.1,
-        },
-      }),
-      signal: AbortSignal.timeout(25_000),
-      cache: "no-store",
-    });
-  } catch (err) {
-    throw new GeminiError(`network: ${(err as Error).message}`);
+  let res: Response | undefined;
+  let model = models[0];
+  for (const m of models) {
+    model = m;
+    try {
+      res = await f(`${API}/${m}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }],
+          generationConfig: {
+            temperature: 0.1,
+          },
+        }),
+        signal: AbortSignal.timeout(25_000),
+        cache: "no-store",
+      });
+    } catch (err) {
+      throw new GeminiError(`network: ${(err as Error).message}`);
+    }
+    if (res.ok) break;
+    const text = await res.text();
+    const q = res.status === 429 ? quotaOf(text) : {};
+    const err = new GeminiError(`HTTP ${res.status}: ${text.slice(0, 200)}`, res.status, q.quota, q.retryAfter);
+    // this model's quota is spent (or the model is unknown): the next one; anything else ends the search
+    if ((res.status !== 429 && res.status !== 404) || m === models[models.length - 1]) throw err;
   }
-
-  if (!res.ok) {
-    throw new GeminiError(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`, res.status);
-  }
+  if (!res) throw new GeminiError("no model to ask");
 
   const data = (await res.json()) as GeminiGroundingResponse;
   const candidate = data.candidates?.[0];

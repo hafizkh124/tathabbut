@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useState } from "react";
+import { track } from "@/lib/analytics";
 import type { ClaimResult, NarrationView } from "@/lib/clientTypes";
 import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
@@ -334,6 +335,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
     if (several) return setPicking(true);
     try {
       await navigator.clipboard.writeText(shareText());
+      track("copy", { n: 1, states: [r.state], linked: Boolean(r.shareId) });
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -342,7 +344,9 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   };
   const share = async () => {
     if (several) return setPicking(true);
-    setShareOutcome(await shareOrCopy(shareText()));
+    const outcome = await shareOrCopy(shareText());
+    track("share", { n: 1, states: [r.state], linked: Boolean(r.shareId), outcome });
+    setShareOutcome(outcome);
   };
 
   const message =

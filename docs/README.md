@@ -20,7 +20,7 @@ who introduce Islam).
 
 ## Status
 
-- **Live demo:** https://tathabbut-rho.vercel.app
+- **Live demo:** https://tathabbut.alulama.org
 - **Build window:** التجهيز من 1 أكتوبر 2026، وعمل المسابقة 4–6 أكتوبر 2026 (preparation from 1 October with the organisers' permission; submitted on 6 October, before the 23:59 Riyadh deadline)
 
 ## Conventions used in these documents

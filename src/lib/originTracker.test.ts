@@ -77,6 +77,18 @@ describe("trackClaimOrigin", () => {
     expect(report.disclaimer).toContain("تنبیہ");
   });
 
+  it("searches with the 2.5 models only, moving on when one is out of quota", async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { details: [{ violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] }] } }), { status: 429 }))
+      .mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: '{"estimatedDate":"2012"}' }] } }] }));
+    const report = await trackClaimOrigin("x", { fetch: mockFetch as unknown as typeof fetch, apiKey: "k" });
+    expect(report.earliestRecord.estimatedDate).toBe("2012");
+    expect(mockFetch.mock.calls.map((c) => String(c[0]).match(/models\/([^:]+)/)?.[1])).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify({ error: { details: [{ violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] }] } }), { status: 429 }));
+    await expect(trackClaimOrigin("x", { fetch: mockFetch as unknown as typeof fetch, apiKey: "k" })).rejects.toMatchObject({ status: 429, quota: "day" });
+  });
+
   it("asks for the requested language and returns that language's disclaimer and fallbacks", async () => {
     const mockFetch = vi.fn(async () => ({
       ok: true,

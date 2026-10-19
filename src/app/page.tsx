@@ -14,6 +14,8 @@ import { LogoMark } from "@/components/ui/Logo";
 import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
+import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
+import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
@@ -23,6 +25,13 @@ type Phase =
   | { name: "loading" }
   | { name: "results"; claims: ClaimResult[] }
   | { name: "error"; kind: ErrorKind };
+
+/** What a failed check means for the person: too long, over a limit (theirs, the site's, or the AI's free quota for the
+ *  day or the minute), or not readable now. */
+function errorKindOf(status: number, data: { error?: string; limit?: string }): ErrorKind {
+  if (status === 429) return data.limit === "ai-day" ? "aiDay" : data.limit === "site" ? "busySite" : "busy";
+  return status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read";
+}
 
 export default function Home() {
   const { t } = useI18n();
@@ -72,13 +81,13 @@ export default function Home() {
       try {
         const res = await fetch("/api/verify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...analyticsHeaders() },
           body: JSON.stringify({ text: submitted }),
         });
-        const data = (await res.json()) as VerifyResponse;
+        const data = (await res.json()) as VerifyResponse & { limit?: string };
         if (id !== run.current) return;
         if (!res.ok) {
-          setPhase({ name: "error", kind: res.status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read" });
+          setPhase({ name: "error", kind: errorKindOf(res.status, data) });
           return;
         }
         const claims = (data.claims ?? []).map((c) => (turathKindOf(c) ? { ...c, turath: { status: "loading" as const } } : c));
@@ -91,9 +100,10 @@ export default function Home() {
     [keepPreview, askTurath],
   );
 
-  /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. */
+  /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. A caption shared with
+   *  it (the share sheet) joins the reading in the confirm box; with no text in the picture, the caption alone is checked. */
   const readPicture = useCallback(
-    async (file: File) => {
+    async (file: File, caption = "") => {
       const id = ++run.current;
       setPhase({ name: "reading" });
       window.scrollTo({ top: 0 });
@@ -107,33 +117,57 @@ export default function Home() {
       try {
         const res = await fetch("/api/ocr", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...analyticsHeaders() },
           body: JSON.stringify({ image: prepared.data, mimeType: prepared.mimeType }),
         });
-        const data = (await res.json()) as { text?: string; uncertain?: string[] };
+        const data = (await res.json()) as { text?: string; uncertain?: string[]; limit?: string };
         if (id !== run.current) {
           URL.revokeObjectURL(prepared.previewUrl);
           return;
         }
         if (!res.ok) {
           URL.revokeObjectURL(prepared.previewUrl);
-          setPhase({ name: "error", kind: res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
+          setPhase({ name: "error", kind: res.status === 429 ? (data.limit === "ai-day" ? "pictureAiDay" : "pictureBusy") : res.status === 400 || res.status === 413 ? "badImage" : "ocr" });
           return;
         }
         if (!data.text?.trim()) {
           URL.revokeObjectURL(prepared.previewUrl);
-          setPhase({ name: "error", kind: "noText" });
+          if (caption) {
+            setText(caption);
+            verify(caption);
+          } else setPhase({ name: "error", kind: "noText" });
           return;
         }
         keepPreview(prepared.previewUrl);
-        setPhase({ name: "confirm", text: data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
+        setPhase({ name: "confirm", text: caption ? `${data.text}\n${caption}` : data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
       } catch {
         URL.revokeObjectURL(prepared.previewUrl);
         if (id === run.current) setPhase({ name: "error", kind: "pictureNetwork" });
       }
     },
-    [keepPreview],
+    [keepPreview, verify],
   );
+
+  // Opened from the share sheet (manifest.ts): public/sw.js left the shared message or screenshot in a cache (?shared=1), or
+  // the fallback route passed the text in the address (?text=). Either is checked at once, as if pasted and Check pressed;
+  // the address is then cleaned, so a reload does not check it again. The visit is counted first, with how it began.
+  useEffect(() => {
+    registerServiceWorker();
+    rememberSource();
+    track("visit");
+    const params = new URLSearchParams(window.location.search);
+    const fromAddress = params.get("text");
+    if (!params.has("shared") && fromAddress === null) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const incoming = fromAddress !== null ? Promise.resolve({ text: fromAddress, image: null }) : takeShared();
+    incoming.then(({ text: shared, image }) => {
+      if (image) readPicture(image, shared);
+      else if (shared) {
+        setText(shared);
+        verify(shared);
+      }
+    });
+  }, [verify, readPicture]);
 
   const toInput = useCallback(() => {
     run.current++;

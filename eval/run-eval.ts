@@ -19,6 +19,7 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { EVAL_RUN_ENV } from "../src/lib/evalRun";
 import { STATES } from "../src/lib/states";
 import { turathKindOf, turathQueryOf } from "../src/lib/turathClient";
 import { rng } from "./build-dataset";
@@ -276,6 +277,8 @@ async function main() {
   if (a.mode === "pipeline" && !process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set: run with --env-file=.env.local (or use --mode api / mock)");
 
   console.log(`mode ${a.mode} · split ${a.split} · ${selected.length} prompts · Turath ${a.turath ? "on" : "off"} · seed ${a.seed}`);
+  // in process the handlers reach the live database: keep the run out of the visitors' limits, cache and analytics
+  if (a.mode === "pipeline") process.env[EVAL_RUN_ENV] = "1";
   const transport = a.mode === "api" ? overHttp(a.apiUrl) : inProcess();
   const r = rng(a.seed + 1);
   const results: PromptEvalResult[] = new Array(selected.length);

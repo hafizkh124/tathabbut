@@ -75,6 +75,8 @@ export const DICT = {
   },
   "home.voice": { ar: "صوت", en: "Voice", ur: "آواز" },
   "home.soon": { ar: "قريبًا", en: "Soon", ur: "جلد" },
+  "install.button": { ar: "ثبّت التطبيق", en: "Install app", ur: "ایپ انسٹال کریں" },
+  "install.short": { ar: "تثبيت", en: "Install", ur: "انسٹال" },
   "home.verify": { ar: "تحقّق", en: "Check", ur: "تصدیق کریں" },
   "home.examples": { ar: "جرّب مثالًا", en: "Try an example", ur: "ایک مثال آزمائیں" },
   "home.history": { ar: "السجل", en: "History", ur: "تاریخ" },
@@ -216,8 +218,9 @@ export const DICT = {
   },
   "via.opens": { ar: "يفتح البحث عن هذا النص في الموقع", en: "Opens a search for this text on the site", ur: "اس سائٹ پر یہی متن تلاش کرتا ہے" },
 
-  "share.grade": { ar: "الحكم", en: "Grading", ur: "حکم" },
-  "share.footer": { ar: "تحقّق من النصوص قبل نشرها", en: "Check texts before you share them", ur: "آگے بھیجنے سے پہلے تحقیق کریں" },
+  // the shared text's first and last lines (team lead, 2026-10-19): the platform's name, and the link «for more»
+  "share.header": { ar: "منصة تثبت", en: "Tathabbut Platform", ur: "تثبت پلیٹ فارم" },
+  "share.more": { ar: "لمزيد من التحقق", en: "For more detail", ur: "مزید تحقیق کے لیے" },
   "share.pickTitle": { ar: "اختر ما تنسخه أو تشاركه", en: "Choose what to copy or share", ur: "منتخب کریں کیا کاپی یا شیئر کرنا ہے" },
   "share.copyN": { ar: "نسخ ({n})", en: "Copy ({n})", ur: "کاپی ({n})" },
   "share.shareN": { ar: "مشاركة ({n})", en: "Share ({n})", ur: "شیئر ({n})" },
@@ -347,6 +350,34 @@ export const DICT = {
   },
 
   "error.title": { ar: "تعذّر إكمال التحقق", en: "We could not finish the check", ur: "تصدیق مکمل نہ ہو سکی" },
+  // the limits (rate limits, the AI's free quota): said as what they are, many people checking at once, never as a fault
+  "error.busyTitle": { ar: "إقبال كبير الآن", en: "High demand right now", ur: "اس وقت رش بہت زیادہ ہے" },
+  "error.busy": {
+    ar: "يتحقق كثيرون عبر تَثَبُّت في هذه اللحظة. انتظر دقيقة ثم أعد المحاولة؛ نصّك محفوظ.",
+    en: "Many people are checking with Tathabbut at this moment. Wait a minute and try again; your text is saved.",
+    ur: "اس لمحے بہت سے لوگ تَثَبُّت سے تحقیق کر رہے ہیں۔ ایک منٹ بعد دوبارہ کوشش کریں، آپ کا متن محفوظ ہے۔",
+  },
+  "error.aiDay": {
+    ar: "ما شاء الله، تحقق اليوم عدد كبير من الناس عبر تَثَبُّت، فاكتملت طاقة اليوم. نرجو المحاولة غدًا، وشكرًا لصبرك.",
+    en: "So many people checked with Tathabbut today that today's capacity is full. Please try again tomorrow; thank you for your patience.",
+    ur: "ماشاء اللہ، آج بہت بڑی تعداد میں لوگوں نے تَثَبُّت سے تحقیق کی، اس لیے آج کی گنجائش پوری ہو گئی ہے۔ براہِ کرم کل دوبارہ کوشش کریں، آپ کے صبر کا شکریہ۔",
+  },
+  "error.busySite": {
+    ar: "ما شاء الله، تحقق اليوم عدد كبير من الناس عبر تَثَبُّت، فاكتملت طاقة اليوم. نرجو المحاولة لاحقًا، وشكرًا لصبرك.",
+    en: "So many people checked with Tathabbut today that today's capacity is full. Please try again later; thank you for your patience.",
+    ur: "ماشاء اللہ، آج بہت بڑی تعداد میں لوگوں نے تَثَبُّت سے تحقیق کی، اس لیے آج کی گنجائش پوری ہو گئی ہے۔ براہِ کرم کچھ دیر بعد کوشش کریں، آپ کے صبر کا شکریہ۔",
+  },
+  "shared.banner": {
+    ar: "نتيجة تحقق شاركها أحدهم معك من تَثَبُّت.",
+    en: "A check someone shared with you from Tathabbut.",
+    ur: "یہ تَثَبُّت کی ایک تحقیق ہے جو کسی نے آپ کو بھیجی ہے۔",
+  },
+  "shared.cta": { ar: "تحقّق من رسالة وصلتك", en: "Check a message you received", ur: "اپنا موصول پیغام چیک کریں" },
+  "shared.missing": {
+    ar: "لم نجد هذه النتيجة. يمكنك لصق النص والتحقق منه من جديد.",
+    en: "We could not find this result. You can paste the text and check it again.",
+    ur: "یہ نتیجہ نہیں ملا۔ آپ متن ڈال کر دوبارہ تحقیق کر سکتے ہیں۔",
+  },
   "error.network": {
     ar: "تحقّق من اتصالك بالإنترنت ثم أعد المحاولة. نصّك محفوظ ولم يضِع.",
     en: "Check your internet connection and try again. Your text is saved.",

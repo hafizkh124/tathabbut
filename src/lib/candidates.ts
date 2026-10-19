@@ -7,7 +7,8 @@ export function applyPick(claim: ClaimResult, pick: number | undefined): ClaimRe
   const list = claim.verse?.candidates;
   if (!claim.verse || !list || pick === undefined || pick <= 0 || !list[pick]) return claim;
   const chosen = list[pick];
-  return { ...claim, state: stateOfVerse(chosen.wording), verse: { ...chosen, candidates: list } };
+  // another verse than the one checked: the result's link would open the first one, so this choice has none
+  return { ...claim, state: stateOfVerse(chosen.wording), verse: { ...chosen, candidates: list }, shareId: undefined };
 }
 
 /** Which candidate is showing now (0 when the claim has no choice to make). */
