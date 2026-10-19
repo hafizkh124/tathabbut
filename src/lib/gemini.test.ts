@@ -143,7 +143,7 @@ describe("generateJson", () => {
     const r = await generateJson<{ a: number }>("find the claims", { schema, fallbackModel: "gemma-4-31b-it" }, { fetch: f, sleep: noSleep });
     expect(r).toMatchObject({ data: { a: 7 }, model: "gemma-4-31b-it" });
     const body = JSON.parse((f.mock.calls[1] as [string, { body: string }])[1].body);
-    expect(body.generationConfig).toEqual({ temperature: 0 }); // no JSON mode, schema or thinking: Gemma refuses them
+    expect(body.generationConfig).toEqual({ temperature: 0, thinkingConfig: { thinkingLevel: "minimal" } }); // no JSON mode or schema: Gemma refuses them
     expect(body.contents[0].parts.at(-1).text).toContain('{"type":"OBJECT"}');
   });
 

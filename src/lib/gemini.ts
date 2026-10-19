@@ -82,8 +82,9 @@ function thinkingFor(model: string): object {
 
 const transient = (status: number | undefined) => status === undefined || status === 429 || status >= 500;
 
-/** Gemma (open models served by the same API, with a far larger free daily quota) takes no JSON mode, schema or
- *  thinking setting: the schema goes into the prompt instead, and the JSON is read out of the reply. */
+/** Gemma (open models served by the same API, with a far larger free daily quota) takes no JSON mode or schema, and of
+ *  the thinking settings only thinkingLevel "minimal" (without it Gemma 4 thinks ~700 tokens: 12-20 s instead of ~1.3 s,
+ *  checked 2026-10-19). The schema goes into the prompt instead, and the JSON is read out of the reply. */
 export const isGemma = (model: string) => /^gemma-/.test(model);
 
 /** The JSON object in a reply that may wrap it in a code fence or a sentence. */
@@ -176,7 +177,7 @@ async function once<T>(model: string, prompt: string, opts: GenerateOptions, key
       body: JSON.stringify({
         contents: [{ parts }],
         generationConfig: gemma
-          ? { temperature: 0 }
+          ? { temperature: 0, thinkingConfig: { thinkingLevel: "minimal" } }
           : {
               responseMimeType: "application/json",
               responseSchema: opts.schema,
