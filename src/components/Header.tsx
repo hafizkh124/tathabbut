@@ -3,6 +3,7 @@ import React, { useSyncExternalStore } from "react";
 import { LOCALES, type Locale } from "@/lib/i18n/dict";
 import { useI18n } from "@/lib/i18n/i18n";
 import { useInstallPrompt } from "@/lib/pwa";
+import { useUpdateAvailable } from "@/lib/updateWatch";
 import { LogoMark, Wordmark, type LogoMotion } from "./ui/Logo";
 import { Icon } from "./ui/Icon";
 
@@ -122,6 +123,21 @@ export function InstallButton() {
   );
 }
 
+/** «A newer version is ready», one line under the header with one button, announced to screen readers; shown only when
+ *  the live site is newer than this page (useUpdateAvailable). */
+function UpdateBar() {
+  const { t } = useI18n();
+  if (!useUpdateAvailable()) return null;
+  return (
+    <div role="status" className="flex items-center justify-center gap-3 border-t border-line bg-brand-soft px-4 py-1.5 text-[13px] text-ink">
+      <span>{t("update.ready")}</span>
+      <button type="button" onClick={() => window.location.reload()} className="min-h-8 cursor-pointer rounded-full bg-brand px-3 text-[13px] font-semibold text-on-brand hover:bg-brand-hover">
+        {t("update.apply")}
+      </button>
+    </div>
+  );
+}
+
 export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHome?: () => void }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
@@ -136,6 +152,7 @@ export function Header({ motion = "none", onHome }: { motion?: LogoMotion; onHom
           <LangSwitch />
         </div>
       </div>
+      <UpdateBar />
     </header>
   );
 }

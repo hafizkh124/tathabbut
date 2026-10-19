@@ -78,7 +78,7 @@ const MAX_MINUTE_WAIT_S = 20;
  *  60 s limit. */
 const slowUntil = new Map<string, number>();
 const SLOW_OUT_MS = 60 * 1000;
-const CALL_MS = 10_000; // a text answer takes 1-5 s; a picture asks for more (ocr.ts)
+const CALL_MS = 8_000; // a text answer takes 1-5 s; a picture asks for more (ocr.ts)
 const BUDGET_MS = 45_000;
 const MIN_CALL_MS = 3_000;
 

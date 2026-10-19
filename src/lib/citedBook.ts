@@ -1,21 +1,8 @@
 // The book a post names for its hadith («رواه الحاكم في المستدرك», «مستدرک حاکم», «سنن ابوداؤد 4944»), found among
 // Dorar's narrations, so the one the person asked about is shown first (team lead, 2026-10-19). The overall state is
 // not touched: it still comes from all the narrations (verify.ts → summarizeGrades).
-import { normalizeArabic } from "./arabic";
+import { foldUrdu as fold } from "./arabic";
 import type { GradedNarration } from "./hadithMatch";
-
-/** Urdu letters folded to their Arabic forms, then the usual Arabic folding: «مستدرک حاکم» → «مستدرك حاكم». */
-const fold = (s: string) =>
-  normalizeArabic(
-    s
-      .replace(/[کڪ]/g, "ك")
-      .replace(/[یےۍ]/g, "ي")
-      .replace(/[ہۀھ]/g, "ه")
-      .replace(/ۃ/g, "ة")
-      .replace(/ؤ/g, "و")
-      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)),
-  );
 
 interface Book {
   /** how a post names it (folded text) */

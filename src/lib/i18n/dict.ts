@@ -75,6 +75,8 @@ export const DICT = {
   },
   "home.voice": { ar: "صوت", en: "Voice", ur: "آواز" },
   "home.soon": { ar: "قريبًا", en: "Soon", ur: "جلد" },
+  "update.ready": { ar: "يتوفر إصدار أحدث من تَثَبُّت", en: "A newer version of Tathabbut is ready", ur: "تثبت کا نیا ورژن تیار ہے" },
+  "update.apply": { ar: "تحديث", en: "Update", ur: "اپڈیٹ" },
   "install.button": { ar: "ثبّت تَثَبُّت تطبيقًا على جهازك", en: "Install Tathabbut as an app on this device", ur: "تثبت کو ایپ کی طرح اپنے ڈیوائس پر انسٹال کریں" },
   "home.verify": { ar: "تحقّق", en: "Check", ur: "تصدیق کریں" },
   "home.examples": { ar: "جرّب مثالًا", en: "Try an example", ur: "ایک مثال آزمائیں" },

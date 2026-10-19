@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { captionAdds, sharedText } from "./sharedInput";
+import { mergeCaption, sharedText } from "./sharedInput";
 
 describe("sharedText", () => {
   it("keeps a WhatsApp message as it is", () => {
@@ -21,13 +21,21 @@ describe("sharedText", () => {
 
 describe("caption with a picture", () => {
   const verse = "أَلَمْ تَرَ كَيْفَ ضَرَبَ اللَّهُ مَثَلًا كَلِمَةً طَيِّبَةً كَشَجَرَةٍ طَيِّبَةٍ أَصْلُهَا ثَابِتٌ وَفَرْعُهَا فِي السَّمَاءِ ۝٢٤";
-  it("adds nothing when it repeats the picture's words, with or without tashkeel and the verse number (2026-10-19)", () => {
-    expect(captionAdds(verse, "ألم تر كيف ضرب الله مثلا كلمة طيبة كشجرة طيبة أصلها ثابت وفرعها في السماء")).toBe(false);
-    expect(captionAdds(verse, "كلمة طيبة كشجرة طيبة")).toBe(false);
-    expect(captionAdds("كلمة طيبة", verse)).toBe(false);
-    expect(captionAdds(verse, "")).toBe(false);
+  // the team lead's phone test (2026-10-19): the picture's reading (a model writes Arabic letters, spells out «صلی اللہ علیہ
+  // وسلم», and adds the picture's own watermark words) against the message's caption (Urdu keyboard, «ﷺ»)
+  const reading = "ورثة الأنبياء AL-ULAMA حضرت انس بيان كرتے ہيں: رسول الله صلى الله عليه وسلم كو كپڑوں ميں سب سے زيادہ پسند دھاري دار يمني چادر تھي۔ [2079: صحيح مسلم] alulama.org ulamaweb";
+  const caption = "حضرت انس بیان کرتے ہیں: رسول ﷺ کو کپڑوں میں سب سے زیادہ پسند دھاری دار یمنی چادر تھی۔ [صحیح مسلم:2079]";
+
+  it("uses the reading alone when the caption says the same, whatever the letter forms, marks and watermark words", () => {
+    expect(mergeCaption(reading, caption)).toBe(reading);
+    expect(mergeCaption(verse, "ألم تر كيف ضرب الله مثلا كلمة طيبة كشجرة طيبة أصلها ثابت وفرعها في السماء")).toBe(verse);
+    expect(mergeCaption(verse, "كلمة طيبة كشجرة طيبة")).toBe(verse);
+    expect(mergeCaption(verse, "")).toBe(verse);
   });
-  it("adds a caption that says something else", () => {
-    expect(captionAdds(verse, "قال رسول الله ﷺ: الكلمة الطيبة صدقة")).toBe(true);
+  it("uses the caption when it is the fuller text of which the reading is a part", () => {
+    expect(mergeCaption("كلمة طيبة كشجرة طيبة", verse)).toBe(verse);
+  });
+  it("joins a caption that says something else", () => {
+    expect(mergeCaption(verse, "قال رسول الله ﷺ: الكلمة الطيبة صدقة")).toBe(`${verse}\nقال رسول الله ﷺ: الكلمة الطيبة صدقة`);
   });
 });

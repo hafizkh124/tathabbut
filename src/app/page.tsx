@@ -16,7 +16,7 @@ import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
 import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
 import { registerServiceWorker, takeShared } from "@/lib/pwa";
-import { captionAdds } from "@/lib/sharedInput";
+import { mergeCaption } from "@/lib/sharedInput";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
@@ -141,7 +141,7 @@ export default function Home() {
           return;
         }
         keepPreview(prepared.previewUrl);
-        setPhase({ name: "confirm", text: caption && captionAdds(data.text, caption) ? `${data.text}\n${caption}` : data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
+        setPhase({ name: "confirm", text: caption ? mergeCaption(data.text, caption) : data.text, uncertain: data.uncertain ?? [], previewUrl: prepared.previewUrl });
       } catch {
         URL.revokeObjectURL(prepared.previewUrl);
         if (id === run.current) setPhase({ name: "error", kind: "pictureNetwork" });

@@ -2,7 +2,7 @@
 // into the one text the person would have pasted. Pure, so it can be tested; public/sw.js and share-target/route.ts use the
 // same field names and cache keys.
 
-import { normalizeArabic } from "./arabic";
+import { foldUrdu } from "./arabic";
 
 /** Where public/sw.js keeps a share until the page picks it up; the page empties it straight after. */
 export const SHARE_CACHE = "tathabbut-share";
@@ -31,16 +31,30 @@ export function sharedText({ title, text, url }: SharedFields): string {
   return parts.join("\n");
 }
 
-/** The letters of a text alone (tashkeel, verse numbers, marks and spaces dropped), to compare two readings of it. */
-const letters = (text: string) => normalizeArabic(text).replace(/[^\p{L}]/gu, "");
+/** The words of a text, Urdu and Arabic letters folded together, without tashkeel, digits and marks. */
+const words = (text: string) => foldUrdu(text).split(/[^\p{L}]+/u).filter((w) => w.length > 1);
+
+/** The share of `a`'s words that `b` also has. */
+const covered = (a: string[], b: string[]) => {
+  const have = new Set(b);
+  return a.length ? a.filter((w) => have.has(w)).length / a.length : 1;
+};
+
+/** How much of one text the other must hold for the two to be taken as the same words. */
+const SAME = 0.8;
 
 /**
- * Whether a caption shared with a picture says something the picture does not. WhatsApp often sends a post as an image
- * with the same words as its caption (team lead's test, 2026-10-19): joined, the one verse came back as two claims.
+ * The text to check when a picture comes with a caption. WhatsApp often sends a post as an image with the same words as
+ * its caption; the reading and the caption then differ only in marks, Urdu or Arabic letter forms («ی» or «ي»), «ﷺ»
+ * against «صلی اللہ علیہ وسلم», and the picture's own watermark words (team lead's tests, 2026-10-19: the one text came
+ * back as two claims). Same words: one of them is used (the longer); different words: both.
  */
-export function captionAdds(reading: string, caption: string): boolean {
-  const c = letters(caption);
-  if (!c) return false;
-  const r = letters(reading);
-  return !(r.includes(c) || c.includes(r));
+export function mergeCaption(reading: string, caption: string): string {
+  const c = words(caption);
+  if (!c.length) return reading;
+  const r = words(reading);
+  if (covered(c, r) >= SAME) return reading; // the picture already says it
+  if (covered(r, c) >= SAME) return caption.trim().length > reading.trim().length ? caption : reading; // the caption is the fuller text
+  return `${reading}
+${caption}`;
 }

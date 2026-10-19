@@ -22,6 +22,22 @@ export function normalizeArabic(text: string): string {
     .trim();
 }
 
+/** Urdu letters folded to their Arabic forms and digits to ASCII, then the usual Arabic folding: «مستدرک حاکم» →
+ *  «مستدرك حاكم». The same post typed on an Urdu keyboard and read by a model (which tends to write Arabic letters)
+ *  then compares equal. */
+export function foldUrdu(text: string): string {
+  return normalizeArabic(
+    text
+      .replace(/[کڪ]/g, "ك")
+      .replace(/[یےۍ]/g, "ي")
+      .replace(/[ہۀھ]/g, "ه")
+      .replace(/ۃ/g, "ة")
+      .replace(/ؤ/g, "و")
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)),
+  );
+}
+
 /** Content words of a matn: normalized, boilerplate removed, short tokens dropped. */
 export function matnTokens(text: string): Set<string> {
   return new Set(
