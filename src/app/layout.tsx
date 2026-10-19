@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   publisher: "العلماء · Alulama",
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
+  // Search Console (URL-prefix property for tathabbut.alulama.org): the meta tag it asks for, so no DNS record is needed
+  verification: { google: "p9_hDF2g1MJKo5eURagOSF1MCNsyN0HGJZpec8dZSQE" },
   openGraph: { title: "تَثَبُّت · Tathabbut", description: DESCRIPTION, type: "website", locale: "ar", siteName: "تَثَبُّت" },
   twitter: { card: "summary_large_image", title: "تَثَبُّت · Tathabbut", description: DESCRIPTION },
   // the tab and search results: app/favicon.ico (the brand mark at 16-48 px; Google wants a multiple of 48) is linked by
