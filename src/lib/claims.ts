@@ -5,8 +5,9 @@
 // always the post's own text. The model's Arabic is used only to translate a claim written in Urdu or English, and
 // such a query is flagged so that it is never used to judge wording.
 import { normalizeArabic } from "./arabic";
+import { hasPressure, stripPressure } from "./chainPressure";
 import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
-import { cleanTopic } from "./topic";
+import { cleanTopic, cleanTopicUrdu } from "./topic";
 
 export { cleanTopic, topicQuery } from "./topic";
 
@@ -36,6 +37,8 @@ export interface Claim {
   scope?: "personal" | "general";
   /** Only for a «question»: the fiqh topic in Arabic (a few words, no names or story), the only thing the books are asked. */
   topic?: string | null;
+  /** Only for a «question»: the same topic in Urdu (a few words), the only thing العلماء' answered questions are searched with. */
+  topicUr?: string | null;
 }
 
 export interface Extraction {
@@ -57,6 +60,7 @@ interface RawClaim {
   cited_source?: string;
   question_scope?: string;
   topic_ar?: string;
+  topic_ur?: string;
 }
 
 export const CLAIMS_SCHEMA = {
@@ -76,6 +80,7 @@ export const CLAIMS_SCHEMA = {
           question_scope: { type: "STRING", enum: ["personal", "general"] },
           question_intent: { type: "STRING", enum: ["ruling", "evidence"] },
           topic_ar: { type: "STRING" },
+          topic_ur: { type: "STRING" },
         },
         required: ["kind", "text_as_written"],
       },
@@ -95,7 +100,10 @@ For each claim return:
 - question_intent (only for kind "question"): "evidence" when the user requests a hadith/reference proving a SPECIFIC stated proposition. Copy that proposition character for character into text_as_written and arabic_span if Arabic; translate only that proposition for arabic_translation, preserving its day, quantities and promised benefit. For example, asking for a sahih hadith that eating watermelon on Mondays cures all eye diseases is a source request for that precise claim, not a fiqh question. Do not replace it with a generic topic about watermelon. A question asking for a ruling or fatwa is "ruling". A request with no specific proposition stays "ruling". Never invent a supporting hadith.
 - question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
 - topic_ar (only for kind "question"): the fiqh topic of the question as the title of a chapter in a fiqh book, in Arabic, two or three words, naming the matter only and not starting with «حكم» or «أحكام» (for example «صلاة الجمعة للمسافر», «سجود السهو», «طلاق الغضبان»). It must contain no name, no number, no detail of the asker's story and no answer or ruling.
+- topic_ur (only for kind "question"): the same topic in Urdu, two to four words, as it would be worded in the title of a fatwa («سورہ یٰس کی فضیلت», «سفر میں نماز جمعہ»). The same limits as topic_ar: no name, no number, no detail of the asker's story and no answer.
 Verses of the Quran quoted one after the other (consecutive verses, with or without verse numbers between them) are ONE claim of kind "quran"; verses quoted in different places of the post, or with other text between them, are separate claims.
+A request to pass the message on («انشرها», "send this to ten people", «آگے بھیجیں») is not a claim: leave it out of every claim's text, and never make a claim of it alone. A reward promised for passing it on («من نشرها دخل الجنة») IS a claim.
+Greetings and courtesies around a question («السلام علیکم», «شیخ صاحب», «جزاکم اللہ خیرا») are not part of any claim or question: leave them out of text_as_written.
 Never judge whether a claim is authentic. Never add a claim that is not in the post.
 
 POST:
@@ -193,8 +201,18 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
   const seen = new Set<string>();
 
   for (const r of raw) {
-    const given = trimPunct(r.text_as_written ?? "");
+    let given = trimPunct(r.text_as_written ?? "");
     if (!given) continue;
+    // A request to pass the message on is not a claim: it is left out of the text that is searched, and a "claim" made of
+    // nothing else is dropped. Without the request the text must still be in the post, else the model's text is kept.
+    if (hasPressure(given)) {
+      const rest = trimPunct(stripPressure(given));
+      if (!rest) {
+        dropped.push({ text: given, reason: "share request" });
+        continue;
+      }
+      if (findIn(post, rest)) given = rest;
+    }
     const spanCheck = findIn(post, given);
     if (!spanCheck) {
       dropped.push({ text: given, reason: "not in the post" });
@@ -208,7 +226,7 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
 
     const warnings: string[] = [];
     let arabicSpan: string | null = null;
-    const modelSpan = trimPunct(r.arabic_span ?? "");
+    const modelSpan = trimPunct(stripPressure(r.arabic_span ?? ""));
     if (modelSpan) {
       if (squash(text).includes(modelSpan)) arabicSpan = modelSpan;
       else {
@@ -237,7 +255,7 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
     claims.push({
       kind,
       ...(evidenceRequest ? { evidenceRequest: true as const } : {}),
-      ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar) } : {}),
+      ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar), topicUr: cleanTopicUrdu(r.topic_ur) } : {}),
       textAsWritten: text,
       spanCheck,
       arabicSpan,

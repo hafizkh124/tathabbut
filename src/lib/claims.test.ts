@@ -97,8 +97,23 @@ describe("checkClaims — the model points, the post decides", () => {
       { kind: "other", text_as_written: "یہ پیغام دس لوگوں کو بھیجو، جنت ملے گی۔" },
       { kind: "rumour", text_as_written: "جنت ملے گی" },
     ]);
-    expect(claims.map((c) => c.kind)).toEqual(["question", "other", "other"]);
-    expect(claims).toHaveLength(3);
+    // the request to send it to ten people is left out; what is promised for it remains one claim
+    expect(claims.map((c) => c.kind)).toEqual(["question", "other"]);
+    expect(claims[1].textAsWritten).toBe("جنت ملے گی");
+    expect(claims).toHaveLength(2);
+  });
+
+  it("leaves a share request out of a claim's text and drops a 'claim' that is only a request", () => {
+    const post = "صيام يوم 27 رجب يعدل صيام ستين شهرا. انشرها ولك الأجر، أمانة في رقبتك";
+    const { claims, dropped } = checkClaims(post, [
+      { kind: "hadith", text_as_written: "صيام يوم 27 رجب يعدل صيام ستين شهرا. انشرها ولك الأجر", arabic_span: "صيام يوم 27 رجب يعدل صيام ستين شهرا. انشرها ولك الأجر" },
+      { kind: "other", text_as_written: "انشرها ولك الأجر، أمانة في رقبتك" },
+    ]);
+    expect(claims).toHaveLength(1);
+    expect(claims[0].textAsWritten).toBe("صيام يوم 27 رجب يعدل صيام ستين شهرا");
+    expect(claims[0].query).toBe("صيام يوم 27 رجب يعدل صيام ستين شهرا");
+    expect(claims[0].warnings).toEqual([]);
+    expect(dropped).toEqual([{ text: "انشرها ولك الأجر، أمانة في رقبتك", reason: "share request" }]);
   });
 });
 

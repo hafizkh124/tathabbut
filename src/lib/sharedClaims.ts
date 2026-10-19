@@ -101,9 +101,12 @@ export async function loadSharedClaims(ids: string[], cfg: RestConfig | null = s
 /** How long a cached answer is used before the post is checked afresh. */
 const CACHE_DAYS = 30;
 
+/** Raised when the way a post is read changes (the prompt, the checks), so an answer made the old way is not served again. */
+const PIPELINE = "3";
+
 /** The cache key of a post: the same words, whatever the spacing, give the same key. The post itself is not kept. */
 export function postKey(post: string): string {
-  return createHash("sha256").update(post.trim().replace(/\s+/g, " "), "utf8").digest("hex");
+  return createHash("sha256").update(`${PIPELINE}\n${post.trim().replace(/\s+/g, " ")}`, "utf8").digest("hex");
 }
 
 /** The stored results of a post checked before, or null (never checked, too old, a result missing, or the cache down). */

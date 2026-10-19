@@ -8,7 +8,7 @@ import { GeminiError } from "./gemini";
 import { rpc, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
 
-export type Bucket = "verify" | "ocr" | "translate" | "origin";
+export type Bucket = "verify" | "ocr" | "translate" | "origin" | "alulama" | "fast" | "alternative";
 
 /**
  * Per client. The AI runs on Gemini's free tier, whose daily quota the whole site shares, so one client must not be able
@@ -21,7 +21,13 @@ export const RULES: Record<Bucket, { perMinute: number; perDay: number }> = {
   ocr: { perMinute: 4, perDay: 30 },
   translate: { perMinute: 10, perDay: 150 },
   origin: { perMinute: 2, perDay: 5 }, // the search runs on the 2.5 models only: about 40 a day for the whole site
+  alternative: { perMinute: 3, perDay: 25 }, // two small calls on the light models (GEMINI_LIGHT_MODELS), only when a soft reply is opened
+  fast: { perMinute: 30, perDay: 400 }, // the answer without the AI (src/lib/fastPath.ts): the specialist's list, the mushaf and Dorar only
+  alulama: { perMinute: 30, perDay: 600 }, // no AI: a search of our own table, so it never counts against the site's AI limit
 };
+
+/** The buckets that cost no AI request: the site's daily AI limit does not count them. */
+const NO_AI: ReadonlySet<Bucket> = new Set<Bucket>(["alulama", "fast"]);
 
 /** All AI calls of the whole site in one UTC day. Off by default (0): on the free tier Gemini itself stops at its quota
  *  and nothing is billed. Set DAILY_AI_LIMIT if the key ever has billing on, so the bill has a ceiling. */
@@ -52,7 +58,7 @@ export function rulesFor(bucket: Bucket, client: string, siteLimit = dailyAiLimi
     { key: `${bucket}:min:${client}`, window: MINUTE, limit: r.perMinute, scope: "client" },
     { key: `${bucket}:day:${client}`, window: DAY, limit: r.perDay, scope: "client" },
   ];
-  if (siteLimit > 0) rules.push({ key: "ai:day:all", window: DAY, limit: siteLimit, scope: "site" });
+  if (siteLimit > 0 && !NO_AI.has(bucket)) rules.push({ key: "ai:day:all", window: DAY, limit: siteLimit, scope: "site" });
   return rules;
 }
 

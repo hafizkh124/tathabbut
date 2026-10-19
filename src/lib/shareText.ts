@@ -55,7 +55,7 @@ const rtl = (locale: Locale) => (locale === "en" ? "" : "‏");
 const bold = (s: string) => `*${s}*`;
 
 /** The difference between a quoted verse and the mushaf, word by word, as the app shows it (ClaimDetail → Diffs). */
-function diffLines(r: ClaimResult, locale: Locale): string[] {
+export function diffLines(r: ClaimResult, locale: Locale): string[] {
   return (r.verse?.wording?.diffs ?? []).map((d) =>
     d.op === "replaced"
       ? translate(locale, "diff.replaced", { typed: d.typed ?? "", correct: d.correct ?? "" })

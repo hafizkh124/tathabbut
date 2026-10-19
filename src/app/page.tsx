@@ -17,6 +17,7 @@ import { prepareImage } from "@/lib/image";
 import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
 import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { mergeCaption } from "@/lib/sharedInput";
+import { alulamaKindOf, alulamaQueryOf, fetchAlulama } from "@/lib/alulamaClient";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
@@ -65,6 +66,18 @@ export default function Home() {
     });
   }, []);
 
+  /** The questions العلماء already answered, asked for the same way (no AI, our own table); an answer lands only if the run is still current. */
+  const askAlulama = useCallback((id: number, claims: ClaimResult[]) => {
+    claims.forEach((c, i) => {
+      const kind = alulamaKindOf(c);
+      if (!kind) return;
+      fetchAlulama(alulamaQueryOf(c, kind), kind).then((alulama) => {
+        if (id !== run.current) return;
+        setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? { ...x, alulama } : x)) } : p));
+      });
+    });
+  }, []);
+
   const verify = useCallback(
     async (value: string) => {
       const submitted = value.trim();
@@ -95,11 +108,12 @@ export default function Home() {
         const claims = (data.claims ?? []).map((c) => (turathKindOf(c) ? { ...c, turath: { status: "loading" as const } } : c));
         setPhase({ name: "results", claims });
         askTurath(id, claims);
+        askAlulama(id, claims);
       } catch {
         if (id === run.current) setPhase({ name: "error", kind: "network" });
       }
     },
-    [keepPreview, askTurath],
+    [keepPreview, askTurath, askAlulama],
   );
 
   /** A picture: shrink it, read it, and let the person confirm the reading before anything is checked. A caption shared with

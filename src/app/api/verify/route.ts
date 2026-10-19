@@ -4,6 +4,7 @@
 import { later } from "@/lib/later";
 import { extractClaims } from "@/lib/claims";
 import { eventRow, logEvent } from "@/lib/events";
+import { fastPath, fastPathEnabled } from "@/lib/fastPath";
 import { supabaseDorarCache } from "@/lib/dorarCache";
 import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
@@ -11,7 +12,7 @@ import { fetchVerseQiraat, fetchVerseScripts, matchVerses, matchVersesInText } f
 import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
-import { verifyClaims } from "@/lib/verify";
+import { verifyClaims, type VerifiedClaim, type VerifyDeps } from "@/lib/verify";
 import { signExcerpt } from "@/lib/turathSign";
 import type { ClaimResult } from "@/lib/clientTypes";
 
@@ -38,29 +39,38 @@ export async function POST(request: Request) {
     return Response.json({ claims: cached, cached: true, ms: { extract: 0, total: Date.now() - t0 } });
   }
 
-  const refused = await limited(request, "verify");
-  if (refused) return refused;
-
-  let extraction;
-  try {
-    extraction = await extractClaims(text);
-  } catch (err) {
-    return aiQuotaResponse(err) ?? Response.json({ error: "could not read the post" }, { status: 502 });
-  }
   const cache = supabaseDorarCache();
-  const results = await verifyClaims(extraction.claims, {
+  const deps: VerifyDeps = {
     matchVerses: (q) => matchVerses(q),
     matchVersesInText: (q) => matchVersesInText(q),
     verseScripts: (keys) => fetchVerseScripts(keys),
     verseQiraat: (keys) => fetchVerseQiraat(keys),
     matchSayings: (q) => matchSayings(q),
     lookupDorar: (q) => lookupDorar(q, { cache }),
-  });
+  };
+
+  // a short text that is one Arabic quotation, with a strong answer from the specialist's list, the mushaf or Dorar, needs no AI
+  // (src/lib/fastPath.ts, off unless FAST_PATH=1); it has its own limit, and anything it cannot answer goes the normal way
+  let results: VerifiedClaim[] | null = null;
+  if (fastPathEnabled() && (await limited(request, "fast")) === null) results = await fastPath(text, deps);
+  const fast = results !== null;
+
+  let extraction: Awaited<ReturnType<typeof extractClaims>> | undefined;
+  if (!results) {
+    const refused = await limited(request, "verify");
+    if (refused) return refused;
+    try {
+      extraction = await extractClaims(text);
+    } catch (err) {
+      return aiQuotaResponse(err) ?? Response.json({ error: "could not read the post" }, { status: 502 });
+    }
+    results = await verifyClaims(extraction.claims, deps);
+  }
 
   // a claim Dorar could not be asked about was not checked: saying "not found" (and keeping it 30 days in the cache)
   // would be wrong, so the page says it is busy and the person tries again
   if (results.some((r) => r.lookupFailed)) {
-    later(() => logEvent(eventRow(request, "verify", { cached: false, failed: "dorar", ms: Date.now() - t0, model: extraction.model })));
+    later(() => logEvent(eventRow(request, "verify", { cached: false, failed: "dorar", ms: Date.now() - t0, model: extraction?.model })));
     return Response.json({ error: "the sources could not be reached, try again in a minute", limit: "source" }, { status: 503, headers: { "Retry-After": "60" } });
   }
   const shown: ClaimResult[] = results.map((r) => ({
@@ -83,14 +93,13 @@ export async function POST(request: Request) {
   later(async () => {
     await saveSharedClaims(rows);
     await saveAnswer(key, claims);
-    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, model: extraction.model }));
+    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(fast ? { fast: true } : { model: extraction?.model }) }));
   });
 
   return Response.json({
     claims,
-    dropped: extraction.dropped,
-    model: extraction.model,
-    usage: extraction.usage,
-    ms: { extract: extraction.ms, total: ms },
+    dropped: extraction?.dropped ?? [],
+    ...(fast ? { fast: true } : { model: extraction?.model, usage: extraction?.usage }),
+    ms: { extract: extraction?.ms ?? 0, total: ms },
   });
 }
