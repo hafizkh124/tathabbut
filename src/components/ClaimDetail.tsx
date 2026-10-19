@@ -6,7 +6,7 @@ import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
 import { styleOf, toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
-import { buildShareText, plainSurah, readersLine, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
+import { buildShareText, plainSurah, readersLine, sameNarration, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
 import { matchedArabic } from "@/lib/matchedArabic";
 import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
@@ -15,7 +15,7 @@ import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
-import { ShareDialog, ShareNote } from "./ShareDialog";
+import { NarrationShareDialog, ShareDialog, ShareNote, shareableNarrations } from "./ShareDialog";
 import { SimilarExpressions } from "./SimilarExpressions";
 
 interface Via {
@@ -176,13 +176,34 @@ function SourceBox({ r }: { r: ClaimResult }) {
   }
 
   if (r.dorar) {
-    const [first, ...rest] = r.dorar.narrations;
-    const weakList = r.dorar.weakVariants;
+    const cited = r.dorar.cited;
+    const firstAll = r.dorar.narrations[0];
+    // the narration of the book the post names goes on top with its own verdict, unless it is the first one anyway;
+    // it is then left out of the lists below so it is not shown twice (team lead, 2026-10-19)
+    const citedTop = cited?.narration && !(firstAll && sameNarration(cited.narration, firstAll)) ? cited.narration : undefined;
+    const notCited = (n: NarrationView) => !(citedTop && sameNarration(n, citedTop));
+    const [first, ...rest] = r.dorar.narrations.filter(notCited);
+    const weakList = r.dorar.weakVariants?.filter(notCited);
     return (
       <div className="space-y-2">
+        {citedTop && (
+          <div className="space-y-1">
+            <p className="text-[13px] font-semibold text-brand-ink">{t("cited.first")}</p>
+            <ul>
+              <NarrationRow n={citedTop} />
+            </ul>
+            <p className="pt-2 text-[13px] font-semibold text-muted">{t("cited.strongest")}</p>
+          </div>
+        )}
+        {cited && !cited.narration && cited.known && (
+          <p role="note" className="text-[13px] text-muted">
+            {t("label.cited")}: <bdi translate="no" lang="ar" dir="rtl">{cited.book}</bdi> — {t("cited.missing")}
+          </p>
+        )}
         {r.dorar.summary.disputed && <p className="text-[13px] text-muted">{t("note.disputed")}</p>}
         {[...r.dorar.narrations, ...(weakList ?? [])].some((n) => n.textVariant) && <p role="note" className="text-[13px] text-muted">{t("note.variantSummary")}</p>}
         <div className="space-y-1 rounded-[14px] bg-surface px-4 py-3 text-[14px]">
+          {cited?.narration && !citedTop && <p className="text-[13px] font-semibold text-brand-ink">{t("cited.first")}</p>}
           {first?.source && (
             <Row label={t("label.source")}>
               <span className="font-semibold text-brand-ink">{first.source}</span>
@@ -322,6 +343,9 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   const [reported, setReported] = useState<{ text: string; status: "sending" | "sent" | "failed" } | null>(null);
   const [picking, setPicking] = useState(false);
   const several = (all?.length ?? 0) > 1;
+  // one hadith with several narrations: the person chooses what to send (the main result, some, or all)
+  const [choosing, setChoosing] = useState(false);
+  const narrationChoice = !several && shareableNarrations(r).length > 1;
   const tone = toneOf(r.state);
   const quote = r.claim.arabicSpan || r.claim.textAsWritten;
   // a question is shown by its topic, never by its own words: the books were asked the topic only
@@ -333,6 +357,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
 
   const copy = async () => {
     if (several) return setPicking(true);
+    if (narrationChoice) return setChoosing(true);
     try {
       await navigator.clipboard.writeText(shareText());
       track("copy", { n: 1, states: [r.state], linked: Boolean(r.shareId) });
@@ -344,6 +369,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   };
   const share = async () => {
     if (several) return setPicking(true);
+    if (narrationChoice) return setChoosing(true);
     const outcome = await shareOrCopy(shareText());
     track("share", { n: 1, states: [r.state], linked: Boolean(r.shareId), outcome });
     setShareOutcome(outcome);
@@ -468,6 +494,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       <ShareNote outcome={shareOutcome} text={shareText()} />
 
       {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} />}
+      {narrationChoice && choosing && <NarrationShareDialog open onClose={() => setChoosing(false)} result={r} />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 lg:justify-start">
         {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (

@@ -65,6 +65,10 @@ export async function POST(request: Request) {
       ...r.dorar,
       narrations: r.dorar.narrations.slice(0, 15).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
       weakVariants: r.dorar.weakVariants?.slice(0, 15).map((n) => ({ ...n, display: displayGrade(classifyVerdict(n.verdict ?? "", n.muhaddith ?? "")) })),
+      cited: r.dorar.cited && {
+        ...r.dorar.cited,
+        narration: r.dorar.cited.narration && { ...r.dorar.cited.narration, display: displayGrade(classifyVerdict(r.dorar.cited.narration.verdict ?? "", r.dorar.cited.narration.muhaddith ?? "")) },
+      },
     },
   }));
   // each result gets a link (/r/<id>) and is stored for it once the answer has gone out

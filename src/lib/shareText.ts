@@ -1,5 +1,5 @@
 // The text that goes to the clipboard / the share sheet: each claim, its result, and where it comes from. Plain text, so it pastes into WhatsApp.
-import type { ClaimResult } from "./clientTypes";
+import type { ClaimResult, NarrationView } from "./clientTypes";
 import { stateLabel, translate, type Locale } from "./i18n/dict";
 import { sahihAttribution } from "./sahihAttribution";
 import { matchedArabic } from "./matchedArabic";
@@ -71,7 +71,7 @@ function diffLines(r: ClaimResult, locale: Locale): string[] {
  * warning. No links to sources at all (the app shows them); no wording-variant, narrator or isnad notes. Only the app's
  * address closes it: the link to these very results when they have one (resultUrl).
  */
-export function buildShareText(results: ClaimResult[], locale: Locale): string {
+export function buildShareText(results: ClaimResult[], locale: Locale, opts: { narrations?: NarrationView[] } = {}): string {
   const blocks = results.map((r, i) => {
     // a question goes by its topic, as on the screen (ClaimDetail): a person's own case never leaves in their words
     const quote = r.claim.kind === "question" ? r.claim.topic : r.claim.arabicSpan || r.claim.textAsWritten;
@@ -79,9 +79,19 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
     const lines = head ? [head] : [];
     const mark = TONE_MARK[toneOf(r.state)];
     const n = r.dorar?.narrations[0];
+    // narrations the person chose to send (one result only): each on its own line, under the state
+    const picked = results.length === 1 && r.dorar ? opts.narrations : undefined;
+    // the narration of the book the post names, when it is not the first one anyway (team lead, 2026-10-19)
+    const cited = r.dorar?.cited;
+    const citedFirst = cited?.narration && !(n && sameNarration(cited.narration, n)) ? cited.narration : undefined;
     const sahih = n && sahihAttribution(n, locale);
-    if (sahih) lines.push(`${mark} ${bold(withNumber(sahih, n.reference))}`);
+    if (sahih && !picked && !citedFirst) lines.push(`${mark} ${bold(withNumber(sahih, n.reference))}`);
     else lines.push(`${mark} ${bold(stateLabel(r.state, locale, true))}`);
+    if (picked) lines.push(...picked.map((x) => `• ${narrationLine(x, locale)}`));
+    else if (citedFirst) {
+      lines.push(`${translate(locale, "label.cited")}: ${narrationLine(citedFirst, locale)}`);
+      if (sahih) lines.push(withNumber(sahih, n.reference));
+    } else if (cited && !cited.narration && cited.known) lines.push(`${translate(locale, "label.cited")}: ${cited.book} — ${translate(locale, "cited.missing")}`);
 
     if (r.verse) {
       // the mistake, then the right wording, then where it stands in the mushaf (an omitted context is the state itself,
@@ -94,7 +104,7 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
         lines.push(`${translate(locale, "label.qiraa")}: «${q.typed}» ${translate(locale, "qiraa.of", { readers: readersLine(q.readers) })}`);
     }
     if (r.saying?.correct_text) lines.push(`${translate(locale, "label.correct")}: ${r.saying.correct_text}`);
-    if (!sahih) {
+    if (!sahih && !picked) {
       const src = sourceLine(r, locale);
       if (src) lines.push(`${translate(locale, "label.source")}: ${src}`);
       if (n?.muhaddith) lines.push(`${translate(locale, "label.scholar")}: ${n.muhaddith}`);
@@ -105,6 +115,18 @@ export function buildShareText(results: ClaimResult[], locale: Locale): string {
     return lines.join("\n");
   });
   return `${bold(translate(locale, "share.header"))}\n\n${blocks.join("\n\n")}\n\n${translate(locale, "share.more")}:\n${resultUrl(results)}`;
+}
+
+/** Two views of one narration (a result travels as JSON, so not by identity): same book, number and text. */
+export const sameNarration = (a: NarrationView, b: NarrationView) => a.source === b.source && a.reference === b.reference && a.matn === b.matn;
+
+/** One narration on one line: «صحيح مسلم، 780 — أخرجه الإمام مسلم في صحيحه.» or «المستدرك، 2062 — الحاكم: غير حاسم». */
+export function narrationLine(x: NarrationView, locale: Locale): string {
+  const place = [x.source, x.reference].filter(Boolean).join("، ");
+  const sahih = sahihAttribution(x, locale);
+  if (sahih) return `${place} — ${sahih}`;
+  const grade = stateLabel(x.display?.grade ?? x.grade, locale, true);
+  return `${place} — ${x.muhaddith ? `${x.muhaddith}: ` : ""}${grade}`;
 }
 
 /** The address that closes a shared text: the link to these results (/r/<id>-<id>…, src/lib/sharedClaims.ts) when each

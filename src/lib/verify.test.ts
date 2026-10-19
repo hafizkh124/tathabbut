@@ -81,6 +81,18 @@ describe("verifyClaim — routing and authority", () => {
     expect(r.dorar?.narrations.length).toBeGreaterThan(0);
   });
 
+  it("puts first the narration of the book the post names, and leaves the state to all the narrations (2026-10-19)", async () => {
+    const d = () => deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })) });
+    const plain = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), d());
+    const named = await verifyClaim({ ...arabic("hadith", "اطلبوا العلم ولو بالصين"), citedSource: "رواه البزار" }, d());
+    expect(named.dorar?.cited).toMatchObject({ book: "رواه البزار", known: true, narration: { source: "البحر الزخار", muhaddith: "البزار" } });
+    expect(named.state).toBe(plain.state);
+    expect(named.dorar?.narrations).toEqual(plain.dorar?.narrations);
+    const missing = await verifyClaim({ ...arabic("hadith", "اطلبوا العلم ولو بالصين"), citedSource: "سنن الترمذي" }, d());
+    expect(missing.dorar?.cited).toEqual({ book: "سنن الترمذي", known: true });
+    expect(plain.dorar?.cited).toBeUndefined();
+  });
+
   it("a scholar's quote found nowhere is referred", async () => {
     const r = await verifyClaim(arabic("scholar_quote", "قول لا نعرفه عن عالم"), deps());
     expect(r.state).toBe(STATES.notFound);
