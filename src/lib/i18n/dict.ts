@@ -90,7 +90,7 @@ export const DICT = {
 
   "loading.title": { ar: "جارٍ التحقق من المصادر…", en: "Checking the sources…", ur: "ماخذ کی جانچ ہو رہی ہے…" },
   "step.read": { ar: "قراءة النص", en: "Reading the text", ur: "متن پڑھنا" },
-  "step.find": { ar: "تحديد الآيات والأحاديث", en: "Finding the verses and hadiths", ur: "آیات اور احادیث الگ کرنا" },
+  "step.find": { ar: "تحديد موضوع الفحص", en: "Working out what to check", ur: "دیکھنا کہ کیا جانچنا ہے" },
   "step.match": { ar: "مطابقة النص مع المصادر", en: "Matching with the sources", ur: "ماخذ سے ملانا" },
   "step.fetch": { ar: "جلب النتائج", en: "Getting the results", ur: "نتائج لانا" },
 
