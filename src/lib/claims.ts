@@ -94,7 +94,7 @@ export const CLAIMS_SCHEMA = {
           alt_ur: { type: "ARRAY", items: { type: "STRING" } },
           alt_ar: { type: "ARRAY", items: { type: "STRING" } },
         },
-        required: ["kind", "text_as_written"],
+        required: ["kind", "text_as_written", "alt_ur", "alt_ar"],
       },
     },
   },

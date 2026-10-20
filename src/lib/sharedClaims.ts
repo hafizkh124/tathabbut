@@ -102,7 +102,7 @@ export async function loadSharedClaims(ids: string[], cfg: RestConfig | null = s
 const CACHE_DAYS = 30;
 
 /** Raised when the way a post is read changes (the prompt, the checks), so an answer made the old way is not served again. */
-const PIPELINE = "5";
+const PIPELINE = "6";
 
 /** The cache key of a post: the same words, whatever the spacing, give the same key. The post itself is not kept. */
 export function postKey(post: string): string {
