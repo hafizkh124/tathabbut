@@ -20,7 +20,8 @@ export const ALULAMA_ASK_URL = "https://alulama.org/ulama-rabeta-urdu/";
  */
 export function alulamaKindOf(c: ClaimResult): AlulamaKind | null {
   const kind = c.claim.kind;
-  if (kind === "question") return c.state === STATES.fiqh && (c.claim.topicUr || c.claim.topicEn) ? "fatwa" : null;
+  // any topic will do: with none of Urdu or English the Arabic one is searched, and the second look names the matter in Urdu
+  if (kind === "question") return c.state === STATES.fiqh && (c.claim.topicUr || c.claim.topicEn || c.claim.topic) ? "fatwa" : null;
   if (kind !== "hadith" && kind !== "scholar_quote") return null;
   if (c.basis === "quran" || c.basis === "kind") return null;
   if (c.state !== STATES.notFound && c.state !== GRADES[3]) return null;
@@ -34,12 +35,17 @@ export function alulamaKindOf(c: ClaimResult): AlulamaKind | null {
 export function alulamaQueriesOf(c: ClaimResult, kind: AlulamaKind): string[] {
   if (kind !== "fatwa") return [c.claim.query];
   const lang = c.claim.language;
-  return [c.claim.topicUr, lang === "en" || !c.claim.topicUr ? c.claim.topicEn : null, lang === "ar" ? c.claim.topic : null].filter((q): q is string => Boolean(q));
+  // the topic, then the other names the model gave the matter (a colloquial word is not how fatwas word it)
+  const all = [c.claim.topicUr, ...(c.claim.altUr ?? []), lang === "en" || !c.claim.topicUr ? c.claim.topicEn : null, lang === "ar" || !c.claim.topicUr ? c.claim.topic : null];
+  return [...new Set(all.filter((q): q is string => Boolean(q)))];
 }
 
 const UNAVAILABLE: AlulamaView = { status: "unavailable" };
 
 /** Never throws: a failure is «unavailable» and the card stays as it is. */
+/** The Urdu and English names the second look found for a topic (src/lib/expand.ts), as the queries to search with. */
+export const expansionQueries = (x: { ur: string[]; en: string[] }): string[] => [...new Set([...x.ur, ...x.en])].slice(0, 8);
+
 export async function fetchAlulama(query: string | string[], kind: AlulamaKind): Promise<AlulamaView> {
   try {
     const res = await fetch("/api/alulama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Array.isArray(query) ? { queries: query, kind } : { query, kind }) });

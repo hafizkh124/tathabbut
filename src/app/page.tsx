@@ -11,14 +11,16 @@ import { ResultsView } from "@/components/ResultsView";
 import { TextConfirm } from "@/components/TextConfirm";
 import { Button } from "@/components/ui/Button";
 import { LogoMark } from "@/components/ui/Logo";
-import type { ClaimResult, VerifyResponse } from "@/lib/clientTypes";
+import type { AlulamaView, ClaimResult, VerifyResponse } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { prepareImage } from "@/lib/image";
 import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
 import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { mergeCaption } from "@/lib/sharedInput";
-import { alulamaKindOf, alulamaQueriesOf, fetchAlulama } from "@/lib/alulamaClient";
-import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
+import { alulamaKindOf, alulamaQueriesOf, expansionQueries, fetchAlulama } from "@/lib/alulamaClient";
+import { fetchExpansion } from "@/lib/expandClient";
+import { topicQuery } from "@/lib/topic";
+import { applyTurath, fetchTurath, fetchTurathWith, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
   | { name: "input" }
@@ -35,6 +37,8 @@ function errorKindOf(status: number, data: { error?: string; limit?: string }): 
   if (status === 503 && data.limit === "source") return "busy"; // Dorar could not be reached: try again in a minute
   return status === 400 && /longer/.test(data.error ?? "") ? "tooLong" : "read";
 }
+
+const holdsPassages = (x: ClaimResult) => x.turath?.status === "success" && x.turath.references.length > 0;
 
 export default function Home() {
   const { t } = useI18n();
@@ -63,7 +67,8 @@ export default function Home() {
       if (!kind) return;
       fetchTurath(c, kind).then(({ turath, patch }) => {
         if (id !== run.current) return;
-        setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? applyTurath(x, turath, patch) : x)) } : p));
+        // a late, empty answer never replaces passages the second look has already found
+        setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? (holdsPassages(x) && turath.references.length === 0 ? x : applyTurath(x, turath, patch)) : x)) } : p));
       });
     });
   }, []);
@@ -73,9 +78,27 @@ export default function Home() {
     claims.forEach((c, i) => {
       const kind = alulamaKindOf(c);
       if (!kind) return;
-      fetchAlulama(alulamaQueriesOf(c, kind), kind).then((alulama) => {
+      const put = (alulama: AlulamaView) => setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? { ...x, alulama } : x)) } : p));
+      fetchAlulama(alulamaQueriesOf(c, kind), kind).then(async (v) => {
         if (id !== run.current) return;
-        setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? { ...x, alulama } : x)) } : p));
+        if (v.status !== "none" || kind !== "fatwa") return put(v.status === "none" ? { status: "none", retried: true } : v);
+        // nothing found: a second look, with what the model makes of the words (a colloquial word is not how fatwas word it)
+        put({ status: "none", retried: false });
+        const x = await fetchExpansion(c);
+        if (id !== run.current) return;
+        const queries = x ? expansionQueries(x) : [];
+        const again = queries.length ? await fetchAlulama(queries, kind) : v;
+        if (id !== run.current) return;
+        put(again.status === "none" ? { status: "none", retried: true } : again);
+        // and the books, under the Arabic names, when they have shown nothing
+        for (const q of (x?.ar ?? []).map(topicQuery).slice(0, 3)) {
+          const r = await fetchTurathWith(c, "fiqh", q);
+          if (id !== run.current) return;
+          if (r.turath.status === "success" && r.turath.references.length > 0) {
+            setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((y, j) => (j === i && !holdsPassages(y) ? applyTurath(y, r.turath, r.patch) : y)) } : p));
+            return;
+          }
+        }
       });
     });
   }, []);

@@ -7,7 +7,7 @@
 import { normalizeArabic } from "./arabic";
 import { hasPressure, stripPressure } from "./chainPressure";
 import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
-import { cleanTopic, cleanTopicEn, cleanTopicUrdu } from "./topic";
+import { cleanTerms, cleanTopic, cleanTopicEn, cleanTopicUrdu } from "./topic";
 
 export { cleanTopic, topicQuery } from "./topic";
 
@@ -41,6 +41,10 @@ export interface Claim {
   topicUr?: string | null;
   /** Only for a «question»: the same topic in English, for showing it and for English answers on العلماء. */
   topicEn?: string | null;
+  /** Only for a «question»: other names of the matter in Urdu (the colloquial word, its spellings, how fatwas word it), for searching. */
+  altUr?: string[];
+  /** Only for a «question»: Arabic fiqh terms for the matter, for searching the books. */
+  altAr?: string[];
 }
 
 export interface Extraction {
@@ -64,6 +68,8 @@ interface RawClaim {
   topic_ar?: string;
   topic_ur?: string;
   topic_en?: string;
+  alt_ur?: string[];
+  alt_ar?: string[];
 }
 
 export const CLAIMS_SCHEMA = {
@@ -85,6 +91,8 @@ export const CLAIMS_SCHEMA = {
           topic_ar: { type: "STRING" },
           topic_ur: { type: "STRING" },
           topic_en: { type: "STRING" },
+          alt_ur: { type: "ARRAY", items: { type: "STRING" } },
+          alt_ar: { type: "ARRAY", items: { type: "STRING" } },
         },
         required: ["kind", "text_as_written"],
       },
@@ -105,6 +113,8 @@ For each claim return:
 - question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
 - topic_ar (only for kind "question"): the fiqh topic of the question as the title of a chapter in a fiqh book, in Arabic, two or three words, naming the matter only and not starting with «حكم» or «أحكام» (for example «صلاة الجمعة للمسافر», «سجود السهو», «طلاق الغضبان»). It must contain no name, no number, no detail of the asker's story and no answer or ruling.
 - topic_ur (only for kind "question"): the same topic in Urdu, two to four words, as it would be worded in the title of a fatwa («سورہ یٰس کی فضیلت», «سفر میں نماز جمعہ»). The same limits as topic_ar: no name, no number, no detail of the asker's story and no answer.
+- Understand the words of a question before you name its topic. A question may use a colloquial, regional or uncommon word (a custom, a trade or family term, a dialect word, a spelling variant: for example نیوتہ / نیوندرا / نیندرا = the money gifts given at weddings and expected back, in Arabic النقوط; ویل; بھاجی). NEVER copy such a word into topic_ar, topic_ur or topic_en as if it were a standard term: work out what it means and write the topic as the standard heading of the matter (for example «النقوط في الأفراح», «شادی میں رقم دینے کی رسم», «wedding money gifts»). If you do not recognise a word, name the matter in the plainest standard words you can from the rest of the question.
+- alt_ur and alt_ar (only for kind "question"): alt_ur = two to four other NAMES of the matter in Urdu, of one or two words each, as they stand in the titles of fatwas (for the wedding gifts: «نیوتہ», «نیوندرا», «سلامی», «شادی میں رقم»), including the colloquial word itself and its usual spellings; never a question or a phrase like «… کا حکم»; alt_ar = one or two Arabic fiqh terms or chapter titles (2 to 3 words) under which the books treat it. Names of the matter only: no name, no number, no detail of the asker's story, no answer.
 - topic_en (only for kind "question"): the same topic in English, two to four words («network marketing», «Friday prayer while travelling»), with the same limits.
 Verses of the Quran quoted one after the other (consecutive verses, with or without verse numbers between them) are ONE claim of kind "quran"; verses quoted in different places of the post, or with other text between them, are separate claims.
 A request to pass the message on («انشرها», "send this to ten people", «آگے بھیجیں») is not a claim: leave it out of every claim's text, and never make a claim of it alone. A reward promised for passing it on («من نشرها دخل الجنة») IS a claim.
@@ -260,7 +270,7 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
     claims.push({
       kind,
       ...(evidenceRequest ? { evidenceRequest: true as const } : {}),
-      ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar), topicUr: cleanTopicUrdu(r.topic_ur), topicEn: cleanTopicEn(r.topic_en) } : {}),
+      ...(asked ? { scope: r.question_scope === "general" ? ("general" as const) : ("personal" as const), topic: cleanTopic(r.topic_ar), topicUr: cleanTopicUrdu(r.topic_ur), topicEn: cleanTopicEn(r.topic_en), altUr: cleanTerms(r.alt_ur, cleanTopicUrdu), altAr: cleanTerms(r.alt_ar, cleanTopic, 2) } : {}),
       textAsWritten: text,
       spanCheck,
       arabicSpan,

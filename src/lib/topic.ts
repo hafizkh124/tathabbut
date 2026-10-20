@@ -24,14 +24,14 @@ const MAX_URDU_TOPIC_CHARS = 50;
 
 /**
  * The same topic in Urdu, for finding questions already answered on العلماء. Checked like the Arabic one: letters (Arabic or Urdu)
- * and spaces only, a few words, short; so no name, no figure and no detail of the asker's story goes with it.
+ * and spaces only, up to six words, short; so no name, no figure and no detail of the asker's story goes with it.
  */
 export function cleanTopicUrdu(raw: string | undefined): string | null {
   const t = squash(trimPunct(raw ?? ""));
   if (!t || t.length > MAX_URDU_TOPIC_CHARS) return null;
   if (!/^[ء-ۿً-ْٰ\s]+$/.test(t) || /[٠-٩۰-۹]/.test(t)) return null;
   const words = t.split(" ");
-  return words.length <= 5 && t.replace(/[ً-ْٰ\s]/g, "").length >= 3 ? t : null;
+  return words.length <= 6 && t.replace(/[ً-ْٰ\s]/g, "").length >= 3 ? t : null;
 }
 
 const MAX_EN_TOPIC_CHARS = 50;
@@ -41,6 +41,24 @@ export function cleanTopicEn(raw: string | undefined): string | null {
   const t = squash(trimPunct(raw ?? ""));
   if (!t || t.length > MAX_EN_TOPIC_CHARS || !/^[A-Za-z][A-Za-z'’\- ]*$/.test(t)) return null;
   return t.split(" ").length <= 5 && t.replace(/[^A-Za-z]/g, "").length >= 3 ? t : null;
+}
+
+/** The other names of a matter that the model gives (at most `max`), each cleaned like a topic; what does not pass is left out. */
+export function cleanTerms(raw: unknown, clean: (s: string) => string | null, max = 3): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const x of raw) {
+    // two names in one string («نیوتہ اور نیوندرا», «a / b», «a، b») are two names: each is looked up alone
+    // (only when each side is a short name: a longer text is not a list)
+    const parts = typeof x === "string" ? x.split(/\s+(?:اور|یا|و|and|or)\s+|\s*[،,/|؛;]\s*/i).map((n) => n.trim()).filter(Boolean) : [];
+    const names = typeof x === "string" ? (parts.length > 1 && parts.every((n) => n.split(/\s+/).length <= 2) ? parts : [x]) : [];
+    for (const name of names) {
+      const t = clean(name);
+      if (t && !out.includes(t)) out.push(t);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
 }
 
 /** A topic that may be sent to العلماء' search, whatever its language: letters and spaces only, a few words, short (never a story). */
