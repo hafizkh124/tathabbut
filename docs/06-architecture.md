@@ -18,9 +18,16 @@ Next.js web app ──► POST /api/verify
   5. Match                                   model picks only from candidate IDs:
                                              EXACT / SEMANTIC / DISTORTED / NO_MATCH
   6. Decide state                            fixed rules + gradeMap.ts (no model)
-  7. Governance level                        أ / ب / ج / د
+  7. Governance level                        أ / ب / ج / د (display label, src/lib/levels.ts)
   8. Attach translations                     quran_translations
   9. Return cards + shareable text
+ 10. After the cards are on screen (separate calls, never blocking them):
+       Turath passages (/api/turath), questions العلماء already answered (/api/alulama)
+
+Before step 1 (optional, FAST_PATH=1): one short Arabic quotation is checked directly against the
+circulating-texts list, the mushaf and Dorar; only a strong positive result answers, anything else
+goes the normal way. Share requests («انشرها …») and greetings are removed from claims in step 2
+(src/lib/chainPressure.ts) and are never searched for.
 ```
 
 ## 6.2 Components
@@ -37,6 +44,12 @@ Next.js web app ──► POST /api/verify
 | Grade map | `src/lib/gradeMap.ts` | Specialist's rules from verdict wording to grade |
 | Circulating texts | `src/lib/sayingsMatch.ts`, `sayingsSheet.ts`, `scripts/load-sayings.ts` | Match against and load the circulating-texts list |
 | Origin tracker (experimental) | `src/lib/originTracker.ts`, `src/app/api/origin/route.ts` | Public digital traces of a viral claim; informational only — its links are search results, never a source for a verdict or attribution |
+| Share requests | `src/lib/chainPressure.ts` | Finds «forward this»-type requests (Arabic, Urdu, English); pure, also used by the screen |
+| Summary and levels | `src/lib/summary.ts`, `src/lib/levels.ts` | The line over the results and the أ–د badge, from the states alone |
+| Soft reply | `src/lib/softReply.ts`, `src/components/SoftReplyDialog.tsx` | A reply to whoever forwarded a text that does not hold, composed only from the result's own fields |
+| Fast path | `src/lib/fastPath.ts`, `eval/fastpath-offline.ts` | The checks that need no model, for one short Arabic quotation; off unless `FAST_PATH=1` |
+| العلماء | `src/lib/alulama.ts`, `alulamaMatch.ts`, `alulamaSync.ts`, `src/app/api/alulama/`, `src/app/api/cron/alulama/`, `scripts/sync-alulama.ts` | Our copy of the answered questions of alulama.org: parse, daily sync, matching, the card |
+| Sahih alternative (experimental, off) | `src/lib/alternative.ts`, `src/app/api/alternative/`, `eval/alternatives.ts` | An authentic text on the same matter for a soft reply; `ALTERNATIVE=1`, not wired to the screen until its check passes |
 | Dorar relay | `worker/` (Cloudflare Worker) | Forwards Dorar API calls from a network location Dorar accepts |
 | Data scripts | `scripts/` | Download and ingest Quran data, warm and upload the Dorar cache |
 
@@ -53,6 +66,8 @@ Schema in `supabase/migrations/`.
 | `dorar_cache` | Raw Dorar responses per normalized query, with fetch time; private (service key only) | As queried |
 | `turath_cache` | The answer to a Turath lookup per normalized query and kind (hadith, scholar_quote, fiqh), 30-day TTL; private (service key only) | As queried |
 | `turath_translations` | The machine translation of a Turath passage per SHA-256 of the Arabic text and language (ur, en); private (service key only) | As translated |
+| `alulama_posts` | The answered questions of alulama.org (about 8,500): title, folded search text, the first ~500 characters of the answer, the shaikh named under it, link back, date; private (service key only); migration 014 | ~22 MB with indexes |
+| `sync_state` | Where the daily العلماء sync stands | 1 |
 | `review_queue` | Unresolved texts, no user identity (`/admin` page not built yet) | — |
 | `data_sources` | Source name, version, link, licence notes | — |
 
@@ -74,4 +89,10 @@ There is deliberately **no local hadith collection** in the MVP.
 - **Rules over model for anything scholarly.** The model's job ends at extraction and candidate choice.
 - **Verbatim Arabic.** Arabic claims are never passed through the model's rewriting; code checks the claim is a
   substring of the post.
-- **Cache narrowly.** Only answers to queries actually asked are cached; no bulk harvesting.
+- **Cache narrowly.** Only answers to queries actually asked are cached; no bulk harvesting. The one exception is
+  العلماء' own question-and-answer pages, which belong to the same organisation as Tathabbut and are copied as short
+  excerpts with a link back (see 5.1).
+- **A source is shown as it is.** The العلماء card carries that site's own answer and shaikh, apart from the books of
+  Turath, and says it is not Tathabbut's ruling; for a personal case there is no ruling at all, only the way to ask.
+- **A cached answer follows the pipeline.** `postKey` carries a version number that is raised whenever the way a post is
+  read changes, so an answer made the old way is not served again.
