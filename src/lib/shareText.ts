@@ -5,6 +5,8 @@ import { sahihAttribution } from "./sahihAttribution";
 import { matchedArabic } from "./matchedArabic";
 import { splitReferenceUrl } from "./viaLinks";
 import { toneOf, type Tone } from "./gradeStyle";
+import { ALULAMA_ASK_URL } from "./alulamaClient";
+import { topicLabel } from "./topic";
 
 export const APP_URL = "https://tathabbut.alulama.org";
 
@@ -54,6 +56,67 @@ const rtl = (locale: Locale) => (locale === "en" ? "" : "‏");
 /** WhatsApp's bold. Elsewhere the stars stay as plain marks, which still read as emphasis. */
 const bold = (s: string) => `*${s}*`;
 
+// ---- a text that mixes scripts (an English line with an Arabic book title, an Urdu line with an English topic)
+/** A piece of another script inside a line, kept apart (Unicode isolates) so the line's own direction and punctuation hold. */
+const iso = (s: string) => `⁨${s}⁩`;
+const ARABIC_SCRIPT = /[؀-ۿݐ-ݿ]/;
+const LATIN = /[A-Za-z]/;
+/** The mark a line starts with so WhatsApp lays it out right: by the script of its own words (what is isolated does not count),
+ *  else by the interface language. An emoji, a bullet or a number cannot decide it. */
+const dirMark = (line: string, locale: Locale) => {
+  const own = line.replace(/⁨[^⁩]*⁩/g, "");
+  return ARABIC_SCRIPT.test(own) ? "‏" : LATIN.test(own) ? "‎" : locale === "en" ? "‎" : "‏";
+};
+const clipAt = (s: string, n: number) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n);
+  return `${cut.slice(0, cut.lastIndexOf(" ") > n * 0.6 ? cut.lastIndexOf(" ") : n)}…`;
+};
+const pageText = (r: NonNullable<ClaimResult["turath"]> & { status: "success" }, i: number, locale: Locale): string => {
+  const loc = r.references[i].pageLocator;
+  if (!loc) return "";
+  if (loc.volume && loc.printedPage !== undefined) return translate(locale, "label.pages", { v: loc.volume, p: loc.printedPage });
+  return loc.printedPage !== undefined ? translate(locale, "turath.printedPage", { p: loc.printedPage }) : "";
+};
+
+/**
+ * A fiqh question in full: its topic (in the language of the text, the Arabic words the books were asked in beside it), the
+ * state, then what was found: up to two answered questions of العلماء (their own words, their shaikh, the link) and up to three
+ * passages of the books of fiqh and fatwa (book, author, volume and page, the start of the passage). A personal case has no
+ * ruling here: the referral, and the way to ask العلماء.
+ */
+function questionLines(r: ClaimResult, locale: Locale, mark: string, numbered: string): string[] {
+  const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate(locale, key, params);
+  const { main, arabic } = topicLabel(r.claim, locale);
+  const topic = main ? `«${iso(main)}»${arabic ? ` (${iso(arabic)})` : ""}` : "";
+  const out = [[numbered, topic].filter(Boolean).join(" "), `${mark} ${bold(stateLabel(r.state, locale, true))}`];
+
+  const a = r.alulama?.status === "found" ? r.alulama.hits.slice(0, 2) : [];
+  if (a.length) {
+    out.push("", bold(t("share.alulama")));
+    for (const h of a) {
+      out.push(`• ${iso(h.title)}`);
+      if (h.answer_snippet) out.push(`  ${clipAt(h.answer_snippet, 240)}`);
+      if (h.answerers[0]) out.push(`  — ${iso(h.answerers[0])}`);
+      out.push(`  ${h.link}`);
+    }
+    out.push(t("share.alulama.note"));
+  }
+
+  const books = r.turath?.status === "success" ? r.turath : null;
+  if (books && books.references.length) {
+    out.push("", bold(t("fiqh.title")));
+    books.references.slice(0, 3).forEach((ref, i) => {
+      const where = [ref.author?.name ? iso(ref.author.name) : "", pageText(books as never, i, locale)].filter(Boolean).join("، ");
+      out.push(`• ${iso(ref.book.title)}${where ? ` (${where})` : ""}`);
+      if (ref.excerpt) out.push(`  «${iso(clipAt(ref.excerpt, 170))}»`);
+    });
+  }
+  if (r.claim.scope !== "general") out.push("", t("fiqh.refer"), `${t("share.ask")} ${ALULAMA_ASK_URL}`);
+  return out;
+}
+
 /** The difference between a quoted verse and the mushaf, word by word, as the app shows it (ClaimDetail → Diffs). */
 export function diffLines(r: ClaimResult, locale: Locale): string[] {
   return (r.verse?.wording?.diffs ?? []).map((d) =>
@@ -79,7 +142,12 @@ export function diffLines(r: ClaimResult, locale: Locale): string[] {
 export function buildShareText(results: ClaimResult[], locale: Locale, opts: { narrations?: NarrationView[] } = {}): string {
   const blocks = results.map((r, i) => {
     // a question goes by its topic, as on the screen (ClaimDetail): a person's own case never leaves in their words
-    const quote = r.claim.kind === "question" ? r.claim.topic : r.claim.arabicSpan || r.claim.textAsWritten;
+    if (r.claim.kind === "question") {
+      const numbered = results.length > 1 ? `${rtl(locale)}${bold(`${i + 1}.`)}` : "";
+      const mark = TONE_MARK[toneOf(r.state)];
+      return questionLines(r, locale, mark, numbered).map((l) => (l ? `${dirMark(l, locale)}${l}` : l)).join("\n");
+    }
+    const quote = r.claim.arabicSpan || r.claim.textAsWritten;
     const head = [results.length > 1 ? bold(`${i + 1}.`) : "", quote ? `«${quote}»` : ""].filter(Boolean).join(" ");
     const start = rtl(locale);
     const lines = head ? [`${results.length > 1 ? start : ""}${head}`] : [];
@@ -117,7 +185,6 @@ export function buildShareText(results: ClaimResult[], locale: Locale, opts: { n
     }
     const arabic = matchedArabic(r);
     if (arabic) lines.push(`${translate(locale, "label.matchedArabic")}: ${arabic}`, translate(locale, "note.translationMatch"));
-    if (r.claim.kind === "question" && r.claim.scope !== "general") lines.push(translate(locale, "fiqh.refer"));
     return lines.join("\n");
   });
   return `${bold(translate(locale, "share.header"))}\n\n${blocks.join("\n\n")}\n\n${translate(locale, "share.more")}:\n${resultUrl(results)}`;

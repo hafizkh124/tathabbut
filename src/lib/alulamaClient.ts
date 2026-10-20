@@ -17,21 +17,29 @@ export const ALULAMA_ASK_URL = "https://alulama.org/ulama-rabeta-urdu/";
  */
 export function alulamaKindOf(c: ClaimResult): AlulamaKind | null {
   const kind = c.claim.kind;
-  if (kind === "question") return c.state === STATES.fiqh && c.claim.topicUr ? "fatwa" : null;
+  if (kind === "question") return c.state === STATES.fiqh && (c.claim.topicUr || c.claim.topicEn) ? "fatwa" : null;
   if (kind !== "hadith" && kind !== "scholar_quote") return null;
   if (c.basis === "quran" || c.basis === "kind") return null;
   if (c.state !== STATES.notFound && c.state !== GRADES[3]) return null;
   return hasArabic(c.claim.query) && c.claim.query.trim().split(/\s+/).length >= 3 ? "hadith_ruling" : null;
 }
 
-export const alulamaQueryOf = (c: ClaimResult, kind: AlulamaKind): string => (kind === "fatwa" ? (c.claim.topicUr ?? "") : c.claim.query);
+/**
+ * What is searched for on العلماء, in every language the question was given in: the Urdu topic always (most answers are Urdu),
+ * and beside it the English topic for an English question or the Arabic one for an Arabic question (a few answers are in those).
+ */
+export function alulamaQueriesOf(c: ClaimResult, kind: AlulamaKind): string[] {
+  if (kind !== "fatwa") return [c.claim.query];
+  const lang = c.claim.language;
+  return [c.claim.topicUr, lang === "en" || !c.claim.topicUr ? c.claim.topicEn : null, lang === "ar" ? c.claim.topic : null].filter((q): q is string => Boolean(q));
+}
 
 const UNAVAILABLE: AlulamaView = { status: "unavailable" };
 
 /** Never throws: a failure is «unavailable» and the card stays as it is. */
-export async function fetchAlulama(query: string, kind: AlulamaKind): Promise<AlulamaView> {
+export async function fetchAlulama(query: string | string[], kind: AlulamaKind): Promise<AlulamaView> {
   try {
-    const res = await fetch("/api/alulama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, kind }) });
+    const res = await fetch("/api/alulama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Array.isArray(query) ? { queries: query, kind } : { query, kind }) });
     if (!res.ok) return UNAVAILABLE;
     const data = (await res.json()) as { status?: string; hits?: AlulamaHit[] };
     if (data.status === "found" && data.hits?.length) return { status: "found", kind, hits: data.hits };

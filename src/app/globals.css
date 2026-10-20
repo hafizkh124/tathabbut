@@ -198,6 +198,12 @@ html[lang="ur"] body {
 html[lang="ur"] :is(h1, h2, h3, p, li):not(.quran, .font-quran) {
   line-height: 2.2;
 }
+/* Urdu content on a page in another language (an answer of العلماء, an Urdu post on the Arabic or English screen) is still set in
+   Nastaliq: in the Arabic font its letters (ی ے ں ھ ٹ ڈ گ) lose their Urdu forms. The Quran and hadith keep Amiri. */
+:where(:not(html)):lang(ur):not(.quran, .font-quran) {
+  font-family: var(--font-nastaliq), var(--font-readex), serif;
+  line-height: 2.2;
+}
 html[lang="ur"] .nastaliq-pad {
   padding-top: 0.5em;
   line-height: 2.1;
