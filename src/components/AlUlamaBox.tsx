@@ -1,7 +1,8 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { AlulamaHit } from "@/lib/alulama";
-import { ALULAMA_ASK_URL } from "@/lib/alulamaClient";
+import { ALULAMA_ASK_URL, answerText } from "@/lib/alulamaClient";
+import { fetchAnswerTranslation } from "@/lib/translateClient";
 import type { ClaimResult } from "@/lib/clientTypes";
 import { STATES } from "@/lib/states";
 import { useI18n } from "@/lib/i18n/i18n";
@@ -17,12 +18,55 @@ function opening(text: string): string {
 
 function HitCard({ h }: { h: AlulamaHit }) {
   const { t, locale, num } = useI18n();
+  // the answers are in Urdu: on the Arabic or English screen they are translated by machine (labelled, with the Urdu one tap away)
+  const to = locale === "ar" || locale === "en" ? locale : null;
+  const key = `${to}:${h.sig}`;
+  const [tr, setTr] = useState<{ key: string; text: string | null } | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  useEffect(() => {
+    if (!to || !h.sig) return;
+    let live = true;
+    fetchAnswerTranslation(answerText(h), h.sig, to).then((text) => {
+      if (live) setTr({ key, text });
+    });
+    return () => {
+      live = false;
+    };
+  }, [to, h, key]);
+  const translated = tr && tr.key === key ? tr.text : null;
+  const waiting = Boolean(to && h.sig && !(tr && tr.key === key));
+  const [tTitle, ...tRest] = translated ? translated.split(/\n\s*\n/) : [];
+  const tBody = tRest.join("\n");
+  const original = !translated || showOriginal;
   const when = h.published ? new Date(h.published) : null;
   const date = when && !Number.isNaN(when.getTime()) ? new Intl.DateTimeFormat(locale === "ur" ? "ur-PK" : locale, { year: "numeric", month: "long" }).format(when) : null;
   return (
     <li className="space-y-1.5 rounded-xl border border-line bg-paper p-3">
-      <p className="text-[15px] font-semibold leading-7 text-ink" dir="auto" lang="ur">{h.title}</p>
-      {h.answer_snippet && <p className="text-[14px] leading-7 text-ink" dir="auto" lang="ur">{opening(h.answer_snippet)}</p>}
+      {translated && (
+        <div className="space-y-1.5" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
+          {tBody ? (
+            <>
+              <p className="text-[15px] font-semibold leading-7 text-ink">{tTitle}</p>
+              <p className="text-[14px] leading-7 text-ink">{opening(tBody)}</p>
+            </>
+          ) : (
+            <p className="text-[14px] leading-7 text-ink">{opening(tTitle ?? "")}</p>
+          )}
+          <p className="text-[12.5px] text-muted">{t("alulama.mt")}</p>
+        </div>
+      )}
+      {waiting && <p className="text-[12.5px] text-muted">{t("translate.loading")}</p>}
+      {original && (
+        <div className="space-y-1.5" dir="auto" lang="ur">
+          <p className="text-[15px] font-semibold leading-7 text-ink">{h.title}</p>
+          {h.answer_snippet && <p className="text-[14px] leading-7 text-ink">{opening(h.answer_snippet)}</p>}
+        </div>
+      )}
+      {translated && (
+        <button type="button" onClick={() => setShowOriginal((v) => !v)} aria-expanded={showOriginal} className="min-h-9 cursor-pointer text-[13px] text-brand-ink underline underline-offset-[5px]">
+          {t(showOriginal ? "alulama.hideOriginal" : "alulama.showOriginal")}
+        </button>
+      )}
       <p className="text-[12.5px] text-muted" dir="auto" lang="ur">
         {[h.answerers[0], h.number ? t("alulama.number", { n: num(h.number) }) : null, date].filter(Boolean).join(" · ")}
       </p>

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { track } from "@/lib/analytics";
 import type { ClaimResult, NarrationView } from "@/lib/clientTypes";
 import { useI18n } from "@/lib/i18n/i18n";
-import { buildShareText, sameNarration, shareOrCopy, whatsappUrl, type ShareOutcome } from "@/lib/shareText";
+import { buildShareText, fiqhItems, sameNarration, shareOrCopy, whatsappUrl, type FiqhPick, type ShareOutcome } from "@/lib/shareText";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
 import { Dialog } from "./ui/Dialog";
@@ -87,6 +87,116 @@ export function ShareDialog({ open, onClose, claims }: { open: boolean; onClose:
           </Button>
         </div>
         <ShareNote outcome={outcome} text={buildShareText(chosen, locale)} />
+      </div>
+    </Dialog>
+  );
+}
+
+/**
+ * Share one fiqh result: the person chooses which of العلماء answers and which passages of the books go into the text, as with the
+ * narrations of a hadith. What the plain share would carry (the first two answers, the first three passages) is ticked to begin with.
+ */
+export function FiqhShareDialog({ open, onClose, result: r }: { open: boolean; onClose: () => void; result: ClaimResult }) {
+  const { t, num, locale } = useI18n();
+  const items = fiqhItems(r);
+  const [a, setA] = useState<boolean[]>(() => items.alulama.map((_, i) => i < 2));
+  const [b, setB] = useState<boolean[]>(() => items.books.map((_, i) => i < 3));
+  const [copied, setCopied] = useState(false);
+  const [outcome, setOutcome] = useState<ShareOutcome | null>(null);
+  const pick: FiqhPick = { alulama: a.flatMap((v, i) => (v ? [i] : [])), books: b.flatMap((v, i) => (v ? [i] : [])) };
+  const n = pick.alulama.length + pick.books.length;
+  const all = n === items.alulama.length + items.books.length;
+  const text = buildShareText([r], locale, { fiqhPick: pick });
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      track("copy", { n: 1, states: [r.state], linked: Boolean(r.shareId), fiqhPicked: n });
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        onClose();
+      }, 1200);
+    } catch {
+      /* clipboard blocked: nothing to do */
+    }
+  };
+  const share = async () => {
+    const result = await shareOrCopy(text);
+    track("share", { n: 1, states: [r.state], linked: Boolean(r.shareId), fiqhPicked: n, outcome: result });
+    if (result === "shared") onClose();
+    else setOutcome(result);
+  };
+  const row = (checked: boolean, onChange: (v: boolean) => void, body: React.ReactNode) => (
+    <label className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 ${checked ? "border-brand bg-brand-soft" : "border-line bg-paper"}`}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 flex-none accent-[var(--brand)]" />
+      <span className="min-w-0 flex-1 text-[14px]">{body}</span>
+    </label>
+  );
+
+  return (
+    <Dialog open={open} onClose={onClose} title={t("share.pickTitle")} placement="bottom">
+      <div className="space-y-3 pb-1">
+        <button
+          type="button"
+          onClick={() => {
+            setA(items.alulama.map(() => !all));
+            setB(items.books.map(() => !all));
+          }}
+          className="min-h-11 cursor-pointer text-[14px] text-brand-ink underline underline-offset-[5px]"
+        >
+          {all ? t("share.none") : t("share.all")}
+        </button>
+        <div className="max-h-[48vh] space-y-3 overflow-y-auto">
+          {items.alulama.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="text-[13px] font-semibold text-muted">{t("share.fiqh.alulama")}</h3>
+              <ul className="space-y-2">
+                {items.alulama.map((h, i) => (
+                  <li key={h.id}>
+                    {row(
+                      a[i] ?? false,
+                      (v) => setA((p) => p.map((x, k) => (k === i ? v : x))),
+                      <span lang="ur" dir="auto">
+                        {h.title}
+                      </span>,
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {items.books.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="text-[13px] font-semibold text-muted">{t("fiqh.title")}</h3>
+              <ul className="space-y-2">
+                {items.books.map((ref, i) => (
+                  <li key={`${ref.bookId}-${i}`}>
+                    {row(
+                      b[i] ?? false,
+                      (v) => setB((p) => p.map((x, k) => (k === i ? v : x))),
+                      <span translate="no" lang="ar" dir="rtl">
+                        <span className="font-semibold text-brand-ink">{ref.book.title}</span>
+                        {ref.author?.name ? <span className="text-muted"> — {ref.author.name}</span> : null}
+                      </span>,
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+        <div className="flex gap-2.5 pt-1">
+          <Button full variant="secondary" onClick={copy} disabled={n === 0}>
+            <Icon name="copy" size={16} />
+            <span>{copied ? t("action.copied") : t("share.copyN", { n: num(n) })}</span>
+          </Button>
+          <Button full onClick={share} disabled={n === 0}>
+            <Icon name="share" size={16} />
+            <span>{t("share.shareN", { n: num(n) })}</span>
+          </Button>
+        </div>
+        <ShareNote outcome={outcome} text={text} />
       </div>
     </Dialog>
   );

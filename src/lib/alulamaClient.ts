@@ -6,6 +6,9 @@ import { STATES } from "./states";
 
 const hasArabic = (s: string) => /[ء-ي]/.test(s);
 
+/** The text of an answer as it is translated and signed: the title, a blank line, the start of the answer. */
+export const answerText = (h: { title: string; answer_snippet: string }) => `${h.title}\n\n${h.answer_snippet}`.trim();
+
 /** The address a visitor goes to with a case of their own (the contact page of العلماء). */
 export const ALULAMA_ASK_URL = "https://alulama.org/ulama-rabeta-urdu/";
 

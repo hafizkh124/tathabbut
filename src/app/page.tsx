@@ -41,6 +41,8 @@ export default function Home() {
   const [text, setText] = useState("");
   const [post, setPost] = useState("");
   const [phase, setPhase] = useState<Phase>({ name: "input" });
+  // how long the answer took, from the press of the button to the cards (the books and العلماء come after)
+  const [tookMs, setTookMs] = useState<number | null>(null);
   const [selected, setSelected] = useState(0);
   const [originQuery, setOriginQuery] = useState<string | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -91,6 +93,8 @@ export default function Home() {
         return;
       }
       setPhase({ name: "loading" });
+      setTookMs(null);
+      const started = Date.now();
       window.scrollTo({ top: 0 });
 
       try {
@@ -106,6 +110,7 @@ export default function Home() {
           return;
         }
         const claims = (data.claims ?? []).map((c) => (turathKindOf(c) ? { ...c, turath: { status: "loading" as const } } : c));
+        setTookMs(Date.now() - started);
         setPhase({ name: "results", claims });
         askTurath(id, claims);
         askAlulama(id, claims);
@@ -242,7 +247,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <ResultsView post={post} claims={phase.claims} selected={selected} onSelect={setSelected} onOrigin={setOriginQuery} onEdit={toInput} onNew={toNew} />
+            <ResultsView tookMs={tookMs} post={post} claims={phase.claims} selected={selected} onSelect={setSelected} onOrigin={setOriginQuery} onEdit={toInput} onNew={toNew} />
           ))}
       </main>
 

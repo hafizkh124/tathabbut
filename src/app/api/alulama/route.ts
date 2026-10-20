@@ -7,6 +7,8 @@
 import { matchAlulama } from "@/lib/alulamaMatch";
 import { limited } from "@/lib/rateLimit";
 import { cleanTopicAny } from "@/lib/topic";
+import { signExcerpt } from "@/lib/turathSign";
+import { answerText } from "@/lib/alulamaClient";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -32,7 +34,8 @@ export async function POST(request: Request) {
   if (refused) return refused;
   try {
     const hits = await matchAlulama(queries, body.kind);
-    return Response.json(hits.length ? { status: "found", hits } : { status: "none" });
+    // each answer carries the server's signature on its text, which /api/translate asks for (only our own copy can be translated)
+    return Response.json(hits.length ? { status: "found", hits: hits.map((h) => ({ ...h, sig: signExcerpt(answerText(h)) })) } : { status: "none" });
   } catch {
     return Response.json({ status: "unavailable" }, { status: 503 });
   }
