@@ -2,10 +2,12 @@
 import React, { useMemo, useState } from "react";
 import type { ClaimResult } from "@/lib/clientTypes";
 import { applyPick } from "@/lib/candidates";
+import { hasPressure } from "@/lib/chainPressure";
 import { segmentPost } from "@/lib/highlight";
 import { styleOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
 import { ClaimDetail } from "./ClaimDetail";
+import { ResultSummary } from "./ResultSummary";
 import { StateBadge } from "./ui/Badge";
 
 /** The claim's own words, short enough for a tab. */
@@ -150,6 +152,9 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
           <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
           <span className="text-[13px] text-muted">{count(claims.length)}</span>
         </div>
+        <div className="lg:hidden">
+          <ResultSummary claims={claims} />
+        </div>
         {!isOnlyUnplaced && (
           <>
             <h2 className="hidden text-[15px] font-semibold text-muted lg:block">{t("result.yourText")}</h2>
@@ -181,6 +186,13 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
             </ul>
           </div>
         )}
+
+        {/* «send it to ten people»: a request, not a claim, so it was not checked */}
+        {hasPressure(post) && (
+          <p role="note" className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] leading-6 text-muted">
+            {t("result.pressure")}
+          </p>
+        )}
       </div>
 
       {/* the result of the chosen claim */}
@@ -189,6 +201,9 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
           <div className="hidden items-baseline gap-2 lg:flex">
             <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
             <span className="text-[13px] text-muted">{count(claims.length)}</span>
+          </div>
+          <div className="hidden lg:block">
+            <ResultSummary claims={claims} />
           </div>
           {claims.length > 1 && <ClaimTabs claims={claims} selected={selected} onSelect={onSelect} />}
           <ClaimDetail result={current} all={claims} index={selected} total={claims.length} onOrigin={onOrigin} onEdit={onEdit} onNew={onNew} onPick={(k) => setPicks((p) => ({ ...p, [selected]: k }))} />

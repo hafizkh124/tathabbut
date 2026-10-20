@@ -20,6 +20,20 @@ export function cleanTopic(raw: string | undefined): string | null {
   return words.length <= MAX_TOPIC_WORDS && t.replace(/[ً-ْ\s]/g, "").length >= 3 ? t : null;
 }
 
+const MAX_URDU_TOPIC_CHARS = 50;
+
+/**
+ * The same topic in Urdu, for finding questions already answered on العلماء. Checked like the Arabic one: letters (Arabic or Urdu)
+ * and spaces only, a few words, short; so no name, no figure and no detail of the asker's story goes with it.
+ */
+export function cleanTopicUrdu(raw: string | undefined): string | null {
+  const t = squash(trimPunct(raw ?? ""));
+  if (!t || t.length > MAX_URDU_TOPIC_CHARS) return null;
+  if (!/^[ء-ۿً-ْٰ\s]+$/.test(t) || /[٠-٩۰-۹]/.test(t)) return null;
+  const words = t.split(" ");
+  return words.length <= 5 && t.replace(/[ً-ْٰ\s]/g, "").length >= 3 ? t : null;
+}
+
 /** Words that open a topic without naming the matter; Turath's search needs every word, and they only narrow it. */
 const GENERIC_OPENERS = new Set(["حكم", "احكام", "أحكام", "مسألة", "مسائل", "باب", "كتاب"]);
 

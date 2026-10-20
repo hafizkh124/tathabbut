@@ -1,5 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import type { AlulamaHit } from "@/lib/alulama";
+import { fetchAlulama } from "@/lib/alulamaClient";
 import { useI18n } from "@/lib/i18n/i18n";
 import { Dialog } from "./ui/Dialog";
 import { Icon } from "./ui/Icon";
@@ -27,6 +29,37 @@ interface Props {
 }
 
 type Load = { status: "loading" } | { status: "failed" } | { status: "done"; report: OriginReportData };
+
+/** Up to three questions العلماء answered about this text, as links; nothing is shown when there are none (our own table, no AI). */
+function AlUlamaLinks({ query }: { query: string }) {
+  const { t } = useI18n();
+  const [hits, setHits] = useState<AlulamaHit[]>([]);
+  useEffect(() => {
+    let live = true;
+    fetchAlulama(query, "hadith_ruling").then((v) => {
+      if (live && v.status === "found") setHits(v.hits);
+    });
+    return () => {
+      live = false;
+    };
+  }, [query]);
+  if (!hits.length) return null;
+  return (
+    <div className="space-y-1">
+      <p className="text-[12px] font-semibold text-muted">{t("alulama.origin")}</p>
+      <ul>
+        {hits.map((h) => (
+          <li key={h.id}>
+            <a href={h.link} target="_blank" rel="noopener noreferrer" lang="ur" className="flex min-h-11 items-center justify-between gap-2 text-[14px] text-brand-ink underline underline-offset-[5px]">
+              <span className="truncate">{h.title}</span>
+              <Icon name="ext" size={12} />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /** The body is mounted only while the dialog is open, so each opening starts a fresh search. */
 function OriginBody({ claimQuery }: { claimQuery: string }) {
@@ -115,6 +148,8 @@ function OriginBody({ claimQuery }: { claimQuery: string }) {
           </p>
         </div>
       )}
+
+      <AlUlamaLinks query={claimQuery} />
     </div>
   );
 }

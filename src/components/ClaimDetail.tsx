@@ -13,6 +13,10 @@ import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
 import { CandidateList } from "./CandidateList";
 import { Button } from "./ui/Button";
 import { StateBadge } from "./ui/Badge";
+import { LevelBadge } from "./ui/LevelBadge";
+import { AlUlamaBox } from "./AlUlamaBox";
+import { SoftReplyDialog } from "./SoftReplyDialog";
+import { softReplyApplies } from "@/lib/softReply";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
 import { NarrationShareDialog, ShareDialog, ShareNote, shareableNarrations } from "./ShareDialog";
@@ -351,6 +355,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   // a question is shown by its topic, never by its own words: the books were asked the topic only
   const isQuestion = r.claim.kind === "question";
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome | null>(null);
+  const [softOpen, setSoftOpen] = useState(false);
   const reportedHere = reported?.text === r.claim.textAsWritten ? reported.status : null;
 
   const shareText = useCallback(() => buildShareText([r], locale), [r, locale]);
@@ -412,7 +417,10 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       {/* the verdict: the state, what it means, and where it was read, on the state's own tint */}
       <div className="space-y-3 rounded-[18px] p-4 lg:space-y-4 lg:p-6" style={{ background: style.bg }}>
       <div className="flex items-center justify-between gap-3">
-        <StateBadge state={r.state} size="md" long solid />
+        <span className="flex items-center gap-2">
+          <StateBadge state={r.state} size="md" long solid />
+          <LevelBadge state={r.state} />
+        </span>
         {total > 1 && <span className="text-[13px] text-muted">{t("result.of", { i: num(index + 1), n: num(total) })}</span>}
       </div>
 
@@ -461,6 +469,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       ) : (
         <TurathBox r={r} />
       )}
+      <AlUlamaBox r={r} />
 
       <div className="flex flex-wrap gap-2.5 lg:gap-3">
         {tone === "notFound" ? (
@@ -485,6 +494,12 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
             </Button>
           </>
         )}
+        {softReplyApplies(r) && (
+          <Button className={act} variant="secondary" onClick={() => setSoftOpen(true)}>
+            <Icon name="share" size={16} />
+            <span>{t("soft.button")}</span>
+          </Button>
+        )}
         <Button className={`${act} max-sm:basis-full`} variant="secondary" onClick={onNew}>
           <Icon name="plus" size={16} />
           <span>{t("result.new")}</span>
@@ -493,6 +508,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
 
       <ShareNote outcome={shareOutcome} text={shareText()} />
 
+      {softOpen && softReplyApplies(r) && <SoftReplyDialog open onClose={() => setSoftOpen(false)} result={r} />}
       {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} />}
       {narrationChoice && choosing && <NarrationShareDialog open onClose={() => setChoosing(false)} result={r} />}
 

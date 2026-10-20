@@ -1,4 +1,7 @@
 {
   "regions": ["sin1"],
-  "crons": [{ "path": "/api/health", "schedule": "0 6 * * *" }]
+  "crons": [
+    { "path": "/api/health", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/alulama", "schedule": "30 5 * * *" }
+  ]
 }

@@ -25,6 +25,7 @@ describe("rate limit", () => {
     const rules = rulesFor("verify", "c", 1000);
     expect(rules.map((r) => r.key)).toEqual(["verify:min:c", "verify:day:c", "ai:day:all"]);
     expect(rulesFor("verify", "c", 0)).toHaveLength(2); // site limit off
+    expect(rulesFor("alulama", "c", 1000).map((r) => r.key)).toEqual(["alulama:min:c", "alulama:day:c"]); // no AI, no site AI limit
     expect(dailyAiLimit()).toBe(0); // off unless DAILY_AI_LIMIT is set: the free tier bills nothing
   });
 
