@@ -98,6 +98,20 @@ export function AlUlamaBox({ r }: { r: ClaimResult }) {
     );
   }
   const a = r.alulama;
+  // a general fiqh question with nothing found even after the second look: say so plainly and show the way to ask, never an empty card
+  const noPassages = !(r.turath && r.turath.status === "success" && r.turath.references.length > 0);
+  if (r.claim.kind === "question" && r.state === STATES.fiqh && a?.status === "none" && a.retried && r.turath?.status !== "loading" && noPassages) {
+    return (
+      <section aria-label={t("alulama.notfound.title")} className="space-y-2 rounded-[14px] border border-line bg-surface p-3.5">
+        <h3 className="text-[15px] font-semibold text-ink">{t("alulama.notfound.title")}</h3>
+        <p className="text-[14px] leading-7 text-muted">{t("alulama.notfound.body")}</p>
+        <a href={ALULAMA_ASK_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-brand-ink underline-offset-4 hover:underline">
+          <span>{t("alulama.ask.cta")}</span>
+          <Icon name="ext" size={14} />
+        </a>
+      </section>
+    );
+  }
   if (a?.status !== "found") return null;
   return (
     <section aria-label={t("alulama.title")} className="space-y-3 rounded-[14px] border border-line bg-surface p-3.5">

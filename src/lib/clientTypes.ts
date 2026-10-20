@@ -10,7 +10,7 @@ export type NarrationView = GradedNarration & { display?: GradeDisplay };
 export type TurathView = { status: "loading" } | TurathLookupOutcome;
 
 /** The questions العلماء already answered on the claim's matter (src/lib/alulamaClient.ts): asked for after /api/verify. */
-export type AlulamaView = { status: "loading" } | { status: "none" } | { status: "unavailable" } | { status: "found"; kind: AlulamaKind; hits: AlulamaHit[] };
+export type AlulamaView = { status: "loading" } | { status: "none"; /** the second look (other names of the matter) has been made, or was not due */ retried?: boolean } | { status: "unavailable" } | { status: "found"; kind: AlulamaKind; hits: AlulamaHit[] };
 
 export type ClaimResult = Omit<VerifiedClaim, "dorar"> & {
   turath?: TurathView;

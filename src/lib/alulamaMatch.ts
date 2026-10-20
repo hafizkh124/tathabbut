@@ -7,7 +7,7 @@ import { rpc, serviceConfig, type RestConfig } from "./supabaseRest";
 const STOP = new Set(
   [
     "کیا", "ہے", "ہیں", "ہو", "ہوں", "ہوتا", "ہوتی", "ہوگا", "ہوگی", "کا", "کی", "کے", "کو", "میں", "سے", "پر", "اور", "یا", "تو", "بھی", "ہی", "نے", "اس", "یہ", "وہ", "جو", "کہ",
-    "جائز", "ناجائز", "حکم", "احکام", "شرعی", "کیسا", "کیسی", "کیسے", "مسئلہ", "مسائل", "سوال", "بارے", "متعلق", "حیثیت", "صورت", "کرنا", "کرنے", "کرتے", "کر", "دینا", "ہونا",
+    "جائز", "ناجائز", "حکم", "احکام", "شرعی", "کیسا", "کیسی", "کیسے", "مسئلہ", "مسائل", "سوال", "بارے", "متعلق", "حیثیت", "صورت", "کرنا", "کرنے", "کرتے", "کر", "دینا", "ہونا", "لینا", "لینے", "دینے", "لیتے", "دیتے", "رکھنے", "جانے", "والے", "والی", "والا", "کون", "کیوں", "کب", "کہاں", "رواج", "رسم",
     "شیخ", "صاحب", "مہربانی", "رہنمائی", "براہ", "السلام", "علیکم", "جزاکم", "اللہ", "خیرا",
     // English topics
     "the", "of", "in", "on", "is", "are", "what", "about", "for", "and", "to", "an", "ruling", "rulings", "permissible", "allowed", "islamic", "islam",
@@ -41,8 +41,8 @@ export interface MatchOptions {
 export async function matchAlulama(query: string | string[], kind: AlulamaKind, opts: MatchOptions = {}): Promise<AlulamaHit[]> {
   const queries = [...new Set(Array.isArray(query) ? query : [query])].filter(Boolean);
   const found = new Map<number, { h: AlulamaHit; inTitle: number }>();
-  for (const q of queries) {
-    for (const x of await matchOne(q, kind, opts)) {
+  for (const found1 of await Promise.all(queries.map((q) => matchOne(q, kind, opts)))) {
+    for (const x of found1) {
       const prev = found.get(x.h.id);
       if (!prev || x.inTitle > prev.inTitle) found.set(x.h.id, x);
     }

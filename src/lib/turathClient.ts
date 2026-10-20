@@ -28,13 +28,26 @@ export function applyTurath(c: ClaimResult, turath: TurathView, patch: TurathPat
 
 const UNAVAILABLE: TurathLookupOutcome = { status: "unavailable", references: [] };
 
-/** Never throws: a failure is «unavailable», and the card stays as /api/verify left it. */
+/** Never throws: a failure is «unavailable», and the card stays as /api/verify left it. A fiqh topic that finds no passage is asked
+ *  again under the other Arabic names the model gave the matter (at most two more). */
 export async function fetchTurath(c: ClaimResult, kind: TurathLookupKind): Promise<{ turath: TurathLookupOutcome; patch: TurathPatch | null }> {
+  const result = await fetchTurathWith(c, kind, turathQueryOf(c, kind));
+  if (kind === "fiqh" && result.turath.status === "success" && result.turath.references.length === 0) {
+    for (const q of (c.claim.altAr ?? []).map(topicQuery).slice(0, 2)) {
+      const more = await fetchTurathWith(c, kind, q);
+      if (more.turath.status === "success" && more.turath.references.length > 0) return more;
+    }
+  }
+  return result;
+}
+
+/** One lookup in the books with the given words. */
+export async function fetchTurathWith(c: ClaimResult, kind: TurathLookupKind, query: string): Promise<{ turath: TurathLookupOutcome; patch: TurathPatch | null }> {
   try {
     const res = await fetch("/api/turath", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: turathQueryOf(c, kind), kind, state: c.state, basis: c.basis, notes: c.notes }),
+      body: JSON.stringify({ query, kind, state: c.state, basis: c.basis, notes: c.notes }),
     });
     if (!res.ok) return { turath: UNAVAILABLE, patch: null };
     const data = (await res.json()) as { turath?: TurathLookupOutcome; patch?: TurathPatch | null };

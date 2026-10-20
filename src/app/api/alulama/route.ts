@@ -2,7 +2,7 @@
 //   →  { "status": "found", "hits": [...] } | { "status": "none" } | 503 { "status": "unavailable" }
 // The questions العلماء already answered, from our copy of them (migration 014): no AI, no call to alulama.org. Asked for by the
 // screen AFTER /api/verify has answered, so a card never waits for it and a failure here changes nothing on the card.
-// A fatwa search takes short topics (up to three, one for each language the question was given in), never a question's own words:
+// A fatwa search takes short topics (up to eight: the topic in each language the question was given in and the other names of the matter), never a question's own words:
 // a person's story cannot be sent through here.
 import { matchAlulama } from "@/lib/alulamaMatch";
 import { limited } from "@/lib/rateLimit";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
 const MAX_QUERY_LEN = 1_000;
-const MAX_QUERIES = 3;
+const MAX_QUERIES = 8;
 
 export async function POST(request: Request) {
   let body: { query?: unknown; queries?: unknown; kind?: unknown };

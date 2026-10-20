@@ -159,6 +159,12 @@ export const DICT = {
     en: "Tathabbut gives no ruling on a personal case. You can send your question to the Al-Ulama fatwa council.",
     ur: "تثبت ذاتی صورت پر کوئی حکم نہیں دیتا۔ آپ اپنا سوال علما فتویٰ کونسل (العلماء) کو بھیج سکتے ہیں۔",
   },
+  "alulama.notfound.title": { ar: "لم نجد شيئًا عن هذا السؤال", en: "Nothing found on this question yet", ur: "اس سوال پر ابھی کچھ نہیں ملا" },
+  "alulama.notfound.body": {
+    ar: "لم يتضح لنا معنى السؤال تمامًا. اكتب كلمة أخرى أشهر وأعد السؤال، أو اسأل العلماء.",
+    en: "We could not fully make out what the question means. Try another, better-known word, or ask Al-Ulama.",
+    ur: "سوال کا مطلب ہم پر پوری طرح واضح نہیں ہوا۔ کوئی اور معروف لفظ لکھ کر دوبارہ پوچھیں، یا اپنا سوال العلماء سے پوچھیں۔",
+  },
   "alulama.ask.cta": { ar: "تواصل مع العلماء", en: "Contact Al-Ulama", ur: "العلماء سے رابطہ کریں" },
   "summary.all": { ar: "{n} نصوص، كلها ثابتة", en: "All {n} texts are established", ur: "تمام {n} عبارتیں ثابت ہیں" },
   "summary.none": { ar: "{n} نصوص، لا يثبت منها شيء", en: "None of the {n} texts is established", ur: "{n} عبارتوں میں سے کوئی ثابت نہیں" },
