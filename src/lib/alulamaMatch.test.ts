@@ -37,6 +37,16 @@ describe("matchAlulama", () => {
     expect(out.map((h) => h.id)).toEqual([2]);
   });
 
+  it("puts the title that holds more of the asked words first, whatever the database's score order", async () => {
+    const call = vi.fn().mockResolvedValue([
+      hit(1, "غسل جمعہ کا تعلق دن سے ہے یا نماز جمعہ سے", "مسافر پر غسل کا حکم"),
+      hit(2, "سفر میں نمازِ جمعہ کا کیا حکم ہے؟", "مسافر کو رخصت ہے"),
+      hit(3, "نماز جمعہ کی شرائط", "سفر کی بات"),
+    ]);
+    const out = await matchAlulama("سفر میں نماز جمعہ", "fatwa", { cfg: { url: "u", key: "k" }, call });
+    expect(out.map((h) => h.id)).toEqual([2, 1, 3]);
+  });
+
   it("gives nothing for a query with no matter in it, or a hadith query of fewer than three words", async () => {
     const call = vi.fn();
     expect(await matchAlulama("کیا ہے؟", "fatwa", { cfg: { url: "u", key: "k" }, call })).toEqual([]);

@@ -46,5 +46,9 @@ export async function matchAlulama(query: string, kind: AlulamaKind, opts: Match
   return hits
     .filter((h) => (seen.has(h.id) ? false : (seen.add(h.id), true)))
     .filter((h) => coverage(tokens, `${h.title} ${h.answer_snippet}`) >= need)
+    // a title that holds more of the asked words comes first; the database's score orders the rest (Array.sort is stable)
+    .map((h) => ({ h, inTitle: coverage(tokens, h.title) }))
+    .sort((a, b) => b.inTitle - a.inTitle)
+    .map(({ h }) => h)
     .slice(0, 3);
 }
