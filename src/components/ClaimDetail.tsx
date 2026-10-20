@@ -16,6 +16,13 @@ import { StateBadge } from "./ui/Badge";
 import { LevelBadge } from "./ui/LevelBadge";
 import { AlUlamaBox } from "./AlUlamaBox";
 import { SoftReplyDialog } from "./SoftReplyDialog";
+import { topicLabel } from "@/lib/topic";
+
+/** «نیٹ ورک مارکیٹنگ (التسويق الشبكي)»: the topic in the interface language, the Arabic the books were asked in beside it. */
+const topicText = (c: ClaimResult["claim"], locale: "ar" | "en" | "ur") => {
+  const { main, arabic } = topicLabel(c, locale);
+  return arabic ? `${main} (${arabic})` : (main ?? "");
+};
 import { softReplyApplies } from "@/lib/softReply";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
@@ -401,7 +408,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
         {!r.claim.topic && <p className="text-[14px] text-muted">{t("fatwa.body")}</p>}
       </div>
     ) : isQuestion && r.claim.topic ? (
-      <p className="text-[14px]">{t("fiqh.topic", { topic: r.claim.topic })}</p>
+      <p className="text-[14px]" dir="auto">{t("fiqh.topic", { topic: topicText(r.claim, locale) })}</p>
     ) : tone === "translated" ? (
       <p className="text-[14px] text-muted">{t("translated.body")}</p>
     ) : null;
@@ -460,7 +467,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
           intro={
             tone === "fatwa" && (
               <div className="space-y-1 rounded-xl border border-line bg-paper p-3 text-[14px]">
-                {r.claim.topic && <p>{t("fiqh.topic", { topic: r.claim.topic })}</p>}
+                {r.claim.topic && <p dir="auto">{t("fiqh.topic", { topic: topicText(r.claim, locale) })}</p>}
                 <p className="font-semibold" style={{ color: "var(--t-weak-fg)" }}>{t("fatwa.warn")}</p>
               </div>
             )

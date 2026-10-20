@@ -47,6 +47,15 @@ describe("matchAlulama", () => {
     expect(out.map((h) => h.id)).toEqual([2, 1, 3]);
   });
 
+  it("searches every language the question was given in and merges what each finds", async () => {
+    const call = vi.fn().mockImplementation(async (_c: unknown, _fn: string, a: { q: string }) =>
+      a.q.includes("marketing") ? [{ ...hit(9, "Network marketing: is it permissible?", "Network marketing is discussed here") }] : [hit(2, "نیٹ ورک مارکیٹنگ کا شرعی حکم", "نیٹ ورک مارکیٹنگ")],
+    );
+    const out = await matchAlulama(["نیٹ ورک مارکیٹنگ", "network marketing"], "fatwa", { cfg: { url: "u", key: "k" }, call });
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(out.map((h) => h.id).sort()).toEqual([2, 9]);
+  });
+
   it("gives nothing for a query with no matter in it, or a hadith query of fewer than three words", async () => {
     const call = vi.fn();
     expect(await matchAlulama("کیا ہے؟", "fatwa", { cfg: { url: "u", key: "k" }, call })).toEqual([]);

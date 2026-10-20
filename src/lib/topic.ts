@@ -34,6 +34,27 @@ export function cleanTopicUrdu(raw: string | undefined): string | null {
   return words.length <= 5 && t.replace(/[ً-ْٰ\s]/g, "").length >= 3 ? t : null;
 }
 
+const MAX_EN_TOPIC_CHARS = 50;
+
+/** The same topic in English, for finding English answers on العلماء: Latin letters and spaces only, a few words, short. */
+export function cleanTopicEn(raw: string | undefined): string | null {
+  const t = squash(trimPunct(raw ?? ""));
+  if (!t || t.length > MAX_EN_TOPIC_CHARS || !/^[A-Za-z][A-Za-z'’\- ]*$/.test(t)) return null;
+  return t.split(" ").length <= 5 && t.replace(/[^A-Za-z]/g, "").length >= 3 ? t : null;
+}
+
+/** A topic that may be sent to العلماء' search, whatever its language: letters and spaces only, a few words, short (never a story). */
+export const cleanTopicAny = (raw: string): string | null => cleanTopicUrdu(raw) ?? cleanTopicEn(raw);
+
+/**
+ * The topic as the reader should see it: in the interface language when the model gave it, with the Arabic words the books were
+ * searched with beside it (Turath's books are Arabic, so Arabic is what they are asked in).
+ */
+export function topicLabel(c: { topic?: string | null; topicUr?: string | null; topicEn?: string | null }, locale: "ar" | "en" | "ur"): { main: string | null; arabic: string | null } {
+  const main = (locale === "ur" ? c.topicUr : locale === "en" ? c.topicEn : c.topic) || c.topic || null;
+  return { main, arabic: c.topic && main !== c.topic ? c.topic : null };
+}
+
 /** Words that open a topic without naming the matter; Turath's search needs every word, and they only narrow it. */
 const GENERIC_OPENERS = new Set(["حكم", "احكام", "أحكام", "مسألة", "مسائل", "باب", "كتاب"]);
 

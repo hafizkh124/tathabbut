@@ -90,7 +90,7 @@ export const DICT = {
 
   "loading.title": { ar: "جارٍ التحقق من المصادر…", en: "Checking the sources…", ur: "ماخذ کی جانچ ہو رہی ہے…" },
   "step.read": { ar: "قراءة النص", en: "Reading the text", ur: "متن پڑھنا" },
-  "step.find": { ar: "تحديد الآيات والأحاديث", en: "Finding the verses and hadiths", ur: "آیات اور احادیث الگ کرنا" },
+  "step.find": { ar: "تحديد موضوع الفحص", en: "Working out what to check", ur: "دیکھنا کہ کیا جانچنا ہے" },
   "step.match": { ar: "مطابقة النص مع المصادر", en: "Matching with the sources", ur: "ماخذ سے ملانا" },
   "step.fetch": { ar: "جلب النتائج", en: "Getting the results", ur: "نتائج لانا" },
 
@@ -128,6 +128,9 @@ export const DICT = {
   "soft.button": { ar: "ردّ لطيف", en: "Gentle reply", ur: "نرم جواب" },
   "soft.title": { ar: "ردّ لطيف لمن أرسلها", en: "A gentle reply to whoever sent it", ur: "بھیجنے والے کو نرم جواب" },
   "soft.hint": { ar: "اختر اللغة، ثم انسخ الرد أو أرسله.", en: "Choose the language, then copy or send the reply.", ur: "زبان چنیں، پھر جواب کاپی کریں یا بھیجیں۔" },
+  "share.alulama": { ar: "العلماء (alulama.org):", en: "Al-Ulama (alulama.org):", ur: "العلماء (alulama.org):" },
+  "share.alulama.note": { ar: "(هذا جواب العلماء وليس حكم تثبت)", en: "(Al-Ulama's own answer, not Tathabbut's ruling)", ur: "(یہ العلماء کا جواب ہے، تثبت کا حکم نہیں)" },
+  "share.ask": { ar: "اسأل العلماء عن حالتك:", en: "Ask Al-Ulama about your case:", ur: "اپنا سوال العلماء سے پوچھیں:" },
   "alulama.title": { ar: "العلماء", en: "Al-Ulama", ur: "العلماء" },
   "alulama.title.fatwa": { ar: "العلماء: أسئلة أُجيب عنها في هذا الموضوع", en: "Al-Ulama: questions answered on this matter", ur: "العلماء: اس موضوع پر دیے گئے جوابات" },
   "alulama.title.hadith": { ar: "العلماء: سؤال وجواب عن هذا النص", en: "Al-Ulama: a question answered about this text", ur: "العلماء: اس عبارت پر سوال و جواب" },

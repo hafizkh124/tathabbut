@@ -23,7 +23,7 @@ function HitCard({ h }: { h: AlulamaHit }) {
     <li className="space-y-1.5 rounded-xl border border-line bg-paper p-3">
       <p className="text-[15px] font-semibold leading-7 text-ink" dir="auto" lang="ur">{h.title}</p>
       {h.answer_snippet && <p className="text-[14px] leading-7 text-ink" dir="auto" lang="ur">{opening(h.answer_snippet)}</p>}
-      <p className="text-[12.5px] text-muted" dir="auto">
+      <p className="text-[12.5px] text-muted" dir="auto" lang="ur">
         {[h.answerers[0], h.number ? t("alulama.number", { n: num(h.number) }) : null, date].filter(Boolean).join(" · ")}
       </p>
       <a href={h.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-brand-ink underline-offset-4 hover:underline">

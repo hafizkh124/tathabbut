@@ -147,7 +147,7 @@ describe("share text", () => {
 
   it("gives a question by its topic, never by the person's own words, as the screen does", () => {
     const q = { claim: { ...claim, kind: "question" as const, scope: "personal" as const, textAsWritten: "میں نے روزے میں دوا لی", topic: "تناول الدواء في الصيام" }, state: "فتوى أو حالة شخصية — إحالة", basis: "none", notes: [] } as unknown as ClaimResult;
-    const text = build([q], "ur");
+    const text = build([q], "ur").replace(/[⁦-⁩]/g, ""); // the isolates around a topic are invisible marks
     expect(text).toContain("«تناول الدواء في الصيام»");
     expect(text).not.toContain("دوا لی");
   });
@@ -188,3 +188,53 @@ describe("share text", () => {
     expect(buildShareText([hadith, verse], "en")).not.toContain("‏");
   });
 });
+
+describe("a general fiqh question, in full (2026-10-20)", () => {
+  const fiqh = {
+    claim: { kind: "question", scope: "general", textAsWritten: "نیٹ ورک مارکیٹنگ کیسا ہے؟", topic: "التسويق الشبكي", topicUr: "نیٹ ورک مارکیٹنگ", topicEn: "network marketing", language: "ur", warnings: [] },
+    state: "مسألة فقهية",
+    basis: "kind",
+    notes: [],
+    turath: { status: "success", references: [{ excerpt: "التسويق الشبكي من الغرر والميسر وهو محرم عند أكثر أهل العلم", citation: "c", book: { id: "1", title: "فتاوى د حسام عفانة" }, author: { name: "حسام الدين عفانة" }, bookId: "1", pageLocator: { printedPage: 12, volume: "3" }, url: "u" }] },
+    alulama: { status: "found", kind: "fatwa", hits: [{ id: 1, kind: "fatwa", number: 5, title: "نیٹ ورک مارکیٹنگ کا شرعی حکم", answer_snippet: "کمیشن صرف اپنی فروخت پر ہو تو جائز ہے۔", answerers: ["فضیلۃ الشیخ عبد الوکیل ناصر حفظہ اللہ"], link: "https://alulama.org/nm/", published: null, score: 0.9 }] },
+  } as unknown as ClaimResult;
+  const plain = (s: string) => s.replace(/[⁦-⁩‎‏]/g, "");
+
+  it("shows the topic in the language of the text, with the Arabic the books were asked in beside it", () => {
+    expect(plain(build([fiqh], "ur"))).toContain("«نیٹ ورک مارکیٹنگ» (التسويق الشبكي)");
+    expect(plain(build([fiqh], "en"))).toContain("«network marketing» (التسويق الشبكي)");
+    expect(plain(build([fiqh], "ar"))).toContain("«التسويق الشبكي»");
+  });
+
+  it("carries العلماء' answer (title, opening, shaikh, link) and the books (book, author, volume and page, the passage's start)", () => {
+    const t = plain(build([fiqh], "ur"));
+    expect(t).toContain("• نیٹ ورک مارکیٹنگ کا شرعی حکم");
+    expect(t).toContain("کمیشن صرف اپنی فروخت پر ہو تو جائز ہے۔");
+    expect(t).toContain("— فضیلۃ الشیخ عبد الوکیل ناصر حفظہ اللہ");
+    expect(t).toContain("https://alulama.org/nm/");
+    expect(t).toContain("• فتاوى د حسام عفانة (حسام الدين عفانة، ج 3، ص 12)");
+    expect(t).toContain("«التسويق الشبكي من الغرر والميسر");
+    expect(t).toContain("العلماء کا جواب ہے، تثبت کا حکم نہیں");
+  });
+
+  it("marks each line by its own script, so an English text with an Urdu answer lays out right (RLM / LRM)", () => {
+    const lines = buildShareText([fiqh], "en").split("\n");
+    expect(lines.find((l) => l.includes("Al-Ulama (alulama.org)"))?.startsWith("‎")).toBe(true);
+    expect(lines.find((l) => l.includes("کمیشن صرف"))?.startsWith("‏")).toBe(true);
+    expect(lines.find((l) => l.includes("https://alulama.org/nm/"))?.startsWith("‎")).toBe(true);
+  });
+
+  it("is fully in each language's labels", () => {
+    expect(build([fiqh], "en")).toContain("From the books of fiqh and fatwa");
+    expect(build([fiqh], "en")).toContain("vol. 3, p. 12");
+    expect(build([fiqh], "ar")).toContain("من كتب الفقه والفتاوى");
+  });
+
+  it("gives a personal case no ruling, only the referral and the way to ask العلماء", () => {
+    const personal = { ...fiqh, claim: { ...fiqh.claim, scope: "personal" }, state: "فتوى أو حالة شخصية — إحالة", turath: undefined, alulama: undefined } as unknown as ClaimResult;
+    const t = build([personal], "ur");
+    expect(t).toContain("https://alulama.org/ulama-rabeta-urdu/");
+    expect(t).not.toContain("alulama.org/nm");
+  });
+});
+

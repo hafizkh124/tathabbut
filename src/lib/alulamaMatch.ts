@@ -9,6 +9,8 @@ const STOP = new Set(
     "کیا", "ہے", "ہیں", "ہو", "ہوں", "ہوتا", "ہوتی", "ہوگا", "ہوگی", "کا", "کی", "کے", "کو", "میں", "سے", "پر", "اور", "یا", "تو", "بھی", "ہی", "نے", "اس", "یہ", "وہ", "جو", "کہ",
     "جائز", "ناجائز", "حکم", "احکام", "شرعی", "کیسا", "کیسی", "کیسے", "مسئلہ", "مسائل", "سوال", "بارے", "متعلق", "حیثیت", "صورت", "کرنا", "کرنے", "کرتے", "کر", "دینا", "ہونا",
     "شیخ", "صاحب", "مہربانی", "رہنمائی", "براہ", "السلام", "علیکم", "جزاکم", "اللہ", "خیرا",
+    // English topics
+    "the", "of", "in", "on", "is", "are", "what", "about", "for", "and", "to", "an", "ruling", "rulings", "permissible", "allowed", "islamic", "islam",
   ].map(foldText),
 );
 
@@ -31,8 +33,24 @@ export interface MatchOptions {
   call?: typeof rpc;
 }
 
-/** At most three answered questions of the asked kind, best first; an empty list when nothing is clearly the same matter. */
-export async function matchAlulama(query: string, kind: AlulamaKind, opts: MatchOptions = {}): Promise<AlulamaHit[]> {
+/**
+ * At most three answered questions of the asked kind, best first; an empty list when nothing is clearly the same matter.
+ * A question is searched in every language it was given in (its Urdu topic, and its English or Arabic one): most answers are
+ * Urdu, a few are English or Arabic. The best match of each post counts, and a title holding more of the asked words comes first.
+ */
+export async function matchAlulama(query: string | string[], kind: AlulamaKind, opts: MatchOptions = {}): Promise<AlulamaHit[]> {
+  const queries = [...new Set(Array.isArray(query) ? query : [query])].filter(Boolean);
+  const found = new Map<number, { h: AlulamaHit; inTitle: number }>();
+  for (const q of queries) {
+    for (const x of await matchOne(q, kind, opts)) {
+      const prev = found.get(x.h.id);
+      if (!prev || x.inTitle > prev.inTitle) found.set(x.h.id, x);
+    }
+  }
+  return [...found.values()].sort((a, b) => b.inTitle - a.inTitle).map(({ h }) => h).slice(0, 3);
+}
+
+async function matchOne(query: string, kind: AlulamaKind, opts: MatchOptions): Promise<{ h: AlulamaHit; inTitle: number }[]> {
   const tokens = queryTokens(query);
   if (!tokens.some((w) => w.length >= 3)) return [];
   // a hadith is asked by its wording, so its words stay together; a topic is a few key words
@@ -48,7 +66,5 @@ export async function matchAlulama(query: string, kind: AlulamaKind, opts: Match
     .filter((h) => coverage(tokens, `${h.title} ${h.answer_snippet}`) >= need)
     // a title that holds more of the asked words comes first; the database's score orders the rest (Array.sort is stable)
     .map((h) => ({ h, inTitle: coverage(tokens, h.title) }))
-    .sort((a, b) => b.inTitle - a.inTitle)
-    .map(({ h }) => h)
-    .slice(0, 3);
+    .sort((a, b) => b.inTitle - a.inTitle);
 }

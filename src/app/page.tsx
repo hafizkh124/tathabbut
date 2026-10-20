@@ -17,7 +17,7 @@ import { prepareImage } from "@/lib/image";
 import { analyticsHeaders, rememberSource, track } from "@/lib/analytics";
 import { registerServiceWorker, takeShared } from "@/lib/pwa";
 import { mergeCaption } from "@/lib/sharedInput";
-import { alulamaKindOf, alulamaQueryOf, fetchAlulama } from "@/lib/alulamaClient";
+import { alulamaKindOf, alulamaQueriesOf, fetchAlulama } from "@/lib/alulamaClient";
 import { applyTurath, fetchTurath, turathKindOf } from "@/lib/turathClient";
 
 type Phase =
@@ -71,7 +71,7 @@ export default function Home() {
     claims.forEach((c, i) => {
       const kind = alulamaKindOf(c);
       if (!kind) return;
-      fetchAlulama(alulamaQueryOf(c, kind), kind).then((alulama) => {
+      fetchAlulama(alulamaQueriesOf(c, kind), kind).then((alulama) => {
         if (id !== run.current) return;
         setPhase((p) => (p.name === "results" ? { ...p, claims: p.claims.map((x, j) => (j === i ? { ...x, alulama } : x)) } : p));
       });
