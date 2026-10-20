@@ -149,9 +149,9 @@ export const DICT = {
   "alulama.read": { ar: "اقرأ الجواب كاملًا في العلماء", en: "Read the full answer on Al-Ulama", ur: "العلماء پر مکمل جواب پڑھیں" },
   "alulama.number": { ar: "سؤال {n}", en: "Question {n}", ur: "سوال {n}" },
   "alulama.disclaimer": {
-    ar: "هذا جواب موقع العلماء بنصّه وليس حكم «تثبّت». لحالتك الخاصة اسأل مفتيًا.",
-    en: "This is Al-Ulama's own answer, not Tathabbut's ruling. For your own case, ask a mufti.",
-    ur: "یہ العلماء کا اپنا جواب ہے، تثبت کا حکم نہیں۔ اپنی صورت کے لیے کسی مفتی سے پوچھیں۔",
+    ar: "هذا جواب العلماء وليس حكم «تثبّت». ولمن كانت له حالة خاصة أن يطلب التوجيه من مفتٍ.",
+    en: "This is Al-Ulama's answer, not Tathabbut's ruling. For your particular situation, guidance can be sought from a mufti.",
+    ur: "یہ العلماء کا جواب ہے، تثبت کا حکم نہیں۔ اپنی خصوصی صورت حال کے لیے مفتی سے رہنمائی لی جا سکتی ہے۔",
   },
   "alulama.ask.title": { ar: "اسأل العلماء عن حالتك", en: "Ask Al-Ulama about your case", ur: "اپنا سوال العلماء سے پوچھیں" },
   "alulama.ask.body": {
