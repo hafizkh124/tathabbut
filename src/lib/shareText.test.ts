@@ -236,5 +236,30 @@ describe("a general fiqh question, in full (2026-10-20)", () => {
     expect(t).toContain("https://alulama.org/ulama-rabeta-urdu/");
     expect(t).not.toContain("alulama.org/nm");
   });
-});
 
+  it("sends only what the person chose of the answers and passages", () => {
+    const two = { ...fiqh, alulama: { status: "found", kind: "fatwa", hits: [(fiqh as never as { alulama: { hits: unknown[] } }).alulama.hits[0], { id: 2, kind: "fatwa", number: 6, title: "دوسرا فتویٰ", answer_snippet: "دوسرا جواب", answerers: [], link: "https://alulama.org/two/", published: null, score: 0.8 }] } } as unknown as ClaimResult;
+    const onlySecond = plain(buildShareText([two], "ur", { fiqhPick: { alulama: [1], books: [] } }));
+    expect(onlySecond).toContain("https://alulama.org/two/");
+    expect(onlySecond).not.toContain("https://alulama.org/nm/");
+    expect(onlySecond).not.toContain("فتاوى د حسام عفانة");
+    const booksOnly = plain(buildShareText([two], "ur", { fiqhPick: { alulama: [], books: [0] } }));
+    expect(booksOnly).not.toContain("العلماء (alulama.org)");
+    expect(booksOnly).toContain("فتاوى د حسام عفانة");
+  });
+
+  it("uses the translation of an answer the reader has already seen, labelled as a machine's", async () => {
+    const { fetchAnswerTranslation, forgetTranslations } = await import("./translateClient");
+    forgetTranslations();
+    const signed = { ...fiqh, alulama: { status: "found", kind: "fatwa", hits: [{ id: 1, kind: "fatwa", number: 5, title: "نیٹ ورک مارکیٹنگ کا شرعی حکم", answer_snippet: "کمیشن صرف اپنی فروخت پر ہو تو جائز ہے۔", answerers: [], link: "https://alulama.org/nm/", published: null, score: 0.9, sig: "s".repeat(64) }] } } as unknown as ClaimResult;
+    expect(plain(buildShareText([signed], "en"))).toContain("نیٹ ورک مارکیٹنگ کا شرعی حکم");
+    const f = (async () => new Response(JSON.stringify({ translation: "Network marketing: the ruling\n\nPermissible if the commission is only on one's own sales." }))) as typeof fetch;
+    await fetchAnswerTranslation("t", "s".repeat(64), "en", f);
+    const text = plain(buildShareText([signed], "en"));
+    expect(text).toContain("Network marketing: the ruling");
+    expect(text).toContain("Permissible if the commission");
+    expect(text).toContain("(machine translation from Urdu)");
+    expect(text).not.toContain("کمیشن صرف");
+    forgetTranslations();
+  });
+});

@@ -45,6 +45,8 @@ function ClaimTabs({ claims, selected, onSelect }: { claims: ClaimResult[]; sele
 }
 
 interface Props {
+  /** how long the answer took in ms, when known (not for a result opened from its link) */
+  tookMs?: number | null;
   post: string;
   claims: ClaimResult[];
   selected: number;
@@ -107,8 +109,8 @@ function Legend({ claims }: { claims: ClaimResult[] }) {
   );
 }
 
-export function ResultsView({ post, claims: found, selected, onSelect, onOrigin, onEdit, onNew }: Props) {
-  const { t, count } = useI18n();
+export function ResultsView({ tookMs, post, claims: found, selected, onSelect, onOrigin, onEdit, onNew }: Props) {
+  const { t, count, num } = useI18n();
   // the verse the user chose for each claim that fits several («هل تقصد؟»); the result follows the choice
   const [picks, setPicks] = useState<Record<number, number>>({});
   const claims = useMemo(() => found.map((c, i) => applyPick(c, picks[i])), [found, picks]);
@@ -151,6 +153,7 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
         <div className="flex items-baseline gap-2 lg:hidden">
           <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
           <span className="text-[13px] text-muted">{count(claims.length)}</span>
+            {tookMs != null && <span className="text-[13px] tabular-nums text-muted">· {t("result.took", { s: num((tookMs / 1000).toFixed(1)) })}</span>}
         </div>
         <div className="lg:hidden">
           <ResultSummary claims={claims} />
@@ -201,6 +204,7 @@ export function ResultsView({ post, claims: found, selected, onSelect, onOrigin,
           <div className="hidden items-baseline gap-2 lg:flex">
             <h1 className="text-xl font-bold text-brand-ink">{t("result.title")}</h1>
             <span className="text-[13px] text-muted">{count(claims.length)}</span>
+            {tookMs != null && <span className="text-[13px] tabular-nums text-muted">· {t("result.took", { s: num((tookMs / 1000).toFixed(1)) })}</span>}
           </div>
           <div className="hidden lg:block">
             <ResultSummary claims={claims} />

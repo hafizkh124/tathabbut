@@ -31,12 +31,12 @@ function StepIcon({ state }: { state: "done" | "active" | "waiting" }) {
 }
 
 export function LoadingView({ text }: { text: string }) {
-  const { t } = useI18n();
+  const { t, num } = useI18n();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     const started = Date.now();
-    const id = setInterval(() => setElapsed(Date.now() - started), 250);
+    const id = setInterval(() => setElapsed(Date.now() - started), 100);
     return () => clearInterval(id);
   }, []);
 
@@ -51,6 +51,10 @@ export function LoadingView({ text }: { text: string }) {
       <div className="flex flex-col items-center gap-3 pt-2">
         <LogoMark size={112} motion="loading" label={t("loading.title")} />
         <p className="text-lg font-semibold text-brand-ink">{t("loading.title")}</p>
+        {/* the seconds the system has taken so far, so the reader sees how quickly it answers */}
+        <p className="text-[15px] tabular-nums text-muted" aria-hidden>
+          {t("loading.elapsed", { s: num((elapsed / 1000).toFixed(1)) })}
+        </p>
       </div>
 
       <ol className="divide-y divide-line rounded-2xl border border-line bg-surface px-4">

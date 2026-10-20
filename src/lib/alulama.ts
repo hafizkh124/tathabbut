@@ -54,6 +54,8 @@ export interface AlulamaHit {
   link: string;
   published: string | null;
   score: number;
+  /** the server's signature on the answer's text (answerText), which /api/translate asks for */
+  sig?: string;
 }
 
 // ---------- text ----------

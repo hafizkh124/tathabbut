@@ -1,5 +1,7 @@
 // The text that goes to the clipboard / the share sheet: each claim, its result, and where it comes from. Plain text, so it pastes into WhatsApp.
 import type { ClaimResult, NarrationView } from "./clientTypes";
+import type { AlulamaHit } from "./alulama";
+import type { TurathReference } from "./hadithMatch";
 import { stateLabel, translate, type Locale } from "./i18n/dict";
 import { sahihAttribution } from "./sahihAttribution";
 import { matchedArabic } from "./matchedArabic";
@@ -7,6 +9,7 @@ import { splitReferenceUrl } from "./viaLinks";
 import { toneOf, type Tone } from "./gradeStyle";
 import { ALULAMA_ASK_URL } from "./alulamaClient";
 import { topicLabel } from "./topic";
+import { knownAnswerTranslation } from "./translateClient";
 
 export const APP_URL = "https://tathabbut.alulama.org";
 
@@ -73,8 +76,8 @@ const clipAt = (s: string, n: number) => {
   const cut = t.slice(0, n);
   return `${cut.slice(0, cut.lastIndexOf(" ") > n * 0.6 ? cut.lastIndexOf(" ") : n)}…`;
 };
-const pageText = (r: NonNullable<ClaimResult["turath"]> & { status: "success" }, i: number, locale: Locale): string => {
-  const loc = r.references[i].pageLocator;
+const pageText = (ref: TurathReference, locale: Locale): string => {
+  const loc = ref.pageLocator;
   if (!loc) return "";
   if (loc.volume && loc.printedPage !== undefined) return translate(locale, "label.pages", { v: loc.volume, p: loc.printedPage });
   return loc.printedPage !== undefined ? translate(locale, "turath.printedPage", { p: loc.printedPage }) : "";
@@ -86,18 +89,42 @@ const pageText = (r: NonNullable<ClaimResult["turath"]> & { status: "success" },
  * passages of the books of fiqh and fatwa (book, author, volume and page, the start of the passage). A personal case has no
  * ruling here: the referral, and the way to ask العلماء.
  */
-function questionLines(r: ClaimResult, locale: Locale, mark: string, numbered: string): string[] {
+/** What the person chose to send of a fiqh result: the positions (in the card's order) of العلماء' answers and of the books' passages. */
+export interface FiqhPick {
+  alulama: number[];
+  books: number[];
+}
+
+/** The answers of العلماء and the passages of the books a fiqh result has, in the order its card shows them. */
+export function fiqhItems(r: ClaimResult): { alulama: AlulamaHit[]; books: TurathReference[] } {
+  return {
+    alulama: r.alulama?.status === "found" ? r.alulama.hits : [],
+    books: r.turath?.status === "success" ? r.turath.references : [],
+  };
+}
+
+function questionLines(r: ClaimResult, locale: Locale, mark: string, numbered: string, pick?: FiqhPick): string[] {
   const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate(locale, key, params);
   const { main, arabic } = topicLabel(r.claim, locale);
   const topic = main ? `«${iso(main)}»${arabic ? ` (${iso(arabic)})` : ""}` : "";
   const out = [[numbered, topic].filter(Boolean).join(" "), `${mark} ${bold(stateLabel(r.state, locale, true))}`];
 
-  const a = r.alulama?.status === "found" ? r.alulama.hits.slice(0, 2) : [];
+  const items = fiqhItems(r);
+  const a = pick ? pick.alulama.map((i) => items.alulama[i]).filter(Boolean) : items.alulama.slice(0, 2);
   if (a.length) {
     out.push("", bold(t("share.alulama")));
     for (const h of a) {
-      out.push(`• ${iso(h.title)}`);
-      if (h.answer_snippet) out.push(`  ${clipAt(h.answer_snippet, 240)}`);
+      // on an Arabic or English screen the answer goes in the translation the reader already saw (labelled), else as written
+      const known = locale === "ur" ? undefined : knownAnswerTranslation(h.sig, locale);
+      const [tTitle, ...tRest] = known ? known.split(/\n\s*\n/) : [];
+      if (known) {
+        out.push(`• ${iso(tRest.length ? tTitle : clipAt(tTitle ?? "", 80))}`);
+        if (tRest.length) out.push(`  ${clipAt(tRest.join(" "), 240)}`);
+        out.push(`  ${t("share.alulama.mt")}`);
+      } else {
+        out.push(`• ${iso(h.title)}`);
+        if (h.answer_snippet) out.push(`  ${clipAt(h.answer_snippet, 240)}`);
+      }
       if (h.answerers[0]) out.push(`  — ${iso(h.answerers[0])}`);
       out.push(`  ${h.link}`);
     }
@@ -105,10 +132,11 @@ function questionLines(r: ClaimResult, locale: Locale, mark: string, numbered: s
   }
 
   const books = r.turath?.status === "success" ? r.turath : null;
-  if (books && books.references.length) {
+  const refs = pick ? pick.books.map((i) => items.books[i]).filter(Boolean) : items.books.slice(0, 3);
+  if (books && refs.length) {
     out.push("", bold(t("fiqh.title")));
-    books.references.slice(0, 3).forEach((ref, i) => {
-      const where = [ref.author?.name ? iso(ref.author.name) : "", pageText(books as never, i, locale)].filter(Boolean).join("، ");
+    refs.forEach((ref) => {
+      const where = [ref.author?.name ? iso(ref.author.name) : "", pageText(ref, locale)].filter(Boolean).join("، ");
       out.push(`• ${iso(ref.book.title)}${where ? ` (${where})` : ""}`);
       if (ref.excerpt) out.push(`  «${iso(clipAt(ref.excerpt, 170))}»`);
     });
@@ -139,13 +167,13 @@ export function diffLines(r: ClaimResult, locale: Locale): string[] {
  * warning. No links to sources at all (the app shows them); no wording-variant, narrator or isnad notes. Only the app's
  * address closes it: the link to these very results when they have one (resultUrl).
  */
-export function buildShareText(results: ClaimResult[], locale: Locale, opts: { narrations?: NarrationView[] } = {}): string {
+export function buildShareText(results: ClaimResult[], locale: Locale, opts: { narrations?: NarrationView[]; fiqhPick?: FiqhPick } = {}): string {
   const blocks = results.map((r, i) => {
     // a question goes by its topic, as on the screen (ClaimDetail): a person's own case never leaves in their words
     if (r.claim.kind === "question") {
       const numbered = results.length > 1 ? `${rtl(locale)}${bold(`${i + 1}.`)}` : "";
       const mark = TONE_MARK[toneOf(r.state)];
-      return questionLines(r, locale, mark, numbered).map((l) => (l ? `${dirMark(l, locale)}${l}` : l)).join("\n");
+      return questionLines(r, locale, mark, numbered, results.length === 1 ? opts.fiqhPick : undefined).map((l) => (l ? `${dirMark(l, locale)}${l}` : l)).join("\n");
     }
     const quote = r.claim.arabicSpan || r.claim.textAsWritten;
     const head = [results.length > 1 ? bold(`${i + 1}.`) : "", quote ? `«${quote}»` : ""].filter(Boolean).join(" ");

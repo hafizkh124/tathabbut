@@ -15,7 +15,7 @@ const LANG_NAME: Record<TranslateLang, string> = { ur: "Urdu", en: "English" };
 
 /** The sample terms of the competition package's glossary (Jamhara), with the equivalent to use in each language.
  *  The package: the approved equivalent comes before automatic translation for the sensitive terms of the religion. */
-const TERMS: ReadonlyArray<{ ar: string } & Record<TranslateLang, string>> = [
+export const TERMS: ReadonlyArray<{ ar: string } & Record<TranslateLang, string>> = [
   { ar: "الإسلام", en: "Islam", ur: "اسلام" },
   { ar: "التوحيد", en: "Tawhid (Oneness of God)", ur: "توحید" },
   { ar: "العبادة", en: "Worship", ur: "عبادت" },

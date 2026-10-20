@@ -6,7 +6,7 @@ import { dorarSearchUrl } from "@/lib/dorarLink";
 import { isDorarAddition, sahihAttribution } from "@/lib/sahihAttribution";
 import { styleOf, toneOf } from "@/lib/gradeStyle";
 import { useI18n } from "@/lib/i18n/i18n";
-import { buildShareText, plainSurah, readersLine, sameNarration, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
+import { buildShareText, fiqhItems, plainSurah, readersLine, sameNarration, shareOrCopy, type ShareOutcome } from "@/lib/shareText";
 import { pickedIndex } from "@/lib/candidates";
 import { matchedArabic } from "@/lib/matchedArabic";
 import { quranpediaUrl, splitReferenceUrl } from "@/lib/viaLinks";
@@ -19,6 +19,10 @@ import { SoftReplyDialog } from "./SoftReplyDialog";
 import { topicLabel } from "@/lib/topic";
 
 /** «نیٹ ورک مارکیٹنگ (التسويق الشبكي)»: the topic in the interface language, the Arabic the books were asked in beside it. */
+const fiqhItemCount = (r: ClaimResult) => {
+  const i = fiqhItems(r);
+  return i.alulama.length + i.books.length;
+};
 const topicText = (c: ClaimResult["claim"], locale: "ar" | "en" | "ur") => {
   const { main, arabic } = topicLabel(c, locale);
   return arabic ? `${main} (${arabic})` : (main ?? "");
@@ -26,7 +30,7 @@ const topicText = (c: ClaimResult["claim"], locale: "ar" | "en" | "ur") => {
 import { softReplyApplies } from "@/lib/softReply";
 import { Icon } from "./ui/Icon";
 import { FiqhBox, TurathBox } from "./TurathBox";
-import { NarrationShareDialog, ShareDialog, ShareNote, shareableNarrations } from "./ShareDialog";
+import { FiqhShareDialog, NarrationShareDialog, ShareDialog, ShareNote, shareableNarrations } from "./ShareDialog";
 import { SimilarExpressions } from "./SimilarExpressions";
 
 interface Via {
@@ -357,6 +361,9 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   // one hadith with several narrations: the person chooses what to send (the main result, some, or all)
   const [choosing, setChoosing] = useState(false);
   const narrationChoice = !several && shareableNarrations(r).length > 1;
+  // a fiqh result with answers or passages to choose from: the person chooses which of them go into the text
+  const [fiqhChoosing, setFiqhChoosing] = useState(false);
+  const fiqhChoice = !several && r.claim.kind === "question" && r.claim.scope === "general" && fiqhItemCount(r) > 1;
   const tone = toneOf(r.state);
   const quote = r.claim.arabicSpan || r.claim.textAsWritten;
   // a question is shown by its topic, never by its own words: the books were asked the topic only
@@ -370,6 +377,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   const copy = async () => {
     if (several) return setPicking(true);
     if (narrationChoice) return setChoosing(true);
+    if (fiqhChoice) return setFiqhChoosing(true);
     try {
       await navigator.clipboard.writeText(shareText());
       track("copy", { n: 1, states: [r.state], linked: Boolean(r.shareId) });
@@ -382,6 +390,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   const share = async () => {
     if (several) return setPicking(true);
     if (narrationChoice) return setChoosing(true);
+    if (fiqhChoice) return setFiqhChoosing(true);
     const outcome = await shareOrCopy(shareText());
     track("share", { n: 1, states: [r.state], linked: Boolean(r.shareId), outcome });
     setShareOutcome(outcome);
@@ -518,6 +527,7 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
       {softOpen && softReplyApplies(r) && <SoftReplyDialog open onClose={() => setSoftOpen(false)} result={r} />}
       {several && picking && <ShareDialog open onClose={() => setPicking(false)} claims={all!} />}
       {narrationChoice && choosing && <NarrationShareDialog open onClose={() => setChoosing(false)} result={r} />}
+      {fiqhChoice && fiqhChoosing && <FiqhShareDialog open onClose={() => setFiqhChoosing(false)} result={r} />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 lg:justify-start">
         {tone !== "fatwa" && tone !== "notFound" && !isQuestion && (
