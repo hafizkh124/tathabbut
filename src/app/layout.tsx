@@ -1,3 +1,4 @@
+import AteedScript from "next/script";
 import type { Metadata, Viewport } from "next";
 import { Amiri, Noto_Nastaliq_Urdu, Readex_Pro } from "next/font/google";
 import { LocaleProvider } from "@/lib/i18n/i18n";
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
         <LocaleProvider>{children}</LocaleProvider>
+      <AteedScript src="https://ateed.alulama.org/widget/loader.js" strategy="afterInteractive" />
       </body>
     </html>
   );
