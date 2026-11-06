@@ -251,14 +251,32 @@ export async function matchVersesInText(quoted: string, cfg: RestConfig | null =
  * The verses whose stored Urdu or English translation holds the text (migration 016). A function that is not there yet,
  * or any failure, is «no match»: this is only a second way to a verse that the usual ways did not find.
  */
-export async function matchVersesByTranslation(text: string, lang: "ur" | "en", cfg: RestConfig | null = publicConfig(), minScore = 0.6): Promise<VerseHit[]> {
+export async function matchVersesByTranslation(text: string, lang: "ur" | "en", cfg: RestConfig | null = publicConfig()): Promise<VerseHit[]> {
   const q = text.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
-  if (q.split(" ").length < 4) return [];
+  if (q.split(" ").length < TRANSLATION_MIN_WORDS) return [];
   try {
-    return await rpc<VerseHit[]>(cfg, "match_verses_by_translation", { q, lang_in: lang, min_score: minScore, max_results: 3 });
+    const hits = await rpc<VerseHit[]>(cfg, "match_verses_by_translation", { q, lang_in: lang, min_score: 0.3, max_results: 2 });
+    return acceptTranslationHit(hits);
   } catch {
     return [];
   }
+}
+
+/**
+ * Measured on 2026-11-07 (16 Quran claims in Urdu whose verse is known, 200 non-Quran Urdu claims): the best verse's
+ * word_similarity is the right verse from about 0.5, but short and common phrases score high on many verses at once
+ * («اللہ ہر چیز پر قادر ہے»: 3:165 0.80, 8:41 0.79, 9:39 0.79), and a verse the text only resembles scored 0.57 beside the
+ * right one's lower score. So the best verse is taken only from 0.5, only when it leads the next by 0.1, and only for a text of
+ * five words or more. With these, the sample gave the right verse for 33:33, 42:51, 2:286 and a post's wording of 13:28,
+ * and no wrong verse (7:128 at a lead of 0.09 and 3:165 at 0.01 were refused).
+ */
+export const TRANSLATION_MIN_SCORE = 0.5;
+export const TRANSLATION_MIN_LEAD = 0.1;
+export const TRANSLATION_MIN_WORDS = 5;
+export function acceptTranslationHit(hits: VerseHit[]): VerseHit[] {
+  const [best, next] = [...hits].sort((a, b) => b.score - a.score);
+  if (!best || best.score < TRANSLATION_MIN_SCORE) return [];
+  return next && best.score - next.score < TRANSLATION_MIN_LEAD - 1e-9 ? [] : [best];
 }
 
 /** The verses of one surah from ayah `from` to `to` (a verse named by its number), as the match functions give them. */
