@@ -6,6 +6,8 @@
 // such a query is flagged so that it is never used to judge wording.
 import { foldUrdu, normalizeArabic } from "./arabic";
 import { hasPressure, stripPressure } from "./chainPressure";
+import { parseHadithReference } from "./hadithReference";
+import { parseQuranReference } from "./quranReference";
 import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
 import { cleanTerms, cleanTopic, cleanTopicEn, cleanTopicUrdu } from "./topic";
 
@@ -312,6 +314,49 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
   return { claims, dropped };
 }
 
+/** A line this short that is a reference and little else (a surah and an ayah, a book and a number) is a claim of its own. */
+const MAX_REFERENCE_LINE = 120;
+/** The words that only name a reference («سورة», «آیت», «حدیث نمبر», «Sahih»). */
+const REFERENCE_WORDS = /سورة|سورہ|سوره|الآية|آية|آیت|ayah|verse|surah|hadith|حدیث|حديث|sahih|صحیح|صحيح|sunan|سنن|نمبر|رقم/giu;
+
+/**
+ * Lines of the post that only name a verse or a hadith by its number, and that no claim covers: the model leaves them out
+ * (a reference is not a text to check, live case 2026-11-07: «سورة الكهف الآية 18» gave no claim at all), but the number is
+ * enough to look the verse or hadith up (verify.ts). Added after the model's claims, up to the limit.
+ */
+export function addReferenceClaims(post: string, claims: Claim[]): Claim[] {
+  const out = [...claims];
+  const covered = (line: string) => out.some((c) => loose(c.textAsWritten).includes(loose(line)));
+  for (const raw of post.split("\n")) {
+    if (out.length >= MAX_CLAIMS) break;
+    const line = trimPunct(raw);
+    if (!line || line.length > MAX_REFERENCE_LINE || covered(line)) continue;
+    let quran = parseQuranReference(line, { kind: "quran" });
+    // digits alone («5:30») are a verse only beside a word that says so
+    if (quran && /^[\d\s:\-–—]+$/.test(foldUrdu(quran.matched)) && !/سور|آیت|آية|ایت|قرآن|قران|quran|surah|ayah|verse/i.test(line)) quran = null;
+    const ref = quran ?? parseHadithReference(line);
+    if (!ref) continue;
+    const kind: ClaimKind = quran ? "quran" : "hadith";
+    // only a bare reference: what is left beside it, besides the words that name it, is a few letters at most (a line with
+    // a text beside its reference belongs to a claim the model chose to leave out, and is not added)
+    const left = line.replace(ref.matched, " ").replace(REFERENCE_WORDS, " ").replace(/[^\p{L}]/gu, "");
+    if (left.length > 12) continue;
+    out.push({
+      kind,
+      textAsWritten: line,
+      spanCheck: "exact",
+      arabicSpan: null,
+      query: line,
+      queryIsTranslation: false,
+      language: /[A-Za-z]/.test(line) && !/[؀-ۿ]/.test(line) ? "en" : "ur",
+      attributedTo: null,
+      citedSource: null,
+      warnings: ["a reference by number, added by the post's own lines"],
+    });
+  }
+  return out;
+}
+
 type Generate = <T>(prompt: string, opts: { schema: object; images?: GeminiImage[] }) => Promise<GenerateResult<T>>;
 
 export async function extractClaims(post: string, deps: { generate?: Generate } = {}): Promise<Extraction> {
@@ -319,7 +364,8 @@ export async function extractClaims(post: string, deps: { generate?: Generate } 
   const text = post.trim();
   if (!text) return { claims: [], dropped: [] };
   const r = await generate<{ claims?: RawClaim[] }>(claimsPrompt(text), { schema: CLAIMS_SCHEMA });
-  return { ...checkClaims(text, r.data.claims ?? []), model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
+  const checked = checkClaims(text, r.data.claims ?? []);
+  return { claims: addReferenceClaims(text, checked.claims), dropped: checked.dropped, model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
 }
 
 /** Reads the text of a screenshot as it is, so the claims can then be checked against what the image says. */
