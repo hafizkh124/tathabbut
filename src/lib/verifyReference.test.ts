@@ -172,3 +172,31 @@ describe("a second look at a text that found nothing", () => {
     expect(r.diag?.retried).toBe("opening");
   });
 });
+
+describe("a misquoted verse the model did not call a verse", () => {
+  // Live case, 2026-11-07: the sample «إن الله مع الصابرون» came back as kind «other»; its best verses scored 0.82, under 0.85.
+  const v153 = verse(2, 153, "يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ", "يا ايها الذين امنوا استعينوا بالصبر والصلاه ان الله مع الصابرين");
+  const text = "إن الله مع الصابرون";
+  it("is a verse with a mistake, not a hadith", async () => {
+    const d = deps({ matchVerses: vi.fn(async () => [{ ...v153, score: 0.82 }]) });
+    const r = await verifyClaim(claim({ kind: "other", textAsWritten: text, arabicSpan: text, query: text, language: "ar" }), d);
+    expect(r.basis).toBe("quran");
+    expect(r.state).toBe(STATES.verseWrong);
+    expect(d.lookupDorar).not.toHaveBeenCalled();
+  });
+  it("a hadith that begins with the words of a verse (a word added) is still a hadith: «اللهم رب السماوات السبع» and 23:86", async () => {
+    const v86 = verse(23, 86, "قُلْ مَنْ رَبُّ السَّمَاوَاتِ السَّبْعِ وَرَبُّ الْعَرْشِ الْعَظِيمِ", "قل من رب السماوات السبع ورب العرش العظيم");
+    const dua = "اللهم رب السماوات السبع";
+    const d = deps({ matchVerses: vi.fn(async () => [{ ...v86, score: 0.79 }]) });
+    const r = await verifyClaim(claim({ kind: "hadith", textAsWritten: dua, arabicSpan: dua, query: dua, language: "ar" }), d);
+    expect(r.basis).not.toBe("quran");
+    expect(d.lookupDorar).toHaveBeenCalled();
+  });
+  it("a hadith that is only near a verse is still a hadith", async () => {
+    const hadith = "من قرأ الله مع الصابرين وزاد كلاما كثيرا بعدها";
+    const d = deps({ matchVerses: vi.fn(async () => [{ ...v153, score: 0.72 }]) });
+    const r = await verifyClaim(claim({ kind: "hadith", textAsWritten: hadith, arabicSpan: hadith, query: hadith, language: "ar" }), d);
+    expect(r.basis).not.toBe("quran");
+    expect(d.lookupDorar).toHaveBeenCalled();
+  });
+});

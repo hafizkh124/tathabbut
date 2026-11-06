@@ -151,6 +151,35 @@ export function alignedDistance(query: string, matn: string): number | null {
 /** The most a quotation may be from a narration for a misspelt text to be taken as it (see alignedDistance). */
 export const MAX_TYPO_DISTANCE = 0.25;
 
+/**
+ * A short text (too few content words to be measured by coverage) is in a narration only as a phrase: its words, with a
+ * one-letter prefix allowed, follow one another in the narration within two words of room. «إن الله مع الصابرون» is not in
+ * «ولن يصبر عليكن إلا الصابرون … والله …»: the words are all there, scattered (live case 2026-11-07).
+ */
+export function phraseIn(words: string[], matn: string): boolean {
+  const m = matn.split(" ").filter(Boolean);
+  const is = (w: string, x: string) => x === w || (x.length === w.length + 1 && x.slice(1) === w && "وفبلك".includes(x[0]));
+  const room = words.length + 2;
+  for (let start = 0; start < m.length; start++) {
+    if (!is(words[0], m[start])) continue;
+    let at = start;
+    let ok = true;
+    for (let k = 1; k < words.length && ok; k++) {
+      let next = -1;
+      for (let j = at + 1; j < Math.min(m.length, start + room); j++) {
+        if (is(words[k], m[j])) {
+          next = j;
+          break;
+        }
+      }
+      if (next < 0) ok = false;
+      else at = next;
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
 export function selectRelevant(query: string, results: DorarResult[], minCoverage = 0.6, opts: { typos?: boolean } = {}): GradedNarration[] {
   const q = letters(query);
   if (!q) return [];
@@ -173,7 +202,7 @@ export function selectRelevant(query: string, results: DorarResult[], minCoverag
       // «أرسل ... عشرة ... الجنة» must not match «عشرة في الجنة» while losing the action.
       : coverage !== null && coverage >= (qTok.size <= 3 ? 1 : minCoverage) && (matnOverlap(qTok, mTok) ?? 0) >= minCoverage
         ? "overlap"
-        : coverage === null && qWords.length > 0 && qWords.every((w) => ` ${m} `.match(new RegExp(`(?<![ء-ي])[وفبلك]?${w}(?![ء-ي])`)))
+        : coverage === null && qWords.length > 0 && phraseIn(qWords, m)
           ? "all-words"
           : null;
     if (!matchedBy) continue;

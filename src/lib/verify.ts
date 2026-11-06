@@ -2,10 +2,11 @@
 // Order of authority: the specialist's own list (circulating_sayings) first, then the Quran text, then Dorar.
 // Nothing here writes a verdict: a state is either the specialist's, the mushaf's wording, or Dorar's muhaddithun
 // read through gradeMap.
+import { normalizeArabic } from "./arabic";
 import type { Claim } from "./claims";
 import type { DorarResult } from "./dorar";
 import type { Grade } from "./gradeMap";
-import { alignedDistance, selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
+import { alignedDistance, nearWord, selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { citedNarration, isKnownBook } from "./citedBook";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
@@ -112,6 +113,11 @@ const wordCount = (s: string) => searchForm(s).split(" ").filter(Boolean).length
 const VERSE_MIN = 0.6;
 const VERSE_AS_HADITH_MIN = 0.85;
 const MAX_VERSE_DISTANCE = 0.5;
+/** A text the model did not call a verse is still a misquoted verse when it is this near one: one word changed in four, a score from 0.7.
+ *  (Live case 2026-11-07: «إن الله مع الصابرون» scored 0.82 on 2:153 and 8:46, under the 0.85 for a hadith that is a verse, and was graded as hadith.) */
+const VERSE_NEAR_MIN = 0.7;
+const VERSE_NEAR_DISTANCE = 0.25;
+const VERSE_NEAR_MIN_WORDS = 3;
 
 const hasArabic = (s: string) => /[ء-ي]/.test(s);
 
@@ -189,13 +195,15 @@ function characterDistance(quoted: string, correctText: string): number {
 
 /** The best verse for a quote, checked word by word; null when no verse is close enough to be "this verse".
  *  A phrase that sits in several verses (or fits one verse only roughly) gives the user the near ones to choose from. */
-async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number): Promise<VerifiedClaim | null> {
+async function checkAsVerse(claim: Claim, deps: VerifyDeps, minScore: number, maxDistance = MAX_VERSE_DISTANCE): Promise<VerifiedClaim | null> {
   const quoted = claim.arabicSpan;
   if (quoted && !claim.queryIsTranslation) {
     const hits = await withScripts((await deps.matchVerses(quoted)).filter((h) => h.score >= minScore), deps);
     const ranked = hits
       .map((v) => ({ v, w: compareWithVerse(quoted, v) }))
-      .filter((r) => r.w.distance <= MAX_VERSE_DISTANCE)
+      .filter((r) => r.w.distance <= maxDistance)
+      // a near verse (not a claimed one) is a misquote of ONE word, spelt almost like the verse's («الصابرون» for «الصابرين»): a word added, left out or another word altogether is a hadith that begins like the verse («اللهم رب السماوات السبع» for «من رب السماوات السبع»)
+      .filter((r) => maxDistance >= MAX_VERSE_DISTANCE || (r.w.diffs.length <= 1 && r.w.diffs.every((d) => d.op === "replaced" && nearWord(normalizeArabic(d.typed), normalizeArabic(d.correct)))))
       .map((r) => ({ ...r, characterDistance: characterDistance(quoted, r.w.correctText) }))
       .sort((a, b) => a.w.distance - b.w.distance || a.characterDistance - b.characterDistance || b.v.score - a.v.score);
     ranked.splice(0, ranked.length, ...ranked.filter((r) =>
@@ -531,6 +539,9 @@ async function verifyClaimPartsCore(claim: Claim, deps: VerifyDeps, ctx: CoreCon
   if (claim.arabicSpan && !claim.queryIsTranslation) {
     const rs = await checkQuran(claim, deps, VERSE_AS_HADITH_MIN, false);
     if (rs) return rs.map((r) => ({ ...r, notes: [...r.notes, "النص آية من القرآن وليس حديثا"] }));
+    // a verse with one word changed is a misquoted verse, whatever the model called it
+    const near = wordCount(claim.arabicSpan) >= VERSE_NEAR_MIN_WORDS ? await checkAsVerse(claim, deps, VERSE_NEAR_MIN, VERSE_NEAR_DISTANCE) : null;
+    if (near) return [{ ...near, notes: [...near.notes, "النص آية من القرآن وليس حديثا"] }];
   }
 
   // 3) Dorar

@@ -49,3 +49,19 @@ describe("selectRelevant", () => {
     expect(selectRelevant("عمر طلق ابا بكر بعد العشاء الاخره عندما صلاها", [narration("أن رسول الله أخر صلاة العشاء الآخرة تسع ليال")], 0.6, { typos: true })).toEqual([]);
   });
 });
+
+describe("a short text is in a narration only as a phrase", () => {
+  // Live case, 2026-11-07: the words of «إن الله مع الصابرون» are all in these narrations, scattered, so they were graded as hadith.
+  const scattered = [
+    narration("إنَّ رسولَ اللهِ صلَّى اللهُ عليه وسلَّمَ كان يقولُ لهُنَّ: إنَّ أمرَكُنَّ لمِمَّا يُهِمُّني بَعدي، ولنْ يَصبِرَ عليكُنَّ إلَّا الصابِرونَ"),
+    narration("لا يَحنو عليكُنَّ بعدي إلا الصابِرونَ سقى اللهُ ابنَ عَوفٍ من سَلسَبيلِ الجنةِ"),
+    narration("واللهِ لا يَعطِفُ عليكُنَّ إلَّا الصابِرونَ وهو مع الله"),
+  ];
+  it("scattered words are no match", () => {
+    expect(selectRelevant("إن الله مع الصابرون", scattered)).toEqual([]);
+  });
+  it("the same words one after another are a match, a prefix letter allowed", () => {
+    expect(selectRelevant("الله مع الصابرون", [narration("واعلموا أن الله مع الصابرون")])).toHaveLength(1);
+    expect(selectRelevant("الصبر ضياء", [narration("والصبر ضياء")])).toHaveLength(1);
+  });
+});
