@@ -4,7 +4,7 @@
 // So every span the model returns is checked against the post itself, and the wording we search with and judge is
 // always the post's own text. The model's Arabic is used only to translate a claim written in Urdu or English, and
 // such a query is flagged so that it is never used to judge wording.
-import { normalizeArabic } from "./arabic";
+import { foldUrdu, normalizeArabic } from "./arabic";
 import { hasPressure, stripPressure } from "./chainPressure";
 import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
 import { cleanTerms, cleanTopic, cleanTopicEn, cleanTopicUrdu } from "./topic";
@@ -107,7 +107,8 @@ For each claim return:
 - kind: "hadith" (attributed to the Prophet ﷺ), "quran" (presented as a verse of the Quran), "scholar_quote" (attributed to a scholar, imam or companion), "question" (asks for a ruling, a fatwa or evidence), "other" (any other religious promise or instruction, e.g. "send this to ten people and enter Paradise").
 - text_as_written: the claim copied from the post character for character, without the narration around it ("the Prophet said:") and WITHOUT correcting anything, even an obvious mistake.
 - arabic_span: the Arabic wording inside text_as_written, copied character for character with any mistakes kept. Empty if the claim has no Arabic wording.
-- arabic_translation: only when arabic_span is empty: the Arabic wording this claim refers to, for searching hadith and Quran databases. Empty otherwise.
+- arabic_translation: only when arabic_span is empty: the Arabic wording this claim refers to, for searching hadith and Quran databases. Empty otherwise. For a claim of kind "hadith", "quran" or "scholar_quote" written in Urdu or English it must hold your best rendering into the Arabic wording it comes from (the verse's own words; a hadith's known wording); leave it empty only when the claim is no more than a reference (a book and a number, a surah and an ayah) or you cannot tell which text it is.
+  Urdu typed with an Arabic keyboard (ك ي ه for ک ی ہ: «ميري مثال اس كي طرح هے») is still Urdu, never Arabic: leave arabic_span empty and fill arabic_translation.
 - attributed_to and cited_source: exactly as written in the post, or empty.
 - question_intent (only for kind "question"): "evidence" when the user requests a hadith/reference proving a SPECIFIC stated proposition. Copy that proposition character for character into text_as_written and arabic_span if Arabic; translate only that proposition for arabic_translation, preserving its day, quantities and promised benefit. For example, asking for a sahih hadith that eating watermelon on Mondays cures all eye diseases is a source request for that precise claim, not a fiqh question. Do not replace it with a generic topic about watermelon. A question asking for a ruling or fatwa is "ruling". A request with no specific proposition stays "ruling". Never invent a supporting hadith.
 - question_scope (only for kind "question"): "general" ONLY when the question asks for a rule in the abstract and mentions no event, no person and no situation of the asker or of anyone (no "I", "we", "my", "our", no named or described person, no concrete act that already happened). A scenario is NOT general even when it speaks of "someone" ("if a man does X in such a state, what then?", "what if ..."): a general question only names the matter and asks its ruling ("what is the ruling on X?", "how is X done?", "what is the nisab of X?"). Anything else is "personal": a case that happened, a scenario or hypothetical, a decision the asker must take, a family, marriage, divorce, inheritance, money or worship matter told as a story, or any doubt. When in doubt answer "personal".
@@ -129,7 +130,8 @@ ${post}`;
 
 /** Urdu keyboards type ی ک ہ for Arabic ي ك ه; fold them so the same words compare equal. */
 export function foldUrduLetters(s: string): string {
-  return s.replace(/ی/g, "ي").replace(/ک/g, "ك").replace(/[ہۂ]/g, "ه").replace(/ۃ/g, "ة");
+  // ھ is the ha of Indo-Pak mushaf and dua texts (اَللّٰھُمَّ, فَكُلُوا مِنْھَا): without folding it, such a word broke apart in the search
+  return s.replace(/ی/g, "ي").replace(/ک/g, "ك").replace(/[ہۂھ]/g, "ه").replace(/ۃ/g, "ة");
 }
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
 /** For a loose comparison: no diacritics, unified letters, no punctuation. */
@@ -175,8 +177,26 @@ export function recoverSlice(post: string, needle: string): string | null {
   return null;
 }
 
-/** Letters that occur in Urdu but not in Arabic. */
-const URDU_ONLY = /[ٹڈڑںےۓھگپچژ]/;
+/** Letters that occur in Urdu but not in Arabic. ھ is not among them: Indo-Pak texts write the Arabic ha with it (see urduWord). */
+const URDU_ONLY = /[ٹڈڑںےۓگپچژ]/;
+/** The Urdu aspirated letters (بھ تھ کھ…) written plain: a ھ after one of them. Arabic text with harakat is never Urdu prose. */
+const ASPIRATE = /[بپتٹجچدڈڑکگمنرسق]ھ/;
+const HARAKAT = /[ً-ْٰ]/;
+/** Urdu words that are only made of letters Arabic has and that Arabic never uses, as an Arabic keyboard writes them. */
+const URDU_PLAIN = new Set(["كي", "كو", "اور", "ايك", "ميري", "ميرا", "بهت", "طرح", "كيا", "كيون"]);
+/** The word is Urdu, not Arabic: an Urdu-only letter, an Urdu word, an aspirated letter, or an Urdu word typed with Arabic letters. */
+function urduWord(word: string): boolean {
+  if (URDU_ONLY.test(word) || URDU_WORDS.has(word)) return true;
+  if (/ھ/.test(word) && ASPIRATE.test(word) && !HARAKAT.test(word)) return true;
+  return URDU_PLAIN.has(foldUrdu(word));
+}
+/** The share of a text's words that are Urdu: a text with several is Urdu written with Arabic letters, whatever its letters. */
+export function urduShare(text: string): number {
+  const words = [...text.matchAll(/\S+/g)].map((m) => m[0].replace(/[^\p{L}\p{M}]/gu, "")).filter(Boolean);
+  return words.length ? words.filter(urduWord).length / words.length : 0;
+}
+/** From this share of Urdu words a model's «Arabic» span is Urdu typed with an Arabic keyboard (live cases of 2026-10-19: «ميري اور سابقه انبياء كي مثال…»). */
+const URDU_SPAN_SHARE = 0.15;
 /** Common Urdu words written only with letters Arabic also has. Matched as typed (Urdu ی ک ہ), so the Arabic
  *  «الله» or «من» never counts as Urdu; words Arabic itself uses (ان، من، اس…) are deliberately absent. */
 const URDU_WORDS = new Set(["کہ", "ہے", "ہیں", "کی", "کا", "کے", "کو", "اور", "یہ", "وہ", "تو", "بھی", "یعنی", "فرمایا", "فرماتے", "فرماتا", "حدیث", "ہو", "جو", "جس", "کر", "کرو", "اگر", "تم", "ہم", "آپ", "جب", "تک", "لیے", "ساتھ", "والا", "والے", "کیا", "اللہ"]);
@@ -188,7 +208,7 @@ export function arabicRun(text: string): string | null {
   for (const m of text.matchAll(/\S+/g)) {
     const raw = m[0];
     const word = raw.replace(/[^\p{L}\p{M}]/gu, "");
-    const arabicLooking = /[ء-ي]/.test(word) && !URDU_ONLY.test(word) && !/[A-Za-z]/.test(word) && !URDU_WORDS.has(word);
+    const arabicLooking = /[ء-ي]/.test(word) && !urduWord(word) && !/[A-Za-z]/.test(word);
     if (arabicLooking) {
       const end = m.index! + raw.length;
       if (cur) {
@@ -248,6 +268,12 @@ export function checkClaims(post: string, raw: RawClaim[]): Extraction {
         warnings.push(`model altered the Arabic: «${modelSpan}»`);
         arabicSpan = arabicRun(text);
       }
+    }
+    // Urdu typed with an Arabic keyboard is not Arabic wording: it is searched through the model's Arabic rendering, like any Urdu
+    if (arabicSpan && urduShare(arabicSpan) >= URDU_SPAN_SHARE) {
+      // the model gave the whole claim as Arabic; a real Arabic quotation inside it would have been the span
+      warnings.push("the span is Urdu written with Arabic letters");
+      arabicSpan = null;
     }
     const translation = trimPunct(r.arabic_translation ?? "");
     const queryIsTranslation = !arabicSpan && Boolean(translation);

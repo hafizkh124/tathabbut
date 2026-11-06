@@ -247,6 +247,32 @@ export async function matchVersesInText(quoted: string, cfg: RestConfig | null =
   return rpc<VerseHit[]>(cfg, "match_verses_in_text", { q, min_score: minScore, max_results: 100 });
 }
 
+/**
+ * The verses whose stored Urdu or English translation holds the text (migration 016). A function that is not there yet,
+ * or any failure, is «no match»: this is only a second way to a verse that the usual ways did not find.
+ */
+export async function matchVersesByTranslation(text: string, lang: "ur" | "en", cfg: RestConfig | null = publicConfig(), minScore = 0.6): Promise<VerseHit[]> {
+  const q = text.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  if (q.split(" ").length < 4) return [];
+  try {
+    return await rpc<VerseHit[]>(cfg, "match_verses_by_translation", { q, lang_in: lang, min_score: minScore, max_results: 3 });
+  } catch {
+    return [];
+  }
+}
+
+/** The verses of one surah from ayah `from` to `to` (a verse named by its number), as the match functions give them. */
+export async function fetchVersesByReference(surah: number, from: number, to: number, cfg: RestConfig | null = publicConfig()): Promise<VerseHit[]> {
+  if (!cfg) throw new Error("Supabase is not configured");
+  if (![surah, from, to].every(Number.isInteger)) return [];
+  const res = await fetch(
+    `${cfg.url.replace(/\/+$/, "")}/rest/v1/quran_verses?select=surah,ayah,surah_name_ar,text_uthmani,text_clean&surah=eq.${surah}&ayah=gte.${from}&ayah=lte.${to}&order=ayah.asc&limit=20`,
+    { headers: restHeaders(cfg.key), signal: AbortSignal.timeout(5_000), cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`quran_verses: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+  return ((await res.json()) as Omit<VerseHit, "score">[]).map((v) => ({ ...v, score: 1 }));
+}
+
 // ---------- a paste of several verses ----------
 
 /** Consecutive verses of one surah found one after the other in a quote, and where they sit in it (character offsets). */

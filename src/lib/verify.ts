@@ -5,12 +5,15 @@
 import type { Claim } from "./claims";
 import type { DorarResult } from "./dorar";
 import type { Grade } from "./gradeMap";
-import { selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
+import { alignedDistance, selectRelevant, summarizeGrades, type GradedNarration, type GradeSummary } from "./hadithMatch";
 import { citedNarration, isKnownBook } from "./citedBook";
 import { rankAndFilterDorarResults } from "./hadithRanking";
 import type { LookupOutcome } from "./lookup";
 import type { QiraaVariant } from "./qiraat";
 import { compareWithVerse, findVerseRuns, joinVerses, looksCopiedFromMushaf, searchForm, type VerseHit, type VerseScriptText, type WordingCheck } from "./quranCheck";
+import { parseQuranReference, withoutReference } from "./quranReference";
+import { BOOK_TITLES, matnQuery, parseHadithReference, sameHadith, type HadithReference, type NumberedHadith } from "./hadithReference";
+import { looksLikeQuestion, type NotFoundReason } from "./notFoundReason";
 
 import { STATES, stateOfVerse, type State } from "./states";
 import { similarSaying, similarNarrations, type SimilarExpression } from "./similarExpressions";
@@ -74,9 +77,21 @@ export interface VerifiedClaim {
     externalUrls?: { dorar: string; shamela: string };
   };
   notes: string[];
+  /** Why nothing was found, when it is known: the card says it in its own words (notFoundReason.ts). */
+  reason?: NotFoundReason;
+  /** The text found at the book and number the post named, when the number gave a hadith (hadithReference.ts). */
+  reference?: { book: string; number: number; text: string };
+  /** What the lookup saw, kept for the usage figures: Dorar's candidates and how many were this text. */
+  diag?: { candidates: number; relevant: number; retried?: "typos" | "opening" };
 }
 
 export interface VerifyDeps {
+  /** The verses at a surah and an ayah range (quran_verses). Without it a verse named by number is not looked up by it. */
+  verseByReference?: (surah: number, from: number, to: number) => Promise<VerseHit[]>;
+  /** The hadith at a book and number (hadith-api). Without it a hadith named by number is not looked up by it. */
+  hadithByReference?: (ref: HadithReference) => Promise<NumberedHadith[]>;
+  /** The verses whose stored translation holds a text in Urdu or English (migration 016): the last way for a Quran claim with no Arabic. */
+  matchByTranslation?: (text: string, lang: "ur" | "en") => Promise<VerseHit[]>;
   matchVerses: (quoted: string) => Promise<VerseHit[]>;
   /** The verses inside a paste of several verses (match_verses_in_text). Without it such a paste is not split. */
   matchVersesInText?: (quoted: string) => Promise<VerseHit[]>;
@@ -298,8 +313,184 @@ export async function verifyClaim(claim: Claim, deps: VerifyDeps): Promise<Verif
   return (await verifyClaimParts(claim, deps))[0];
 }
 
+// ---------- a verse or a hadith named by its number ----------
+
+/** What reading the number a post names gave: the finished results, or only notes (and what the usual way should know). */
+interface ViaReference {
+  results?: VerifiedClaim[];
+  notes: string[];
+  /** the book and number as Dorar prints them, so the narration of that book is shown first */
+  citedBook?: string;
+  /** the post named a hadith by number, and no text was read at it */
+  unresolved?: true;
+}
+
+const exactWording = (v: VerseHit): WordingCheck => ({ exact: true, correctText: v.text_uthmani, diffs: [], distance: 0 });
+const placeOf = (r: { surah: number; from: number; to: number }) => `${r.surah}:${r.from}${r.to > r.from ? `-${r.to}` : ""}`;
+
+/**
+ * A verse named by surah and ayah is looked up by its number (quran_verses). A quoted text is compared with that verse
+ * (a verse that is not the one quoted sends the claim back to the usual way, with a note); a number alone, or a number
+ * with a translation, shows the verse.
+ */
+async function viaQuranReference(claim: Claim, deps: VerifyDeps): Promise<ViaReference> {
+  if (!deps.verseByReference) return { notes: [] };
+  const ref = parseQuranReference(`${claim.citedSource ?? ""} ${claim.textAsWritten}`, { kind: claim.kind });
+  if (!ref) return { notes: [] };
+  const found = await deps.verseByReference(ref.surah, ref.from, ref.to).catch(() => [] as VerseHit[]);
+  const where = placeOf(ref);
+  if (!found.length) return { notes: [`لم يُعثر على آية بالرقم المذكور (${where})`] };
+  const verses = await withScripts(found, deps);
+  const span = verses.length > 1 ? joinVerses(verses) : verses[0];
+  const last = verses.length > 1 ? verses[verses.length - 1].ayah : undefined;
+  const quoted = claim.arabicSpan && !claim.queryIsTranslation && wordCount(claim.arabicSpan) >= 2 ? claim.arabicSpan : null;
+  if (quoted) {
+    const wording = compareWithVerse(quoted, span);
+    if (wording.distance <= MAX_VERSE_DISTANCE) return { results: [verseResult(claim, span, wording, [`الآية بحسب الرقم المذكور (${where})`], undefined, last)], notes: [] };
+    return { notes: [`النص المقتبس لا يطابق الآية ${where} المذكورة؛ جرى البحث عنه بالطريقة المعتادة`] };
+  }
+  // a number alone, or a number beside a translation: the verse is shown; a translation's wording is never judged
+  const translated = (claim.language === "ur" || claim.language === "en") && wordCount(withoutReference(claim.textAsWritten, ref)) >= 8;
+  const note = translated ? `النص مترجم؛ لا يُحكم على لفظه، وتُعرض الآية بحسب الرقم المذكور (${where})` : `الآية بحسب الرقم المذكور (${where})`;
+  return { results: [verseResult(claim, span, translated ? undefined : exactWording(span), [note], undefined, last)], notes: [] };
+}
+
+/** How much of a post's own text the hadith at its number must have for the number to be taken as that text's place. */
+const SAME_HADITH_MIN = 0.5;
+
+/**
+ * A hadith named by book and number is read at that number (hadith-api). If the post also gives the text, the text must
+ * be the hadith found there: then the usual check goes on with that book's narration shown first; a different text
+ * leaves the usual way alone, with a note. If it gives no text, the text found there is searched in Dorar for its
+ * verdict. A number that gives nothing leaves the claim to the usual way.
+ */
+async function viaHadithReference(claim: Claim, deps: VerifyDeps): Promise<ViaReference> {
+  if (!deps.hadithByReference || claim.kind === "quran") return { notes: [] };
+  const ref = parseHadithReference(`${claim.citedSource ?? ""} ${claim.textAsWritten}`);
+  if (!ref) return { notes: [] };
+  const title = `${BOOK_TITLES[ref.book]} ${ref.number}`;
+  const found = await deps.hadithByReference(ref).catch(() => [] as NumberedHadith[]);
+  if (!found.length) return { notes: [`لم يُقرأ نص بالرقم المذكور (${title})؛ جرى البحث بالطريقة المعتادة`], unresolved: true };
+
+  const ownText = claim.query && wordCount(claim.query) >= 4 && (claim.arabicSpan || (claim.queryIsTranslation && hasArabic(claim.query))) ? claim.query : null;
+  if (ownText) {
+    const best = found.map((h) => ({ h, score: sameHadith(ownText, h.text) ?? 0 })).sort((a, b) => b.score - a.score)[0];
+    if (best.score >= SAME_HADITH_MIN) return { notes: [`النص موافق للحديث المقروء بالرقم المذكور (${title})`], citedBook: title };
+    return { notes: [`النص لا يوافق الحديث المقروء بالرقم المذكور (${title})؛ جرى البحث عنه بالطريقة المعتادة`] };
+  }
+
+  const hadith = found[0];
+  const derived: Claim = { ...claim, query: matnQuery(hadith.text), queryIsTranslation: true };
+  const result = await checkInDorar(derived, deps, [], [`الحديث مقروء بالرقم المذكور (${title})`], title);
+  const reference = { book: BOOK_TITLES[ref.book], number: ref.number, text: hadith.text.slice(0, 1_500) };
+  if (result.lookupFailed) return { results: [result], notes: [] };
+  if (result.state !== STATES.notFound) return { results: [{ ...result, reference }], notes: [] };
+  return { results: [{ ...result, reason: "reference-no-grade", reference }], notes: [] };
+}
+
 /** The results for a claim: one, or one per verse or run of verses when the claim quotes verses from several places. */
 export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<VerifiedClaim[]> {
+  if (claim.kind === "question") return verifyClaimPartsCore(claim, deps, {});
+  // A verse or a hadith named by its number is looked up by it first; when the number gives nothing that fits, the
+  // claim goes the usual way (the team lead's rule, 2026-11-07), and what the number said is kept as a note.
+  const notes: string[] = [];
+  const ctx: CoreContext = {};
+  for (const via of claim.kind === "quran" ? [viaQuranReference, viaHadithReference] : [viaHadithReference, viaQuranReference]) {
+    const r = await via(claim, deps);
+    if (r.results) return r.results;
+    notes.push(...r.notes);
+    if (r.citedBook) ctx.citedBook = r.citedBook;
+    if (r.unresolved) ctx.referenceUnresolved = true;
+  }
+  const results = await verifyClaimPartsCore(claim, deps, ctx);
+  return notes.length ? results.map((x) => ({ ...x, notes: [...x.notes, ...notes] })) : results;
+}
+
+interface CoreContext {
+  /** the book and number the post named, found to be this text's place: shown first among Dorar's narrations */
+  citedBook?: string;
+  referenceUnresolved?: boolean;
+}
+
+/** Words of a long text's opening that Dorar is searched with when the whole text found nothing. */
+const OPENING_WORDS = 8;
+/** A long text found by its opening may differ from the narration by this much of its words (alignedDistance). */
+const MAX_OPENING_DISTANCE = 0.4;
+const NOTE_TYPOS = "عُثر على النص مع تجاوز أخطاء إملائية في كتابته";
+const NOTE_OPENING = "بُحث بمطلع النص لطوله";
+
+/**
+ * Dorar for a text: its nearest narrations that are this text, graded by the muhaddithun. A text that finds none is
+ * looked at once more: with a word or two misspelt (the same narrations, compared with a letter of leeway), and, when
+ * long, by its opening (a second search) with the whole text still having to be mostly in the narration.
+ */
+async function checkInDorar(claim: Claim, deps: VerifyDeps, nearbySayings: SimilarExpression[], notes: string[] = [], citedOverride?: string): Promise<VerifiedClaim> {
+  const looked = await deps.lookupDorar(claim.query);
+  if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", lookupFailed: true, notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings };
+  let found = looked.results;
+  let rawNarrations = selectRelevant(claim.query, found);
+  let retried: "typos" | "opening" | undefined;
+  if (!rawNarrations.length) {
+    const typos = selectRelevant(claim.query, found, 0.6, { typos: true });
+    if (typos.length) {
+      rawNarrations = typos;
+      retried = "typos";
+      notes = [...notes, NOTE_TYPOS];
+    }
+  }
+  if (!rawNarrations.length && wordCount(claim.query) > OPENING_WORDS + 2) {
+    const opening = searchForm(claim.query).split(" ").slice(0, OPENING_WORDS).join(" ");
+    const second = await deps.lookupDorar(opening);
+    if (second.ok) {
+      // the opening must stand in the narration word for word, and the whole text must be near it (a different hadith never begins the same and goes on the same)
+      const part = selectRelevant(opening, second.results).filter((n) => n.matchedBy === "contained" && (alignedDistance(claim.query, n.matn) ?? 1) <= MAX_OPENING_DISTANCE);
+      if (part.length) {
+        rawNarrations = part;
+        found = second.results;
+        retried = "opening";
+        notes = [...notes, NOTE_OPENING];
+      }
+    }
+  }
+  const diag = { candidates: found.length, relevant: rawNarrations.length, ...(retried ? { retried } : {}) };
+  if (!rawNarrations.length) {
+    // Nothing matched: up to three retrieved near texts as suggestions, each with its own source and verdict.
+    const seen = new Set<string>();
+    const similarExpressions = [...nearbySayings, ...similarNarrations(claim.query, found)].filter((x) => {
+      const key = searchForm(x.text);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 3);
+    const reason: NotFoundReason | undefined = looksLikeQuestion(claim.textAsWritten) ? "question" : claim.kind === "other" && !claim.attributedTo && !claim.citedSource ? "unattributed" : undefined;
+    return { claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"], similarExpressions, diag, ...(reason ? { reason } : {}) };
+  }
+  const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
+  const summary = summarizeGrades(rawNarrations);
+  const citedBook = (citedOverride ?? claim.citedSource)?.trim();
+  const citedHit = citedBook ? citedNarration(citedBook, [ranked.allRanked, ranked.weakVariants]) : null;
+  const encodedQuery = encodeURIComponent(claim.query);
+  return {
+    claim,
+    state: summary.grade as Grade,
+    basis: "dorar",
+    dorar: {
+      narrations: ranked.allRanked,
+      weakVariants: ranked.weakVariants.length > 0 ? ranked.weakVariants : undefined,
+      ...(citedBook ? { cited: { book: citedBook, known: isKnownBook(citedBook), ...(citedHit ? { narration: citedHit } : {}) } } : {}),
+      summary,
+      origin: looked.origin,
+      externalUrls: {
+        dorar: `https://dorar.net/hadith/search?q=${encodedQuery}`,
+        shamela: `https://shamela.ws/search?q=${encodedQuery}`,
+      },
+    },
+    notes,
+    diag,
+  };
+}
+
+async function verifyClaimPartsCore(claim: Claim, deps: VerifyDeps, ctx: CoreContext): Promise<VerifiedClaim[]> {
   if (claim.kind === "question") {
     // A general question with a usable topic is shown as fiqh (the books answer it, the screen asks them); a personal case, or
     // a general one the model could not give a topic for, is a referral. In doubt it is personal (specialist's rule).
@@ -313,7 +504,13 @@ export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<
   // A claimed verse must never receive a hadith grade through a fuzzy saying match.
   if (claim.kind === "quran") {
     const verses = await checkQuran(claim, deps, VERSE_MIN, true);
-    return verses ?? [{ claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] }];
+    if (verses) return verses;
+    // a translation of a verse with no Arabic wording: the stored translations are searched (the posts that copy the translator's words)
+    if (deps.matchByTranslation && !claim.arabicSpan && (claim.language === "ur" || claim.language === "en")) {
+      const [hit] = await deps.matchByTranslation(claim.textAsWritten, claim.language).catch(() => [] as VerseHit[]);
+      if (hit) return [verseResult(claim, (await withScripts([hit], deps))[0], undefined, ["النص مترجم؛ لا يُحكم على لفظه، وتُعرض الآية للمقارنة"])];
+    }
+    return [{ claim, state: STATES.notFound, basis: "none", notes: ["لم يُعثر على آية مطابقة؛ لم يُحكم على النص بوصفه حديثا"] }];
   }
   // 1) the specialist's own list
   let nearbySayings: SimilarExpression[] = [];
@@ -337,44 +534,11 @@ export async function verifyClaimParts(claim: Claim, deps: VerifyDeps): Promise<
   }
 
   // 3) Dorar
-  if (!canSearch) return [{ claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"] }];
-  const looked = await deps.lookupDorar(claim.query);
-  if (!looked.ok) return [{ claim, state: STATES.notFound, basis: "none", lookupFailed: true, notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings }];
-  const rawNarrations = selectRelevant(claim.query, looked.results);
-  const notes: string[] = [];
-  if (!rawNarrations.length) {
-    // Nothing matched: up to three retrieved near texts as suggestions, each with its own source and verdict.
-    const seen = new Set<string>();
-    const similarExpressions = [...nearbySayings, ...similarNarrations(claim.query, looked.results)].filter((x) => {
-      const key = searchForm(x.text);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 3);
-    return [{ claim, state: STATES.notFound, basis: "none", notes: [...notes, "لا رواية مطابقة في الدرر"], similarExpressions }];
+  if (!canSearch) {
+    const reason: NotFoundReason = looksLikeQuestion(claim.textAsWritten) ? "question" : ctx.referenceUnresolved || isKnownBook(claim.citedSource) || parseHadithReference(`${claim.citedSource ?? ""} ${claim.textAsWritten}`) ? "reference" : "no-arabic";
+    return [{ claim, state: STATES.notFound, basis: "none", notes: ["لا نص عربي يمكن البحث به"], reason }];
   }
-  const ranked = rankAndFilterDorarResults(claim.query, rawNarrations);
-  const summary = summarizeGrades(rawNarrations);
-  const citedBook = claim.citedSource?.trim();
-  const citedHit = citedBook ? citedNarration(citedBook, [ranked.allRanked, ranked.weakVariants]) : null;
-  const encodedQuery = encodeURIComponent(claim.query);
-  return [{
-    claim,
-    state: summary.grade as Grade,
-    basis: "dorar",
-    dorar: {
-      narrations: ranked.allRanked,
-      weakVariants: ranked.weakVariants.length > 0 ? ranked.weakVariants : undefined,
-      ...(citedBook ? { cited: { book: citedBook, known: isKnownBook(citedBook), ...(citedHit ? { narration: citedHit } : {}) } } : {}),
-      summary,
-      origin: looked.origin,
-      externalUrls: {
-        dorar: `https://dorar.net/hadith/search?q=${encodedQuery}`,
-        shamela: `https://shamela.ws/search?q=${encodedQuery}`,
-      },
-    },
-    notes,
-  }];
+  return [await checkInDorar(claim, deps, nearbySayings, [], ctx.citedBook)];
 }
 
 /** Verifies all claims of a post, a few at a time (Dorar is reached through one relay), in the post's order; a claim

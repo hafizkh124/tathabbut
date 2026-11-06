@@ -8,11 +8,12 @@ import { fastPath, fastPathEnabled } from "@/lib/fastPath";
 import { supabaseDorarCache } from "@/lib/dorarCache";
 import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
-import { fetchVerseQiraat, fetchVerseScripts, matchVerses, matchVersesInText } from "@/lib/quranCheck";
+import { fetchNumberedHadith } from "@/lib/hadithReference";
+import { fetchVerseQiraat, fetchVersesByReference, fetchVerseScripts, matchVerses, matchVersesByTranslation, matchVersesInText } from "@/lib/quranCheck";
 import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
-import { verifyClaims, type VerifiedClaim, type VerifyDeps } from "@/lib/verify";
+import { STATES, verifyClaims, type VerifiedClaim, type VerifyDeps } from "@/lib/verify";
 import { signExcerpt } from "@/lib/turathSign";
 import type { ClaimResult } from "@/lib/clientTypes";
 
@@ -41,6 +42,9 @@ export async function POST(request: Request) {
 
   const cache = supabaseDorarCache();
   const deps: VerifyDeps = {
+    verseByReference: (surah, from, to) => fetchVersesByReference(surah, from, to),
+    hadithByReference: (ref) => fetchNumberedHadith(ref),
+    matchByTranslation: (text, lang) => matchVersesByTranslation(text, lang),
     matchVerses: (q) => matchVerses(q),
     matchVersesInText: (q) => matchVersesInText(q),
     verseScripts: (keys) => fetchVerseScripts(keys),
@@ -93,7 +97,9 @@ export async function POST(request: Request) {
   later(async () => {
     await saveSharedClaims(rows);
     await saveAnswer(key, claims);
-    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(fast ? { fast: true } : { model: extraction?.model }) }));
+    // what each «not found» was (kind, why, how many narrations Dorar offered, which second look found it) so the next review can count them
+    const lookups = claims.filter((c) => c.diag || c.reason || c.reference).map((c) => ({ s: c.state === STATES.notFound ? 0 : 1, k: c.claim.kind, ...(c.reason ? { r: c.reason } : {}), ...(c.diag ? { c: c.diag.candidates, m: c.diag.relevant, ...(c.diag.retried ? { v: c.diag.retried } : {}) } : {}), ...(c.reference ? { ref: 1 } : {}) }));
+    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
   });
 
   return Response.json({

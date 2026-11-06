@@ -430,6 +430,33 @@ export const DICT = {
     en: "We do not guess the result. If you meant another text, change the wording; otherwise ask a scholar.",
     ur: "ہم اندازے سے نتیجہ نہیں دیتے۔ کوئی اور متن مراد ہو تو الفاظ بدلیں، ورنہ اہلِ علم سے رجوع کریں۔",
   },
+  // why nothing was found (notFoundReason.ts): the card says which case it is, so the person knows what to do next
+  "notfound.noArabic": {
+    ar: "هذا النص بغير العربية، ولم نستطع ردّه إلى نص عربي نبحث به. أرسل النص بالعربية إن توفّر، أو اذكر الكتاب ورقم الحديث.",
+    en: "This text is not in Arabic and we could not turn it into Arabic wording to search with. Send the Arabic text if you have it, or name the book and the hadith number.",
+    ur: "یہ متن عربی میں نہیں اور ہم اسے ایسے عربی متن میں نہ بدل سکے جس سے تلاش کریں۔ عربی متن ہو تو وہ بھیجیں، یا کتاب اور حدیث کا نمبر لکھیں۔",
+  },
+  "notfound.question": {
+    ar: "هذا سؤال أو موضوع، وليس نصًّا نتحقق منه. أرسل نص الحديث أو الآية نفسه.",
+    en: "This is a question or a topic, not a text we can check. Send the text of the hadith or the verse itself.",
+    ur: "یہ سوال یا موضوع ہے، ایسا متن نہیں جس کی ہم تصدیق کر سکیں۔ حدیث یا آیت کا متن خود بھیجیں۔",
+  },
+  "notfound.unattributed": {
+    ar: "لا يبدو هذا الكلام منسوبًا إلى النبي ﷺ ولا إلى عالم، فلا نجد ما نقابله به. نحن لا نحكم على كلام لا نسبة له.",
+    en: "This does not appear to be attributed to the Prophet ﷺ or to a scholar, so there is nothing to check it against. We do not rule on a saying that has no attribution.",
+    ur: "یہ کلام نبی ﷺ یا کسی عالم سے منسوب نہیں لگتا، اس لیے ہمارے پاس اس سے ملانے کو کچھ نہیں۔ ہم بے نسبت کلام پر حکم نہیں لگاتے۔",
+  },
+  "notfound.reference": {
+    ar: "ذُكر كتاب ورقم، لكن لم نصل إلى نص بهذا الرقم. أرسل نص الحديث بالعربية ليُبحث عنه.",
+    en: "A book and a number were named, but we could not read a text at that number. Send the hadith's Arabic text so it can be searched for.",
+    ur: "کتاب اور نمبر لکھا گیا مگر اس نمبر پر ہمیں متن نہ مل سکا۔ حدیث کا عربی متن بھیجیں تاکہ اسے تلاش کیا جائے۔",
+  },
+  "notfound.referenceNoGrade": {
+    ar: "وجدنا نصًّا بهذا الرقم، لكن لم نجد له حكمًا في الدرر السنية. اقرأ النص أدناه، وراجع أهل العلم.",
+    en: "We found a text at that number, but Dorar has no verdict on it. Read the text below and ask a scholar.",
+    ur: "اس نمبر پر ہمیں متن ملا، مگر الدرر السنیہ میں اس پر کوئی حکم نہیں ملا۔ نیچے دیا گیا متن پڑھیں اور اہلِ علم سے رجوع کریں۔",
+  },
+  "label.readAtNumber": { ar: "المقروء بالرقم المذكور", en: "Read at the number named", ur: "مذکورہ نمبر پر ملنے والا متن" },
   "note.scholar": {
     ar: "القول منسوب إلى عالم. هذه نتائج الدرر السنية في هذا النص كما وردت، فاقرأ كلام المحدّث كاملًا.",
     en: "This is a saying attributed to a scholar. These are Dorar's results for the text, as given; read the scholar's words in full.",

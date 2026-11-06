@@ -17,6 +17,17 @@ import { LevelBadge } from "./ui/LevelBadge";
 import { AlUlamaBox } from "./AlUlamaBox";
 import { SoftReplyDialog } from "./SoftReplyDialog";
 import { topicLabel } from "@/lib/topic";
+import type { Key } from "@/lib/i18n/dict";
+import type { NotFoundReason } from "@/lib/notFoundReason";
+
+/** The message of each reason a claim was not found (notFoundReason.ts). */
+const NOT_FOUND_KEY: Record<NotFoundReason, Key> = {
+  "no-arabic": "notfound.noArabic",
+  question: "notfound.question",
+  unattributed: "notfound.unattributed",
+  reference: "notfound.reference",
+  "reference-no-grade": "notfound.referenceNoGrade",
+};
 
 /** «نیٹ ورک مارکیٹنگ (التسويق الشبكي)»: the topic in the interface language, the Arabic the books were asked in beside it. */
 const fiqhItemCount = (r: ClaimResult) => {
@@ -399,7 +410,15 @@ export function ClaimDetail({ result: r, index, total, onOrigin, onEdit, onPick,
   const message =
     tone === "notFound" ? (
       <div className="space-y-2">
-        <p className="text-base">{t("notfound.body")}</p>
+        <p className="text-base">{r.reason ? t(NOT_FOUND_KEY[r.reason]) : t("notfound.body")}</p>
+        {r.reference && (
+          <div role="note" className="space-y-1 rounded-[14px] bg-surface p-3">
+            <p className="text-[12px] text-muted">
+              {t("label.readAtNumber")}: <bdi translate="no" lang="ar" dir="rtl">{r.reference.book} {r.reference.number}</bdi>
+            </p>
+            <p translate="no" lang="ar" dir="rtl" className="quran text-[20px] leading-loose">{r.reference.text}</p>
+          </div>
+        )}
         {r.claim.citedSource && (
           <p className="text-[14px]">
             <span className="text-muted">{t("label.cited")}: </span>

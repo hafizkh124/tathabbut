@@ -1,6 +1,6 @@
 // From Dorar's answer (always 15 results, even for invented text) keep only the narrations that are this text,
 // grade each muhaddith's verdict with the specialist's rules, and summarize.
-import { matnOverlap, matnTokens, normalizeArabic } from "./arabic";
+import { COMMON_WORDS, matnOverlap, matnTokens, normalizeArabic } from "./arabic";
 import type { DorarResult } from "./dorar";
 import { classifyVerdict, displayGrade, GRADES, type Grade } from "./gradeMap";
 import { getBookTier } from "./hadithRanking";
@@ -108,7 +108,50 @@ function preservesExplicitContext(query: string, matn: string): boolean {
  * measured on the smaller set, «اطلبوا العلم من المهد إلى اللحد» took the «اطلبوا العلم ولو بالصين» narrations
  * (live case, 2026-10-04).
  */
-export function selectRelevant(query: string, results: DorarResult[], minCoverage = 0.6): GradedNarration[] {
+/** Whether two words are one word with a letter of difference (a typing slip): one edit, for words of five letters or more.
+ *  Shorter words must be equal: a letter changes the word. */
+export function nearWord(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    previous = current;
+  }
+  return previous[b.length] <= 1;
+}
+
+/** The content words of a text, in order (no short words, no narration boilerplate): what a quotation is made of. */
+const contentWords = (s: string): string[] => letters(s).split(" ").filter((w) => w.length > 3 && !COMMON_WORDS.has(w));
+
+/**
+ * How far a quotation is from standing in a narration as one stretch, by words: the quotation's content words are lined up
+ * against the best stretch of the narration (a word that is only a typing slip away costs 0.4, a word missing 1, a word
+ * of the narration in between 1), divided by the quotation's length. 0 = it is there word for word. Only a few slips
+ * cost little, so another hadith that shares some words never comes near.
+ */
+export function alignedDistance(query: string, matn: string): number | null {
+  const q = contentWords(query);
+  const m = contentWords(matn);
+  if (q.length < 2 || m.length < 2) return null;
+  // semi-global alignment: the quotation is whole, the narration is entered and left anywhere
+  let previous = new Array<number>(m.length + 1).fill(0);
+  for (let i = 1; i <= q.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= m.length; j++) {
+      const sub = q[i - 1] === m[j - 1] ? 0 : nearWord(q[i - 1], m[j - 1]) ? 0.4 : 1;
+      current[j] = Math.min(previous[j - 1] + sub, previous[j] + 1, current[j - 1] + 1);
+    }
+    previous = current;
+  }
+  return Math.min(...previous) / q.length;
+}
+
+/** The most a quotation may be from a narration for a misspelt text to be taken as it (see alignedDistance). */
+export const MAX_TYPO_DISTANCE = 0.25;
+
+export function selectRelevant(query: string, results: DorarResult[], minCoverage = 0.6, opts: { typos?: boolean } = {}): GradedNarration[] {
   const q = letters(query);
   if (!q) return [];
   const qTok = matnTokens(query);
@@ -120,13 +163,17 @@ export function selectRelevant(query: string, results: DorarResult[], minCoverag
     const mTok = matnTokens(r.matn);
     const coverage = qTok.size >= 3 && mTok.size >= 3 ? [...qTok].filter((w) => mTok.has(w)).length / qTok.size : null;
     const contained = m.includes(q) || (m.split(" ").length >= 3 && q.includes(m));
+    // a misspelt text (opts.typos): the quotation lines up with a stretch of the narration, a few words a slip away
+    const aligned = opts.typos && !contained ? alignedDistance(q, m) : null;
     const matchedBy = contained
       ? "contained"
+      : aligned !== null && aligned <= MAX_TYPO_DISTANCE
+        ? "overlap"
       // With only three content words, two shared nouns do not identify a narration:
       // «أرسل ... عشرة ... الجنة» must not match «عشرة في الجنة» while losing the action.
       : coverage !== null && coverage >= (qTok.size <= 3 ? 1 : minCoverage) && (matnOverlap(qTok, mTok) ?? 0) >= minCoverage
         ? "overlap"
-        : coverage === null && qWords.length > 0 && qWords.every((w) => m.includes(w))
+        : coverage === null && qWords.length > 0 && qWords.every((w) => ` ${m} `.match(new RegExp(`(?<![ء-ي])[وفبلك]?${w}(?![ء-ي])`)))
           ? "all-words"
           : null;
     if (!matchedBy) continue;
