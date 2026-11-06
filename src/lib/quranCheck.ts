@@ -19,6 +19,8 @@ export interface VerseHit {
   scripts?: VerseScriptText[];
   /** The words other canonical readings have in place of Hafs's (quran_qiraat), when fetched. */
   qiraat?: QiraaVariant[];
+  /** Only from match_verses_by_translation: how many words the stored translation has (migration 017). */
+  translation_words?: number;
 }
 
 /** One verse in another script, as stored in quran_verse_scripts (migration 007). */
@@ -256,7 +258,7 @@ export async function matchVersesByTranslation(text: string, lang: "ur" | "en", 
   if (q.split(" ").length < TRANSLATION_MIN_WORDS) return [];
   try {
     const hits = await rpc<VerseHit[]>(cfg, "match_verses_by_translation", { q, lang_in: lang, min_score: 0.3, max_results: 2 });
-    return acceptTranslationHit(hits);
+    return acceptTranslationHit(hits, q.split(" ").length);
   } catch {
     return [];
   }
@@ -273,10 +275,19 @@ export async function matchVersesByTranslation(text: string, lang: "ur" | "en", 
 export const TRANSLATION_MIN_SCORE = 0.5;
 export const TRANSLATION_MIN_LEAD = 0.1;
 export const TRANSLATION_MIN_WORDS = 5;
-export function acceptTranslationHit(hits: VerseHit[]): VerseHit[] {
+/**
+ * The text must be this share of the verse's translation (by words): a hadith of seven words sat inside the 35 words of
+ * 59:3 and scored 0.79 (2026-11-07), while a post's wording of 13:28 is 9 of 28 words. A longer verse quoted in part falls
+ * short of it and is left to the usual ways (the Arabic wording).
+ */
+export const TRANSLATION_MIN_SHARE = 0.25;
+export function acceptTranslationHit(hits: VerseHit[], queryWords: number): VerseHit[] {
   const [best, next] = [...hits].sort((a, b) => b.score - a.score);
   if (!best || best.score < TRANSLATION_MIN_SCORE) return [];
-  return next && best.score - next.score < TRANSLATION_MIN_LEAD - 1e-9 ? [] : [best];
+  if (next && best.score - next.score < TRANSLATION_MIN_LEAD - 1e-9) return [];
+  // a hit without its length (migration 017 not run) is not trusted on its score alone
+  if (!best.translation_words || queryWords / best.translation_words < TRANSLATION_MIN_SHARE) return [];
+  return [best];
 }
 
 /** The verses of one surah from ayah `from` to `to` (a verse named by its number), as the match functions give them. */
