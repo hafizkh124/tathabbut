@@ -1,7 +1,8 @@
 "use client";
-// The user's language: Arabic by default, then English and Urdu. It sets lang/dir on <html> and is remembered in the browser.
+// The user's language: their saved choice, else a guess (Urdu for Urdu phones and Pakistan's time zone), else Arabic. It sets lang/dir on <html> and is remembered in the browser.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 import { DEFAULT_LOCALE, DIR, LOCALES, countLabel, digits, stateLabel, translate, type Key, type Locale } from "./dict";
+import { guessLocaleFromBrowser } from "./guess";
 
 const STORAGE_KEY = "tathabbut.locale";
 
@@ -32,10 +33,11 @@ function readLocale(): Locale {
   if (chosen) return chosen;
   try {
     const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    return saved && LOCALES.includes(saved) ? saved : DEFAULT_LOCALE;
+    if (saved && LOCALES.includes(saved)) return saved;
   } catch {
-    return DEFAULT_LOCALE;
+    /* blocked storage: fall through to the guess */
   }
+  return guessLocaleFromBrowser(DEFAULT_LOCALE);
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
