@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkRateLimit, clientAddress, clientKey, dailyAiLimit, limited, memoryCheck, RULES, rulesFor, secondsLeft, tooManyResponse } from "./rateLimit";
+import { MIN_PARTNER_SECRET, PARTNER_ID_HEADER, PARTNER_SIG_HEADER, PARTNER_TS_HEADER, signPartner } from "./partner";
 import { EVAL_RUN_ENV } from "./evalRun";
 import { logEvent } from "./events";
 import { cachedAnswer } from "./sharedClaims";
@@ -19,6 +20,34 @@ describe("rate limit", () => {
     expect(key).not.toContain("203");
     expect(clientKey("203.0.113.7", "secret")).toBe(key);
     expect(clientKey("203.0.113.7", "other")).not.toBe(key);
+  });
+
+  it("counts a signed partner request by the person it speaks for, with the partner's smaller limits", async () => {
+    const secret = "s".repeat(MIN_PARTNER_SECRET);
+    process.env.TATHABBUT_PARTNER_SECRET = secret;
+    try {
+      const id = "0123456789abcdef";
+      const ts = String(Math.floor(Date.now() / 1000));
+      const signed = (ip: string, person = id) =>
+        new Request("http://x/api/verify", {
+          method: "POST",
+          headers: { "x-forwarded-for": ip, [PARTNER_ID_HEADER]: person, [PARTNER_TS_HEADER]: ts, [PARTNER_SIG_HEADER]: signPartner(secret, ts, person, "POST", "/api/verify") },
+        });
+      const call = vi.fn().mockResolvedValue(0);
+      await checkRateLimit(signed("10.0.0.1"), "verify", { cfg, call });
+      await checkRateLimit(signed("10.0.0.99"), "verify", { cfg, call }); // another server address, the same person
+      const keys = (n: number) => (call.mock.calls[n][2] as { p_keys: string[] }).p_keys;
+      expect(keys(0)).toEqual(keys(1)); // counted by the person, not by the address
+      expect(keys(0)[0]).toMatch(/^verify:min:[0-9a-f]{32}$/);
+      expect(call.mock.calls[0][2]).toMatchObject({ p_limits: [3, 5] });
+      // a forged signature is an ordinary client: by address, with the ordinary limits
+      const forged = new Request("http://x/api/verify", { method: "POST", headers: { "x-forwarded-for": "10.0.0.1", [PARTNER_ID_HEADER]: id, [PARTNER_TS_HEADER]: ts, [PARTNER_SIG_HEADER]: "0".repeat(64) } });
+      await checkRateLimit(forged, "verify", { cfg, call });
+      expect(call.mock.calls[2][2]).toMatchObject({ p_limits: [RULES.verify.perMinute, RULES.verify.perDay] });
+      expect(keys(2)).not.toEqual(keys(0));
+    } finally {
+      delete process.env.TATHABBUT_PARTNER_SECRET;
+    }
   });
 
   it("counts the client's minute, the client's day, then the site's day", () => {

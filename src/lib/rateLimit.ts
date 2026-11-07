@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { isEvalRun } from "./evalRun";
 import { GeminiError } from "./gemini";
+import { partnerPerson } from "./partner";
 import { rpc, serviceConfig, type RestConfig } from "./supabaseRest";
 import { signingKey } from "./turathSign";
 
@@ -52,9 +53,15 @@ export function clientKey(address: string, secret: string | null = signingKey())
   return createHash("sha256").update(`${secret ?? "tathabbut"}:${address}`).digest("hex").slice(0, 32);
 }
 
+/** What one person may check when a partner (Ateed, for WhatsApp) asks for them (src/lib/partner.ts): a few a day, since
+ *  each answer is one message the partner pays for out of a monthly allowance. A text checked before costs nothing. */
+export const PARTNER_RULES: Partial<Record<Bucket, { perMinute: number; perDay: number }>> = {
+  verify: { perMinute: 3, perDay: 5 },
+};
+
 /** The rules for one request, in the order they are counted: the client's minute, the client's day, the site's day. */
-export function rulesFor(bucket: Bucket, client: string, siteLimit = dailyAiLimit()) {
-  const r = RULES[bucket];
+export function rulesFor(bucket: Bucket, client: string, siteLimit = dailyAiLimit(), partner = false) {
+  const r = (partner && PARTNER_RULES[bucket]) || RULES[bucket];
   const rules: Array<{ key: string; window: number; limit: number; scope: "client" | "site" }> = [
     { key: `${bucket}:min:${client}`, window: MINUTE, limit: r.perMinute, scope: "client" },
     { key: `${bucket}:day:${client}`, window: DAY, limit: r.perDay, scope: "client" },
@@ -85,7 +92,9 @@ export async function checkRateLimit(
   bucket: Bucket,
   deps: { cfg?: RestConfig | null; call?: typeof rpc } = {},
 ): Promise<RateLimitResult> {
-  const rules = rulesFor(bucket, clientKey(clientAddress(request.headers)));
+  // a signed partner request counts the person it speaks for; anything else, the address it came from (as always)
+  const person = partnerPerson(request);
+  const rules = person ? rulesFor(bucket, clientKey(`partner:${person}`), dailyAiLimit(), true) : rulesFor(bucket, clientKey(clientAddress(request.headers)));
   const cfg = deps.cfg === undefined ? serviceConfig() : deps.cfg;
   const call = deps.call ?? rpc;
   try {

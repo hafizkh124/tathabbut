@@ -10,6 +10,7 @@ import { displayGrade, classifyVerdict } from "@/lib/gradeMap";
 import { lookupDorar } from "@/lib/lookup";
 import { fetchNumberedHadith } from "@/lib/hadithReference";
 import { fetchVerseQiraat, fetchVersesByReference, fetchVerseScripts, matchVerses, matchVersesByTranslation, matchVersesInText } from "@/lib/quranCheck";
+import { partnerLocale, whatsappTextFor } from "@/lib/partnerReply";
 import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
@@ -24,8 +25,11 @@ const MAX_TEXT = 5_000;
 
 export async function POST(request: Request) {
   let text = "";
+  let locale = partnerLocale(undefined);
   try {
-    text = String(((await request.json()) as { text?: unknown }).text ?? "").trim();
+    const body = (await request.json()) as { text?: unknown; locale?: unknown };
+    text = String(body.text ?? "").trim();
+    locale = partnerLocale(body.locale);
   } catch {
     return Response.json({ error: "body must be JSON: { text }" }, { status: 400 });
   }
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
   const cached = await cachedAnswer(key);
   if (cached) {
     later(() => logEvent(eventRow(request, "verify", { cached: true, claims: cached.length, states: cached.map((c) => c.state), ms: Date.now() - t0 })));
-    return Response.json({ claims: cached, cached: true, ms: { extract: 0, total: Date.now() - t0 } });
+    return Response.json({ claims: cached, cached: true, ms: { extract: 0, total: Date.now() - t0 }, whatsappText: whatsappTextFor(request, cached, locale) });
   }
 
   const cache = supabaseDorarCache();
@@ -107,5 +111,6 @@ export async function POST(request: Request) {
     dropped: extraction?.dropped ?? [],
     ...(fast ? { fast: true } : { model: extraction?.model, usage: extraction?.usage }),
     ms: { extract: extraction?.ms ?? 0, total: ms },
+    whatsappText: whatsappTextFor(request, claims, locale),
   });
 }
