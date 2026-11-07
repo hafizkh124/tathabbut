@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternal
 import { useI18n } from "@/lib/i18n/i18n";
 import type { Key } from "@/lib/i18n/dict";
 import { imageFromClipboard, imageFromDrop } from "@/lib/pickImage";
+import { speechLang } from "@/lib/speech";
+import { useSpeech } from "@/lib/useSpeech";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 
@@ -48,8 +50,14 @@ interface Props {
 }
 
 export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) {
-  const { t, num, dir } = useI18n();
+  const { t, num, dir, locale } = useI18n();
   const id = useId();
+  const speech = useSpeech();
+  const stopListening = speech.stop;
+  // a check or a picture reading started: the microphone is closed
+  useEffect(() => {
+    if (busy) stopListening();
+  }, [busy, stopListening]);
   const tooLong = value.length > MAX_TEXT;
   const files = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
@@ -179,18 +187,30 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
                 <Icon name="camera" size={19} />
               </Button>
             )}
-            {/* not ready yet: said on the button itself, since a phone shows no tooltip and a faded button looks broken */}
-            <Button
-              variant="secondary"
-              className={`${side} relative border-dashed text-muted disabled:cursor-default disabled:opacity-100`}
-              disabled
-              aria-label={`${t("home.voice")} · ${t("home.soon")}`}
-            >
-              <span className="truncate">{t("home.voice")}</span>
-              <Icon name="mic" size={19} />
-              <span className="absolute -top-2.5 end-2 rounded-full border border-line-strong bg-surface px-2 py-1 text-[11px] font-semibold leading-none text-brand-ink">{t("home.soon")}</span>
-            </Button>
+            {/* speaking: only where the browser can recognise speech (not Firefox); the words go into the box to be fixed */}
+            {speech.supported && (
+              <Button
+                variant="secondary"
+                className={`${side} ${speech.listening ? "border-brand! text-brand-ink" : ""}`}
+                disabled={busy}
+                aria-pressed={speech.listening}
+                onClick={() => (speech.listening ? speech.stop() : speech.start(speechLang(locale), value, onChange))}
+              >
+                <span className="truncate">{speech.listening ? t("voice.stop") : t("home.voice")}</span>
+                <Icon name="mic" size={19} />
+              </Button>
+            )}
           </div>
+          {speech.listening && (
+            <p className="text-center text-[12px] text-brand-ink" role="status">
+              {t("voice.listening")} <span className="text-muted">{t("voice.privacy")}</span>
+            </p>
+          )}
+          {speech.problem && !speech.listening && (
+            <p className="text-center text-[12px]" style={{ color: "var(--t-weak-fg)" }} role="status">
+              {t(`voice.${speech.problem}`)}
+            </p>
+          )}
           {!touch && <p className="text-center text-[12px] text-muted">{t("home.imageHint")}</p>}
         </div>
 
