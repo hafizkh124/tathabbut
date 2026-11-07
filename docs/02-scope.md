@@ -35,14 +35,14 @@ The MVP is sized for the challenge window (4–6 October 2026). Anything not lis
 | WhatsApp / Telegram bots, mobile app, browser text-select button, floating button | Channel work; the API is ready for them later |
 | Hadith translations (Urdu/English) from HadeethEnc | Time; only where a hadith is matched, unmodified and cited |
 | Local database of the Sahihayn | Resilience if Dorar is unavailable; needs a source with clear rights |
-| Al-Maktaba al-Shamela integration | Its terms allow reading, search and citation only; needs permission |
+| Al-Maktaba al-Shamela as a separate, direct data source | Shamela's books are already reached through the Turath API (excerpts with citation and a link to the same page on Shamela); a direct integration would need Shamela's own permission |
 | Full Jamhara dictionary integration | MVP uses a small approved sample |
 | Tafsir, aqeedah, fiqh, seerah references | Only needed if the tool starts answering questions; out of verification scope |
 | Isnad / narrator (rijal) views, topical hadith families | Beyond the MVP |
 | Streaming responses (SSE), automatic switching across several LLM vendors | One complete response and one fallback model are enough |
 | Rate limiter, OAuth for admin | Not needed for a judged demo |
 | Hadith-translation datasets with unclear rights (e.g. fawazahmed0, hadith-json) | Excluded until their rights are clear |
-| Formal permission and partnership with Dorar | Planned after the challenge (draft letter prepared) |
+| Formal permission and partnership with Dorar | Done after the challenge (the partnership proposal itself continues) |
 
 ## 2.3 Roadmap after the challenge
 
@@ -55,7 +55,9 @@ As in the submitted presentation:
 4. **Months 3–4 — sharing:** mobile app, WhatsApp and Telegram bots, and a floating button to check with one tap.
 5. **Months 4–6 — sources:** hadith translations (HadeethEnc), the full Jamhara, and an API for platforms.
 
-Later: a local Sahihayn database, and Shamela matching only with permission.
+Later: a local Sahihayn database. Shamela books are already reached through the Turath API; a direct Shamela integration only with its permission.
+
+Channels (WhatsApp, Telegram) are planned through the team's other project, Ateed, rather than as a separate bot inside Tathabbut.
 
 **Sustainability:** free for users — no sign-up, no ads, and no input stored against a user (only anonymous
 unresolved texts for review and cached source answers). Costs (hosting, model calls, scholarly review) are to be
