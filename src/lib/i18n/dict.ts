@@ -544,6 +544,17 @@ export const DICT = {
   "ocr.confirm": { ar: "تأكيد ومتابعة", en: "Confirm and continue", ur: "تصدیق کر کے آگے بڑھیں" },
   "ocr.reading": { ar: "جارٍ قراءة الصورة…", en: "Reading the picture…", ur: "تصویر پڑھی جا رہی ہے…" },
   "ocr.picture": { ar: "الصورة", en: "The picture", ur: "تصویر" },
+  "ocr.zoomIn": { ar: "تكبير الصورة", en: "Enlarge the picture", ur: "تصویر بڑی کریں" },
+  "ocr.zoomOut": { ar: "تصغير الصورة", en: "Shrink the picture", ur: "تصویر چھوٹی کریں" },
+  "ocr.tapWord": {
+    ar: "اضغط على الكلمة المعلَّمة لتصحيحها.",
+    en: "Tap a marked word to fix it.",
+    ur: "نشان زد لفظ پر ٹیپ کر کے اسے ٹھیک کریں۔",
+  },
+  "ocr.wordLabel": { ar: "تصحيح الكلمة", en: "Fix this word", ur: "اس لفظ کی درستی" },
+  "ocr.keepWord": { ar: "هي صحيحة", en: "It is right", ur: "یہ درست ہے" },
+  "ocr.undo": { ar: "تراجع", en: "Undo", ur: "واپس کریں" },
+  "ocr.reset": { ar: "العودة إلى القراءة الأصلية", en: "Back to what we first read", ur: "پہلی پڑھت پر واپس" },
   "ocr.privacy": {
     ar: "تُرسل الصورة إلى Google Gemini لقراءتها ولا نحتفظ بها.",
     en: "The picture is sent to Google Gemini to be read. We do not keep it.",
