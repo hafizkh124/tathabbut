@@ -6,7 +6,7 @@ import { APP_URL } from "@/lib/shareText";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/share-target"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/share-target", "/admin/"] },
     sitemap: `${APP_URL}/sitemap.xml`,
     host: APP_URL,
   };

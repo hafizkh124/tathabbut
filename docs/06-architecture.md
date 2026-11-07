@@ -68,7 +68,8 @@ Schema in `supabase/migrations/`.
 | `turath_translations` | The machine translation of a Turath passage per SHA-256 of the Arabic text and language (ur, en); private (service key only) | As translated |
 | `alulama_posts` | The answered questions of alulama.org (about 8,500): title, folded search text, the first ~500 characters of the answer, the shaikh named under it, link back, date; private (service key only); migration 014 | ~22 MB with indexes |
 | `sync_state` | Where the daily العلماء sync stands | 1 |
-| `review_queue` | Unresolved texts, no user identity (`/admin` page not built yet) | — |
+| `review_queue` | Not used by the app (kept from the first schema; empty) | — |
+| `reports` | «Is this result wrong?» reports, no user identity; read by the specialist at `/admin/review` (token-guarded) | 009 |
 | `data_sources` | Source name, version, link, licence notes | — |
 
 There is deliberately **no local hadith collection** in the MVP.
