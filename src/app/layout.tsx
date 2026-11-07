@@ -74,7 +74,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
         <LocaleProvider>{children}</LocaleProvider>
-      <AteedScript src="https://ateed.alulama.org/widget/loader.js" strategy="afterInteractive" />
+        {/* Ateed's support widget answers only the live site's host; on localhost and preview deployments it was refused (CORS)
+            and only added noise, so it is loaded in production alone */}
+        {process.env.VERCEL_ENV === "production" && <AteedScript src="https://ateed.alulama.org/widget/loader.js" strategy="afterInteractive" />}
       </body>
     </html>
   );
