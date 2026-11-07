@@ -47,3 +47,11 @@ describe("partnerPerson", () => {
     expect(partnerPerson(new Request(url, { method: "POST" }), secret, now)).toBeNull();
   });
 });
+
+// The same input is signed by Ateed's Python (ateed/tools/tathabbut_tool.py, tests/unit/test_tathabbut_whatsapp.py): if either
+// side changes the format, one of the two tests fails.
+describe("signature agreement with Ateed", () => {
+  it("signs a fixed request to the exact value Ateed's code produces", () => {
+    expect(signPartner("k".repeat(32), "1800000000", "a1b2c3d4e5f60718", "POST", "/api/verify")).toBe("fc92046cdb759c7d4fe9e26387edf458713fa7356b26b907f595de3ef508f688");
+  });
+});
