@@ -3,7 +3,16 @@
 // writes a verdict of its own; classification of these verdicts is src/lib/gradeMap.ts.
 
 const ENDPOINT = "https://dorar.net/dorar_api.json";
-const TIMEOUT_MS = 8_000;
+/** One call. Dorar usually answers in 1-3 s; the live figures of 2026-11-23 showed two checks at 17 s, which is exactly
+ *  two calls that each hung for the old 8 s, plus the pause between them. */
+const TIMEOUT_MS = 6_000;
+/** A call that has not answered by now gets a second, identical call beside it; the first good answer wins and the
+ *  other is dropped. Only the slow ones (a few in a hundred) cost Dorar a second request. */
+const HEDGE_MS = 2_500;
+/** Everything one search may take, the retry included, so a bad moment of Dorar costs the person at most about this. */
+const DEADLINE_MS = 9_000;
+/** A retry that has less than this left is not worth starting. */
+const MIN_RETRY_MS = 2_000;
 
 /** We identify ourselves honestly. Checked 2026-10-03: the endpoint answers this UA without any browser disguise. */
 const HEADERS: Record<string, string> = {
@@ -76,9 +85,14 @@ export async function searchDorar(text: string, limit = 15, opts: { books?: stri
   const extra = (opts.books ?? []).filter((b) => /^\d{1,6}$/.test(b)).map((b) => `&s[]=${b}`).join("");
 
   let last: DorarLookup = { ok: false, error: "network" };
+  const started = Date.now();
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-    last = await fetchOnce(query, limit, extra);
+    if (attempt > 0) {
+      // the pause counts too: a retry that could not start with MIN_RETRY_MS left after it is not begun at all
+      if (DEADLINE_MS - (Date.now() - started) - RETRY_DELAY_MS * attempt < MIN_RETRY_MS) break;
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+    }
+    last = await hedged(query, limit, extra, Math.min(TIMEOUT_MS, DEADLINE_MS - (Date.now() - started)));
     // Only transient failures are worth another call. An empty answer counts as one: Dorar returns its 15 nearest
     // results even for an invented text (checked 2026-10-03), so an empty page is a glitch of Dorar or the relay
     // (2026-10-19: the same query came back empty, then with 15 results a moment later).
@@ -90,9 +104,40 @@ export async function searchDorar(text: string, limit = 15, opts: { books?: stri
   return last;
 }
 
-async function fetchOnce(query: string, limit: number, extra = ""): Promise<DorarLookup> {
+/** One call; if it is slow, a second beside it. Resolves with the first good answer, or, when none is good, with the
+ *  last failure once both are over. */
+async function hedged(query: string, limit: number, extra: string, timeoutMs: number): Promise<DorarLookup> {
+  const stop = new AbortController();
+  const first = fetchOnce(query, limit, extra, timeoutMs, stop.signal);
+  let hedgeTimer: ReturnType<typeof setTimeout> | undefined;
+  const slow = new Promise<"slow">((resolve) => {
+    hedgeTimer = setTimeout(() => resolve("slow"), HEDGE_MS);
+  });
+  const quick = await Promise.race([first, slow]);
+  clearTimeout(hedgeTimer);
+  if (quick !== "slow") return quick;
+
+  const second = fetchOnce(query, limit, extra, timeoutMs, stop.signal);
+  const winner = await new Promise<DorarLookup>((resolve) => {
+    let failures = 0;
+    let lastFailure: DorarLookup = { ok: false, error: "timeout" };
+    for (const call of [first, second]) {
+      call.then((r) => {
+        if (r.ok) return resolve(r);
+        lastFailure = r;
+        if (++failures === 2) resolve(lastFailure);
+      });
+    }
+  });
+  stop.abort(); // the one still running is no longer needed
+  return winner;
+}
+
+async function fetchOnce(query: string, limit: number, extra = "", timeoutMs = TIMEOUT_MS, outer?: AbortSignal): Promise<DorarLookup> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onOuter = () => controller.abort();
+  outer?.addEventListener("abort", onOuter);
   try {
     // dorar.net answers 403 to Vercel's IPs. When a relay is configured the call goes through it instead
     // (the Cloudflare Worker in worker/dorar-relay.mjs); it hands back Dorar's own JSON, so everything below is unchanged.
@@ -116,5 +161,6 @@ async function fetchOnce(query: string, limit: number, extra = ""): Promise<Dora
     return { ok: false, error: "network", detail: (err as Error).message };
   } finally {
     clearTimeout(timer);
+    outer?.removeEventListener("abort", onOuter);
   }
 }

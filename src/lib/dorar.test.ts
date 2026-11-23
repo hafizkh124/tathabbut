@@ -74,3 +74,71 @@ describe("searchDorar", () => {
     expect(await pending).toEqual({ ok: false, error: "empty" });
   });
 });
+
+describe("searchDorar when Dorar is slow (2026-11-23)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
+  const page = (result: string) => new Response(JSON.stringify({ ahadith: { result } }), { status: 200 });
+  /** a call that never answers until it is cancelled, as a hung Dorar does */
+  const hang = (_url: unknown, init: { signal: AbortSignal }) =>
+    new Promise<Response>((_resolve, reject) => init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))));
+
+  it("asks once more beside a call that has not answered in 2.5 s, and takes whichever answers well first", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    const f = vi.fn().mockImplementationOnce(hang).mockImplementationOnce(async () => page(html));
+    vi.stubGlobal("fetch", f);
+    vi.useFakeTimers();
+    let done = false;
+    const pending = searchDorar("اطلبوا العلم ولو بالصين").then((r) => ((done = true), r));
+    await vi.advanceTimersByTimeAsync(2_400);
+    expect(f).toHaveBeenCalledTimes(1); // not yet: the first call still has time
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+    const r = await pending;
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(r.ok && r.results.length).toBe(15);
+  });
+
+  it("does not ask twice when the first call answers in time", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    const f = vi.fn().mockImplementation(async () => page(html));
+    vi.stubGlobal("fetch", f);
+    vi.useFakeTimers();
+    const pending = searchDorar("اطلبوا العلم ولو بالصين");
+    await vi.runAllTimersAsync();
+    expect((await pending).ok).toBe(true);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the first call's good answer when it arrives after the second began and the second is still waiting", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    let release: (r: Response) => void = () => {};
+    const f = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => (release = resolve)))
+      .mockImplementationOnce(hang);
+    vi.stubGlobal("fetch", f);
+    vi.useFakeTimers();
+    const pending = searchDorar("اطلبوا العلم ولو بالصين");
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(f).toHaveBeenCalledTimes(2);
+    release(page(html));
+    expect((await pending).ok).toBe(true);
+  });
+
+  it("gives up within the overall deadline when Dorar hangs, not after two full waits (the old 17.5 s)", async () => {
+    vi.stubEnv("DORAR_RELAY_URL", "");
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(hang));
+    vi.useFakeTimers();
+    const t0 = Date.now();
+    let result: unknown;
+    const pending = searchDorar("اطلبوا العلم ولو بالصين").then((r) => (result = r));
+    await vi.advanceTimersByTimeAsync(9_000);
+    await pending;
+    expect(Date.now() - t0).toBeLessThanOrEqual(9_000);
+    expect(result).toMatchObject({ ok: false, error: "timeout" });
+  });
+});
