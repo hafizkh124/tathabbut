@@ -28,11 +28,18 @@ export interface GeminiUsage {
   totalTokens: number;
 }
 
+/** One step of a call's way through the models: [model, ms, how it ended]. «how»: "ok", "timeout", the HTTP status, or "skipped:day" /
+ *  "skipped:slow" / "skipped:busy" for a model that was not asked. Kept so a slow check can say which model was slow. */
+export type Attempt = [model: string, ms: number, outcome: string];
+
 export interface GenerateResult<T> {
   data: T;
   model: string;
+  /** the time of the attempt that answered, not of the ones before it (see `tried`) */
   ms: number;
   usage?: GeminiUsage;
+  /** every model asked or passed over on the way to this answer, in order */
+  tried?: Attempt[];
 }
 
 /** Which free-tier quota a 429 hit: the model's requests per minute (wait and retry) or per day (out until the reset). */
@@ -256,13 +263,16 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
 
   let last: GeminiError | undefined;
   const busy = new Map<string, number>(); // models busy for the minute, and how long Google said to wait
+  const trail: Attempt[] = [];
   const tryModel = async (m: string): Promise<GenerateResult<T> | null> => {
     const t0 = now();
     try {
       const { data, usage } = await once<T>(m, prompt, { ...opts, timeoutMs: Math.min(opts.timeoutMs ?? CALL_MS, left()) }, key, f);
-      return { data, model: m, ms: now() - t0, ...(usage ? { usage } : {}) };
+      trail.push([m, now() - t0, "ok"]);
+      return { data, model: m, ms: now() - t0, ...(usage ? { usage } : {}), tried: [...trail] };
     } catch (err) {
       last = err instanceof GeminiError ? err : new GeminiError(String(err));
+      trail.push([m, now() - t0, last.status === undefined && /timeout|abort/i.test(last.message) ? "timeout" : String(last.status ?? "error")]);
       if (last.quota === "day") outForTheDay.set(m, now() + DAY_OUT_MS);
       if (last.quota === "minute") busy.set(m, last.retryAfter ?? MAX_MINUTE_WAIT_S);
       if (last.status === undefined && /timeout|abort/i.test(last.message)) slowUntil.set(m, now() + SLOW_OUT_MS);
@@ -280,7 +290,12 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
 
   for (const [i, m] of attempts.entries()) {
     if (left() < MIN_CALL_MS) break;
-    if (!available(m) || busy.has(m)) continue;
+    if (!available(m) || busy.has(m)) {
+      const why = (outForTheDay.get(m) ?? 0) > now() ? "skipped:day" : (slowUntil.get(m) ?? 0) > now() ? "skipped:slow" : "skipped:busy";
+      const prev = trail[trail.length - 1];
+      if (!(prev && prev[0] === m && prev[2] === why)) trail.push([m, 0, why]); // a model listed twice is told once
+      continue;
+    }
     if (i === 1) await sleep(1_000);
     const r = await tryModel(m);
     if (r) return r;

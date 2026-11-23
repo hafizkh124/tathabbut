@@ -8,7 +8,7 @@ import { foldUrdu, normalizeArabic } from "./arabic";
 import { hasPressure, stripPressure } from "./chainPressure";
 import { parseHadithReference } from "./hadithReference";
 import { parseQuranReference } from "./quranReference";
-import { generateJson, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
+import { generateJson, type Attempt, type GeminiImage, type GeminiUsage, type GenerateResult } from "./gemini";
 import { cleanTerms, cleanTopic, cleanTopicEn, cleanTopicUrdu } from "./topic";
 
 export { cleanTopic, topicQuery } from "./topic";
@@ -56,6 +56,8 @@ export interface Extraction {
   ms?: number;
   /** tokens of the extraction call (for the evaluation's cost figure) */
   usage?: GeminiUsage;
+  /** the models asked on the way to the answer, each with its time and how it ended (gemini.ts Attempt) */
+  tried?: Attempt[];
 }
 
 interface RawClaim {
@@ -365,7 +367,7 @@ export async function extractClaims(post: string, deps: { generate?: Generate } 
   if (!text) return { claims: [], dropped: [] };
   const r = await generate<{ claims?: RawClaim[] }>(claimsPrompt(text), { schema: CLAIMS_SCHEMA });
   const checked = checkClaims(text, r.data.claims ?? []);
-  return { claims: addReferenceClaims(text, checked.claims), dropped: checked.dropped, model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}) };
+  return { claims: addReferenceClaims(text, checked.claims), dropped: checked.dropped, model: r.model, ms: r.ms, ...(r.usage ? { usage: r.usage } : {}), ...(r.tried ? { tried: r.tried } : {}) };
 }
 
 /** Reads the text of a screenshot as it is, so the claims can then be checked against what the image says. */

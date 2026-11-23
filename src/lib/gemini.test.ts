@@ -212,3 +212,37 @@ describe("generateJson", () => {
     expect(jsonIn('The answer: {"a":{"b":2}} done')).toBe('{"a":{"b":2}}');
   });
 });
+
+describe("generateJson keeps the way through the models (2026-11-23)", () => {
+  beforeEach(() => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("GEMINI_MODEL", "gemini-3.8-flash");
+    vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    resetQuotaMemory();
+  });
+
+  it("lists each model asked, its time and how it ended, up to the one that answered", async () => {
+    let t = 1_000;
+    const f = vi.fn().mockImplementationOnce(async () => (t += 400, fail(503))).mockImplementationOnce(async () => (t += 300, fail(503))).mockImplementationOnce(async () => (t += 1_500, ok({ a: 1 })));
+    const r = await generateJson("x", { schema }, { fetch: f, sleep: noSleep, now: () => t });
+    expect(r.model).toBe("gemini-2.5-flash");
+    expect(r.tried).toEqual([
+      ["gemini-3.8-flash", 400, "503"],
+      ["gemini-3.8-flash", 300, "503"],
+      ["gemini-2.5-flash", 1_500, "ok"],
+    ]);
+  });
+
+  it("names a model that was passed over, once, and why", async () => {
+    await generateJson("x", { schema }, { fetch: vi.fn().mockResolvedValueOnce(perDay()).mockResolvedValue(ok({ a: 1 })), sleep: noSleep });
+    const r = await generateJson("x", { schema }, { fetch: vi.fn().mockResolvedValue(ok({ a: 1 })), sleep: noSleep });
+    expect(r.model).toBe("gemini-2.5-flash");
+    expect(r.tried?.map(([m, , how]) => [m, how])).toEqual([
+      ["gemini-3.8-flash", "skipped:day"],
+      ["gemini-2.5-flash", "ok"],
+    ]);
+  });
+});

@@ -95,6 +95,7 @@ export async function POST(request: Request) {
           claims: results.length,
           ms: Date.now() - t0,
           extractMs: extraction?.ms,
+          tried: extraction?.tried,
           trace: trace.summary(),
           model: extraction?.model,
         }),
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
     await saveAnswer(key, claims);
     // what each «not found» was (kind, why, how many narrations Dorar offered, which second look found it) so the next review can count them
     const lookups = claims.filter((c) => c.diag || c.reason || c.reference).map((c) => ({ s: c.state === STATES.notFound ? 0 : 1, k: c.claim.kind, ...(c.dorar?.origin ? { o: c.dorar.origin } : {}), ...(c.reason ? { r: c.reason } : {}), ...(c.diag ? { c: c.diag.candidates, m: c.diag.relevant, ...(c.diag.retried ? { v: c.diag.retried } : {}) } : {}), ...(c.reference ? { ref: 1 } : {}) }));
-    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(extraction ? { extractMs: extraction.ms } : {}), trace: trace.summary(), ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
+    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(extraction ? { extractMs: extraction.ms, ...(extraction.tried ? { tried: extraction.tried } : {}) } : {}), trace: trace.summary(), ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
   });
 
   return Response.json({

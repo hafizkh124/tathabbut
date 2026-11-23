@@ -71,3 +71,32 @@ select (select count(*) from events where event in ('share', 'copy') and created
 
 -- 11. The specialist's queue: reports not yet looked at
 select count(*) as waiting, min(created_at)::date as oldest from reports where not reviewed;
+
+-- 12. Where the time of a check goes (stages recorded from 2026-11-23): average and slowest, in ms
+select count(*) as checks,
+       round(avg((data->'trace'->'stages'->>'cache')::numeric))   as cache_ms,
+       round(avg((data->'trace'->'stages'->>'limit')::numeric))   as limit_ms,
+       round(avg((data->'trace'->'stages'->>'extract')::numeric)) as ai_ms,
+       round(avg((data->'trace'->'stages'->>'verify')::numeric))  as verify_ms,
+       max((data->'trace'->'stages'->>'extract')::int)            as slowest_ai_ms,
+       max((data->'trace'->'stages'->>'verify')::int)             as slowest_verify_ms
+from events where event = 'verify' and data ? 'trace' and created_at > now() - interval '7 days';
+
+-- 13. Time lost to AI attempts that did not answer (the wall time of the AI stage minus the answering attempt)
+select count(*) filter (where lost > 1000) as checks_that_lost_over_1s,
+       count(*) as checks,
+       round(avg(lost) filter (where lost > 1000)) as avg_lost_ms
+from (select (data->'trace'->'stages'->>'extract')::int - (data->>'extractMs')::int as lost
+      from events where event = 'verify' and data ? 'trace' and data ? 'extractMs' and created_at > now() - interval '7 days') t;
+
+-- 14. Per model: how often it was asked, answered, timed out or failed, and how long its answers took (tried is recorded from 2026-11-23)
+select a->>0 as model, a->>2 as outcome, count(*) as n, round(avg((a->>1)::numeric)) as avg_ms, max((a->>1)::int) as max_ms
+from events, jsonb_array_elements(coalesce(data->'tried', '[]'::jsonb)) a
+where event = 'verify' and created_at > now() - interval '7 days'
+group by 1, 2 order by 1, 3 desc;
+
+-- 15. Dorar and the Supabase searches inside the verification: calls, average and slowest
+select c.key as call, sum((c.value->>0)::int) as calls, round(sum((c.value->>1)::numeric) / nullif(sum((c.value->>0)::int), 0)) as avg_ms, max((c.value->>2)::int) as slowest_ms
+from events, jsonb_each(coalesce(data->'trace'->'calls', '{}'::jsonb)) c
+where event = 'verify' and created_at > now() - interval '7 days'
+group by 1 order by 2 desc;
