@@ -95,6 +95,16 @@ export const EARLY_CALL_MS = 5_000;
 /** How long one call to a model may take: what the caller asked for (a picture asks for more), else EARLY_CALL_MS when
  *  another model can still answer after it, else CALL_MS. */
 export const callTimeoutMs = (asked: number | undefined, hasLaterModel: boolean): number => asked ?? (hasLaterModel ? EARLY_CALL_MS : CALL_MS);
+
+/** Circuit breaker, per request. When this many models in a row-ish (within one call) have timed out or answered a server
+ *  error, Google itself is in trouble (2026-11-23, 18:38 PKT: seven Google models gave 503 or timeouts one after another
+ *  and the answer came from the last model after 26 s). The Google models still behind are then passed over, and the
+ *  first model of another provider is asked, if there is one. A 429 (quota) does not count: that model is only out of its
+ *  allowance, which says nothing about Google; nor does 501 (a provider not set up here). */
+export const BREAKER_AFTER = 3;
+
+/** A failure that says the service is in trouble: a timeout, a network error, or a server error (not 501). */
+export const isTrouble = (status: number | undefined, timedOut: boolean): boolean => timedOut || status === undefined || (status >= 500 && status !== 501);
 const BUDGET_MS = 45_000;
 const MIN_CALL_MS = 3_000;
 
@@ -273,6 +283,8 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   let last: GeminiError | undefined;
   const busy = new Map<string, number>(); // models busy for the minute, and how long Google said to wait
   const trail: Attempt[] = [];
+  let trouble = 0; // models of this call that timed out or answered a server error
+  const isGoogle = (m: string) => providerOf(m) === null;
   const tryModel = async (m: string, hasLaterModel = false): Promise<GenerateResult<T> | null> => {
     const t0 = now();
     try {
@@ -282,6 +294,8 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
     } catch (err) {
       last = err instanceof GeminiError ? err : new GeminiError(String(err));
       trail.push([m, now() - t0, last.status === undefined && /timeout|abort/i.test(last.message) ? "timeout" : String(last.status ?? "error")]);
+      const timedOut = last.status === undefined && /timeout|abort/i.test(last.message);
+      if (isTrouble(last.status, timedOut) && !/^not JSON/.test(last.message)) trouble += 1; // a garbled answer is the model's, not an outage
       if (last.quota === "day") outForTheDay.set(m, now() + DAY_OUT_MS);
       if (last.quota === "minute") busy.set(m, last.retryAfter ?? MAX_MINUTE_WAIT_S);
       if (last.status === undefined && /timeout|abort/i.test(last.message)) slowUntil.set(m, now() + SLOW_OUT_MS);
@@ -303,6 +317,13 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
       const why = (outForTheDay.get(m) ?? 0) > now() ? "skipped:day" : (slowUntil.get(m) ?? 0) > now() ? "skipped:slow" : "skipped:busy";
       const prev = trail[trail.length - 1];
       if (!(prev && prev[0] === m && prev[2] === why)) trail.push([m, 0, why]); // a model listed twice is told once
+      continue;
+    }
+    // Google is in trouble (BREAKER_AFTER failures of this kind in this call) and a model of another provider is still to
+    // come: the Google models in between are passed over
+    if (trouble >= BREAKER_AFTER && isGoogle(m) && attempts.slice(i + 1).some((x) => !isGoogle(x) && available(x) && !busy.has(x))) {
+      const prev = trail[trail.length - 1];
+      if (!(prev && prev[0] === m && prev[2] === "skipped:breaker")) trail.push([m, 0, "skipped:breaker"]);
       continue;
     }
     if (i === 1) await sleep(1_000);

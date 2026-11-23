@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { callTimeoutMs, EARLY_CALL_MS, fallbackModels, GeminiError, generateJson, jsonIn, quotaOf, resetQuotaMemory } from "./gemini";
+import { BREAKER_AFTER, callTimeoutMs, EARLY_CALL_MS, fallbackModels, isTrouble, GeminiError, generateJson, jsonIn, quotaOf, resetQuotaMemory } from "./gemini";
 
 const ok = (obj: unknown) =>
   new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: JSON.stringify(obj) }] } }] }), { status: 200 });
@@ -291,5 +291,73 @@ describe("how long one call to a model may take (2026-11-23)", () => {
     vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => (seen.push(ms), real(ms)));
     await generateJson("x", { schema, timeoutMs: 12_000 }, { fetch: vi.fn().mockResolvedValue(ok({ a: 1 })), sleep: noSleep });
     expect(seen).toEqual([12_000]);
+  });
+});
+
+describe("the circuit breaker (2026-11-23)", () => {
+  const other = (obj: unknown) => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(obj) } }] }), { status: 200 });
+  /** Google answers `google()`; the other provider answers `other`. */
+  const route = (google: () => Response, answer: () => Response) =>
+    vi.fn().mockImplementation(async (url: string) => (String(url).includes("generativelanguage") ? google() : answer()));
+  beforeEach(() => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("GEMINI_MODEL", "gemini-3.8-flash");
+    vi.stubEnv("GEMINI_FALLBACK_MODELS", "g-two,g-three,g-four,ifm:IFM/K2");
+    vi.stubEnv("IFM_BASE_URL", "https://ifm.test/v1");
+    vi.stubEnv("IFM_API_KEY", "ifm-key");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    resetQuotaMemory();
+  });
+
+  it("counts timeouts, network errors and server errors as trouble, and quota, a missing provider and bad JSON not", () => {
+    expect(BREAKER_AFTER).toBe(3);
+    expect(isTrouble(503, false)).toBe(true);
+    expect(isTrouble(500, false)).toBe(true);
+    expect(isTrouble(undefined, true)).toBe(true);
+    expect(isTrouble(undefined, false)).toBe(true); // a network error has no status
+    expect(isTrouble(429, false)).toBe(false);
+    expect(isTrouble(501, false)).toBe(false);
+    expect(isTrouble(404, false)).toBe(false);
+  });
+
+  it("after three Google failures passes over the Google models still to come and asks the other provider", async () => {
+    const f = route(() => fail(503), () => other({ a: 1 }));
+    const r = await generateJson("x", { schema }, { fetch: f, sleep: noSleep });
+    expect(r.model).toBe("ifm:IFM/K2");
+    expect(r.tried?.map(([m, , how]) => [m, how])).toEqual([
+      ["gemini-3.8-flash", "503"],
+      ["gemini-3.8-flash", "503"],
+      ["g-two", "503"],
+      ["g-three", "skipped:breaker"],
+      ["g-four", "skipped:breaker"],
+      ["ifm:IFM/K2", "ok"],
+    ]);
+    expect(f).toHaveBeenCalledTimes(4); // three Google calls and one for the other provider
+  });
+
+  it("does not trip on a model that is only out of quota", async () => {
+    const f = route(() => perDay(), () => other({ a: 1 }));
+    await generateJson("x", { schema }, { fetch: f, sleep: noSleep }).catch(() => undefined);
+    // every Google model answered 429 (its own allowance): all four were asked, none passed over because of the breaker
+    const google = f.mock.calls.filter(([u]) => String(u).includes("generativelanguage")).length;
+    expect(google).toBe(4);
+  });
+
+  it("keeps asking the remaining Google models when no other provider is behind them", async () => {
+    vi.stubEnv("GEMINI_FALLBACK_MODELS", "g-two,g-three,g-four");
+    const f = route(() => fail(503), () => other({ a: 1 }));
+    await generateJson("x", { schema }, { fetch: f, sleep: noSleep }).catch(() => undefined);
+    const asked = f.mock.calls.map(([u]) => String(u).split("/models/")[1]?.split(":")[0]);
+    expect(asked).toEqual(expect.arrayContaining(["g-two", "g-three", "g-four"])); // nobody to jump to: none skipped
+  });
+
+  it("does not trip on garbled answers, which are the model's fault, not an outage", async () => {
+    const garbled = () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "not json at all" }] } }] }), { status: 200 });
+    const f = route(garbled, () => other({ a: 1 }));
+    await generateJson("x", { schema }, { fetch: f, sleep: noSleep }).catch(() => undefined);
+    const google = f.mock.calls.filter(([u]) => String(u).includes("generativelanguage")).length;
+    expect(google).toBeGreaterThanOrEqual(4); // not stopped after three
   });
 });
