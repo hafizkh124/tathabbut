@@ -83,9 +83,17 @@ describe("verifyClaim — routing and authority", () => {
 
   it("marks a hadith Dorar could not be asked about as not checked, not as found nowhere (2026-10-19)", async () => {
     const r = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: false as const, error: "empty" })) }));
-    expect(r).toMatchObject({ lookupFailed: true, state: STATES.notFound });
+    expect(r).toMatchObject({ lookupFailed: true, state: STATES.notFound, lookupError: "empty" });
     const ok = await verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: true as const, results: dorarTalab, origin: "live" as const })) }));
     expect(ok.lookupFailed).toBeUndefined();
+  });
+
+  it("records why Dorar could not be asked, with the http status when there is one, for the usage figures (2026-11-23)", async () => {
+    const failing = (error: "timeout" | "http" | "network" | "empty", detail?: string) =>
+      verifyClaim(arabic("hadith", "اطلبوا العلم ولو بالصين"), deps({ lookupDorar: vi.fn(async () => ({ ok: false as const, error, detail })) }));
+    expect((await failing("timeout")).lookupError).toBe("timeout");
+    expect((await failing("http", "403")).lookupError).toBe("http:403");
+    expect((await failing("network", "x".repeat(200))).lookupError).toHaveLength(40); // never a long message
   });
 
   it("puts first the narration of the book the post names, and leaves the state to all the narrations (2026-10-19)", async () => {

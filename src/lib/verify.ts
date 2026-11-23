@@ -63,6 +63,8 @@ export interface VerifiedClaim {
   /** Dorar could not be asked (down, or an empty page twice): the claim was not checked, so the answer is not given
    *  or stored as "not found" (api/verify answers 503) */
   lookupFailed?: true;
+  /** Why Dorar could not be asked, for the usage figures: «empty», «timeout», «network» or «http:403» (never shown to the person). */
+  lookupError?: string;
   /** where the state comes from */
   basis: "specialist-list" | "quran" | "dorar" | "turath" | "none" | "kind";
   verse?: VerseView & { candidates?: VerseView[] };
@@ -434,7 +436,17 @@ const NOTE_OPENING = "بُحث بمطلع النص لطوله";
  */
 async function checkInDorar(claim: Claim, deps: VerifyDeps, nearbySayings: SimilarExpression[], notes: string[] = [], citedOverride?: string): Promise<VerifiedClaim> {
   const looked = await deps.lookupDorar(claim.query);
-  if (!looked.ok) return { claim, state: STATES.notFound, basis: "none", lookupFailed: true, notes: [`تعذّر البحث في الدرر (${looked.error})`], similarExpressions: nearbySayings };
+  if (!looked.ok) {
+    return {
+      claim,
+      state: STATES.notFound,
+      basis: "none",
+      lookupFailed: true,
+      lookupError: looked.detail ? `${looked.error}:${looked.detail}`.slice(0, 40) : looked.error,
+      notes: [`تعذّر البحث في الدرر (${looked.error})`],
+      similarExpressions: nearbySayings,
+    };
+  }
   let found = looked.results;
   let rawNarrations = selectRelevant(claim.query, found);
   let retried: "typos" | "opening" | undefined;

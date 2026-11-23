@@ -1,5 +1,6 @@
 "use client";
 import React, { useId, useMemo, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import { markWords } from "@/lib/highlight";
 import { cleanWord, pushHistory, replacePiece, stillUnsure } from "@/lib/ocrEdit";
 import { useI18n } from "@/lib/i18n/i18n";
@@ -44,7 +45,10 @@ export function TextConfirm({ text, uncertain, previewUrl, onConfirm, onBack }: 
   const unsure = pieces.filter((p) => p.flagged);
   const changed = value !== text || accepted.size > 0;
 
+  const fixes = useRef(0); // word fixes made on this screen (for the usage figures; the words themselves are never sent)
+
   const change = (next: string) => {
+    fixes.current += 1;
     setHistory((h) => pushHistory(h, value));
     setValue(next);
     setActive(null);
@@ -198,7 +202,14 @@ export function TextConfirm({ text, uncertain, previewUrl, onConfirm, onBack }: 
           </Button>
         ) : (
           <>
-            <Button size="lg" onClick={() => onConfirm(value)} disabled={!value.trim()}>
+            <Button
+              size="lg"
+              onClick={() => {
+                track("ocr_edit", { edited: value !== text, fixes: fixes.current, unsure: uncertain.length, accepted: accepted.size, zoomed });
+                onConfirm(value);
+              }}
+              disabled={!value.trim()}
+            >
               {t("ocr.confirm")}
             </Button>
             <Button variant="secondary" onClick={openEditor}>

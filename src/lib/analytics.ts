@@ -66,7 +66,7 @@ export function analyticsHeaders(): Record<string, string> {
 }
 
 /** Counts one event: a visit, a share or copy, the install prompt's answer, an install. */
-export function track(event: "visit" | "share" | "copy" | "install_prompt" | "installed", data?: Record<string, unknown>) {
+export function track(event: "visit" | "share" | "copy" | "install_prompt" | "installed" | "voice" | "ocr_edit", data?: Record<string, unknown>) {
   try {
     const body = JSON.stringify({ event, device: deviceId(), source: source ?? rememberSource(), locale: locale(), referrer: document.referrer || null, data: { path: window.location.pathname, ...data } });
     const blob = new Blob([body], { type: "application/json" });

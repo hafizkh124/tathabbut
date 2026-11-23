@@ -5,7 +5,7 @@ import { isEvalRun } from "./evalRun";
 import { restHeaders, serviceConfig, type RestConfig } from "./supabaseRest";
 
 /** What the page may report itself; checks and pictures are logged by their own routes. */
-export const CLIENT_EVENTS = new Set(["visit", "share", "copy", "install_prompt", "installed"]);
+export const CLIENT_EVENTS = new Set(["visit", "share", "copy", "install_prompt", "installed", "voice", "ocr_edit"]);
 
 export interface EventRow {
   device: string | null;

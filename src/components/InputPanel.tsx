@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternal
 import { useI18n } from "@/lib/i18n/i18n";
 import type { Key } from "@/lib/i18n/dict";
 import { imageFromClipboard, imageFromDrop } from "@/lib/pickImage";
+import { track } from "@/lib/analytics";
 import { speechLang } from "@/lib/speech";
 import { useSpeech } from "@/lib/useSpeech";
 import { Button } from "./ui/Button";
@@ -58,6 +59,11 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
   useEffect(() => {
     if (busy) stopListening();
   }, [busy, stopListening]);
+  // how the voice button is really used: a start, and the problem when it did not work (counts only, never the words)
+  const voiceProblem = speech.problem;
+  useEffect(() => {
+    if (voiceProblem) track("voice", { phase: "problem", problem: voiceProblem });
+  }, [voiceProblem]);
   const tooLong = value.length > MAX_TEXT;
   const files = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
@@ -194,7 +200,14 @@ export function InputPanel({ value, onChange, onSubmit, onImage, busy }: Props) 
                 className={`${side} ${speech.listening ? "border-brand! text-brand-ink" : ""}`}
                 disabled={busy}
                 aria-pressed={speech.listening}
-                onClick={() => (speech.listening ? speech.stop() : speech.start(speechLang(locale), value, onChange))}
+                onClick={() => {
+                  if (speech.listening) {
+                    speech.stop();
+                    return;
+                  }
+                  track("voice", { phase: "start", lang: speechLang(locale), hadText: value.trim().length > 0 });
+                  speech.start(speechLang(locale), value, onChange);
+                }}
               >
                 <span className="truncate">{speech.listening ? t("voice.stop") : t("home.voice")}</span>
                 <Icon name="mic" size={19} />

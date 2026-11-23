@@ -78,7 +78,22 @@ export async function POST(request: Request) {
   // a claim Dorar could not be asked about was not checked: saying "not found" (and keeping it 30 days in the cache)
   // would be wrong, so the page says it is busy and the person tries again
   if (results.some((r) => r.lookupFailed)) {
-    later(() => logEvent(eventRow(request, "verify", { cached: false, failed: "dorar", ms: Date.now() - t0, model: extraction?.model })));
+    const failedClaims = results.filter((r) => r.lookupFailed);
+    later(() =>
+      logEvent(
+        eventRow(request, "verify", {
+          cached: false,
+          failed: "dorar",
+          // which kind of failure (empty page, timeout, http:403 ...) and how many of the post's claims it hit, so the
+          // fix can follow the cause instead of a guess (2026-11-23: 91 of 513 checks failed this way in 17 days)
+          kinds: failedClaims.map((r) => r.lookupError ?? "?").slice(0, 8),
+          failedClaims: failedClaims.length,
+          claims: results.length,
+          ms: Date.now() - t0,
+          model: extraction?.model,
+        }),
+      ),
+    );
     return Response.json({ error: "the sources could not be reached, try again in a minute", limit: "source" }, { status: 503, headers: { "Retry-After": "60" } });
   }
   const shown: ClaimResult[] = results.map((r) => ({
@@ -102,7 +117,7 @@ export async function POST(request: Request) {
     await saveSharedClaims(rows);
     await saveAnswer(key, claims);
     // what each «not found» was (kind, why, how many narrations Dorar offered, which second look found it) so the next review can count them
-    const lookups = claims.filter((c) => c.diag || c.reason || c.reference).map((c) => ({ s: c.state === STATES.notFound ? 0 : 1, k: c.claim.kind, ...(c.reason ? { r: c.reason } : {}), ...(c.diag ? { c: c.diag.candidates, m: c.diag.relevant, ...(c.diag.retried ? { v: c.diag.retried } : {}) } : {}), ...(c.reference ? { ref: 1 } : {}) }));
+    const lookups = claims.filter((c) => c.diag || c.reason || c.reference).map((c) => ({ s: c.state === STATES.notFound ? 0 : 1, k: c.claim.kind, ...(c.dorar?.origin ? { o: c.dorar.origin } : {}), ...(c.reason ? { r: c.reason } : {}), ...(c.diag ? { c: c.diag.candidates, m: c.diag.relevant, ...(c.diag.retried ? { v: c.diag.retried } : {}) } : {}), ...(c.reference ? { ref: 1 } : {}) }));
     await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
   });
 
