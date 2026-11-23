@@ -11,6 +11,7 @@ import { lookupDorar } from "@/lib/lookup";
 import { fetchNumberedHadith } from "@/lib/hadithReference";
 import { fetchVerseQiraat, fetchVersesByReference, fetchVerseScripts, matchVerses, matchVersesByTranslation, matchVersesInText } from "@/lib/quranCheck";
 import { partnerLocale, whatsappTextFor } from "@/lib/partnerReply";
+import { createTrace } from "@/lib/trace";
 import { aiQuotaResponse, limited } from "@/lib/rateLimit";
 import { matchSayings } from "@/lib/sayingsMatch";
 import { cachedAnswer, postKey, saveAnswer, saveSharedClaims, withShareIds } from "@/lib/sharedClaims";
@@ -36,43 +37,46 @@ export async function POST(request: Request) {
   if (!text) return Response.json({ error: "empty text" }, { status: 400 });
   if (text.length > MAX_TEXT) return Response.json({ error: `text longer than ${MAX_TEXT} characters` }, { status: 400 });
   const t0 = Date.now();
+  const trace = createTrace();
   // a post checked before: its stored results, with no AI call and not counted against the client's limit
   const key = postKey(text);
-  const cached = await cachedAnswer(key);
+  const cached = await trace.time("cache", () => cachedAnswer(key));
   if (cached) {
     later(() => logEvent(eventRow(request, "verify", { cached: true, claims: cached.length, states: cached.map((c) => c.state), ms: Date.now() - t0 })));
     return Response.json({ claims: cached, cached: true, ms: { extract: 0, total: Date.now() - t0 }, whatsappText: whatsappTextFor(request, cached, locale) });
   }
 
   const cache = supabaseDorarCache();
-  const deps: VerifyDeps = {
-    verseByReference: (surah, from, to) => fetchVersesByReference(surah, from, to),
-    hadithByReference: (ref) => fetchNumberedHadith(ref),
-    matchByTranslation: (text, lang) => matchVersesByTranslation(text, lang),
-    matchVerses: (q) => matchVerses(q),
-    matchVersesInText: (q) => matchVersesInText(q),
-    verseScripts: (keys) => fetchVerseScripts(keys),
-    verseQiraat: (keys) => fetchVerseQiraat(keys),
-    matchSayings: (q) => matchSayings(q),
-    lookupDorar: (q) => lookupDorar(q, { cache }),
-  };
+  // every outside call of the verification is timed under its own name (src/lib/trace.ts)
+  const deps: VerifyDeps = trace.wrap({
+    verseByReference: (surah: number, from: number, to: number) => fetchVersesByReference(surah, from, to),
+    hadithByReference: (ref: Parameters<typeof fetchNumberedHadith>[0]) => fetchNumberedHadith(ref),
+    matchByTranslation: (text: string, lang: "ur" | "en") => matchVersesByTranslation(text, lang),
+    matchVerses: (q: string) => matchVerses(q),
+    matchVersesInText: (q: string) => matchVersesInText(q),
+    verseScripts: (keys: { surah: number; ayah: number }[]) => fetchVerseScripts(keys),
+    verseQiraat: (keys: { surah: number; ayah: number }[]) => fetchVerseQiraat(keys),
+    matchSayings: (q: string) => matchSayings(q),
+    lookupDorar: (q: string) => lookupDorar(q, { cache }),
+  });
 
   // a short text that is one Arabic quotation, with a strong answer from the specialist's list, the mushaf or Dorar, needs no AI
   // (src/lib/fastPath.ts, off unless FAST_PATH=1); it has its own limit, and anything it cannot answer goes the normal way
   let results: VerifiedClaim[] | null = null;
-  if (fastPathEnabled() && (await limited(request, "fast")) === null) results = await fastPath(text, deps);
+  if (fastPathEnabled() && (await trace.time("limit", () => limited(request, "fast"))) === null) results = await trace.time("verify", () => fastPath(text, deps));
   const fast = results !== null;
 
   let extraction: Awaited<ReturnType<typeof extractClaims>> | undefined;
   if (!results) {
-    const refused = await limited(request, "verify");
+    const refused = await trace.time("limit", () => limited(request, "verify"));
     if (refused) return refused;
     try {
-      extraction = await extractClaims(text);
+      extraction = await trace.time("extract", () => extractClaims(text));
     } catch (err) {
       return aiQuotaResponse(err) ?? Response.json({ error: "could not read the post" }, { status: 502 });
     }
-    results = await verifyClaims(extraction.claims, deps);
+    const found = extraction.claims;
+    results = await trace.time("verify", () => verifyClaims(found, deps));
   }
 
   // a claim Dorar could not be asked about was not checked: saying "not found" (and keeping it 30 days in the cache)
@@ -91,6 +95,7 @@ export async function POST(request: Request) {
           claims: results.length,
           ms: Date.now() - t0,
           extractMs: extraction?.ms,
+          trace: trace.summary(),
           model: extraction?.model,
         }),
       ),
@@ -119,14 +124,14 @@ export async function POST(request: Request) {
     await saveAnswer(key, claims);
     // what each «not found» was (kind, why, how many narrations Dorar offered, which second look found it) so the next review can count them
     const lookups = claims.filter((c) => c.diag || c.reason || c.reference).map((c) => ({ s: c.state === STATES.notFound ? 0 : 1, k: c.claim.kind, ...(c.dorar?.origin ? { o: c.dorar.origin } : {}), ...(c.reason ? { r: c.reason } : {}), ...(c.diag ? { c: c.diag.candidates, m: c.diag.relevant, ...(c.diag.retried ? { v: c.diag.retried } : {}) } : {}), ...(c.reference ? { ref: 1 } : {}) }));
-    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(extraction ? { extractMs: extraction.ms } : {}), ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
+    await logEvent(eventRow(request, "verify", { cached: false, claims: claims.length, states: claims.map((c) => c.state), ids: rows.map((r) => r.id), ms, ...(extraction ? { extractMs: extraction.ms } : {}), trace: trace.summary(), ...(lookups.length ? { lookups } : {}), ...(fast ? { fast: true } : { model: extraction?.model }) }));
   });
 
   return Response.json({
     claims,
     dropped: extraction?.dropped ?? [],
     ...(fast ? { fast: true } : { model: extraction?.model, usage: extraction?.usage }),
-    ms: { extract: extraction?.ms ?? 0, total: ms },
+    ms: { extract: extraction?.ms ?? 0, total: ms, ...trace.summary().stages },
     whatsappText: whatsappTextFor(request, claims, locale),
   });
 }
