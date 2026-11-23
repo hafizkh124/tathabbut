@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fallbackModels, GeminiError, generateJson, jsonIn, quotaOf, resetQuotaMemory } from "./gemini";
+import { callTimeoutMs, EARLY_CALL_MS, fallbackModels, GeminiError, generateJson, jsonIn, quotaOf, resetQuotaMemory } from "./gemini";
 
 const ok = (obj: unknown) =>
   new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: JSON.stringify(obj) }] } }] }), { status: 200 });
@@ -244,5 +244,52 @@ describe("generateJson keeps the way through the models (2026-11-23)", () => {
       ["gemini-3.8-flash", "skipped:day"],
       ["gemini-2.5-flash", "ok"],
     ]);
+  });
+});
+
+describe("how long one call to a model may take (2026-11-23)", () => {
+  beforeEach(() => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("GEMINI_MODEL", "gemini-3.8-flash");
+    vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    resetQuotaMemory();
+  });
+
+  it("is 5 s when another model can still answer, 8 s for the last one, and what the caller asked for when it asked", () => {
+    expect(EARLY_CALL_MS).toBe(5_000);
+    expect(callTimeoutMs(undefined, true)).toBe(5_000);
+    expect(callTimeoutMs(undefined, false)).toBe(8_000);
+    expect(callTimeoutMs(12_000, true)).toBe(12_000); // a picture asks for more and keeps it
+    expect(callTimeoutMs(12_000, false)).toBe(12_000);
+  });
+
+  it("gives the first model 5 s while a fallback is behind it, and the fallback the full 8 s", async () => {
+    const seen: number[] = [];
+    const real = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => (seen.push(ms), real(ms)));
+    const f = vi.fn().mockResolvedValueOnce(fail(503)).mockResolvedValueOnce(fail(503)).mockResolvedValueOnce(ok({ a: 1 }));
+    await generateJson("x", { schema }, { fetch: f, sleep: noSleep });
+    expect(seen).toEqual([5_000, 5_000, 8_000]); // the model, the model again after a 503, then the last model
+  });
+
+  it("keeps the full 8 s for a model that has no fallback behind it", async () => {
+    vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-3.8-flash"); // the same model: no other one to fall back to
+    const seen: number[] = [];
+    const real = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => (seen.push(ms), real(ms)));
+    await generateJson("x", { schema }, { fetch: vi.fn().mockResolvedValue(ok({ a: 1 })), sleep: noSleep });
+    expect(seen).toEqual([8_000]);
+  });
+
+  it("leaves a picture's own limit alone", async () => {
+    const seen: number[] = [];
+    const real = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => (seen.push(ms), real(ms)));
+    await generateJson("x", { schema, timeoutMs: 12_000 }, { fetch: vi.fn().mockResolvedValue(ok({ a: 1 })), sleep: noSleep });
+    expect(seen).toEqual([12_000]);
   });
 });

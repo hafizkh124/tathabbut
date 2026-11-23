@@ -86,6 +86,15 @@ const MAX_MINUTE_WAIT_S = 20;
 const slowUntil = new Map<string, number>();
 const SLOW_OUT_MS = 60 * 1000;
 const CALL_MS = 8_000; // a text answer takes 1-5 s; a picture asks for more (ocr.ts)
+/** A model that has another model behind it waits this long, not CALL_MS: 2026-11-23, two of eight live checks lost exactly
+ *  8.0 s to a hung first model while the next answered in 1.8-5.3 s. Good answers come in 1.4-2.5 s (5-7 s on a slow
+ *  moment); one that is cut here is left out for a minute (slowUntil) and the next model answers. The last model has no
+ *  one behind it, so it keeps the full CALL_MS. */
+export const EARLY_CALL_MS = 5_000;
+
+/** How long one call to a model may take: what the caller asked for (a picture asks for more), else EARLY_CALL_MS when
+ *  another model can still answer after it, else CALL_MS. */
+export const callTimeoutMs = (asked: number | undefined, hasLaterModel: boolean): number => asked ?? (hasLaterModel ? EARLY_CALL_MS : CALL_MS);
 const BUDGET_MS = 45_000;
 const MIN_CALL_MS = 3_000;
 
@@ -264,10 +273,10 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
   let last: GeminiError | undefined;
   const busy = new Map<string, number>(); // models busy for the minute, and how long Google said to wait
   const trail: Attempt[] = [];
-  const tryModel = async (m: string): Promise<GenerateResult<T> | null> => {
+  const tryModel = async (m: string, hasLaterModel = false): Promise<GenerateResult<T> | null> => {
     const t0 = now();
     try {
-      const { data, usage } = await once<T>(m, prompt, { ...opts, timeoutMs: Math.min(opts.timeoutMs ?? CALL_MS, left()) }, key, f);
+      const { data, usage } = await once<T>(m, prompt, { ...opts, timeoutMs: Math.min(callTimeoutMs(opts.timeoutMs, hasLaterModel), left()) }, key, f);
       trail.push([m, now() - t0, "ok"]);
       return { data, model: m, ms: now() - t0, ...(usage ? { usage } : {}), tried: [...trail] };
     } catch (err) {
@@ -297,7 +306,9 @@ export async function generateJson<T>(prompt: string, opts: GenerateOptions, dep
       continue;
     }
     if (i === 1) await sleep(1_000);
-    const r = await tryModel(m);
+    // another model that can still be asked after this one: then this call gives up early (EARLY_CALL_MS)
+    const later = attempts.slice(i + 1).some((x) => x !== m && available(x) && !busy.has(x));
+    const r = await tryModel(m, later);
     if (r) return r;
   }
   // every model was busy for the minute, or out for the day: wait for the soonest busy one, if it is soon enough
